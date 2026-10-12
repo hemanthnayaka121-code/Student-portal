@@ -1,0 +1,584 @@
+/* ==========================================================================
+   MIT PLACEMENT PORTAL — STRICT MONOCHROME BLACK & WHITE DESIGN SYSTEM
+   Colors: #000000 (Black), #FFFFFF (White), and neutral grays for borders/accents.
+   ========================================================================== */
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+:root {
+    --bg-page: #FFFFFF;
+    --bg-card: #FFFFFF;
+    --bg-subtle: #FAFAFA;
+    --bg-hover: #F5F5F5;
+    
+    --text-primary: #000000;
+    --text-secondary: #555555;
+    --text-muted: #777777;
+    
+    --border-dark: #000000;
+    --border-light: #E5E5E5;
+    --border-mid: #CCCCCC;
+    
+    --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    font-family: var(--font-sans);
+    background-color: var(--bg-page);
+    color: var(--text-primary);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+}
+
+a {
+    color: var(--text-primary);
+    text-decoration: underline;
+    transition: opacity 0.15s ease;
+}
+
+a:hover {
+    opacity: 0.75;
+}
+
+/* ----------------- TYPOGRAPHY ----------------- */
+h1, h2, h3, h4, h5, h6 {
+    color: var(--text-primary);
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    line-height: 1.25;
+}
+
+/* ----------------- BUTTONS ----------------- */
+.btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.4rem;
+    background-color: #000000;
+    color: #FFFFFF !important;
+    padding: 0.65rem 1.25rem;
+    border: 1px solid #000000;
+    border-radius: 4px;
+    font-weight: 600;
+    font-size: 0.88rem;
+    cursor: pointer;
+    text-decoration: none;
+    transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.btn:hover {
+    background-color: #262626;
+    color: #FFFFFF !important;
+    opacity: 1;
+}
+
+.btn-secondary, .btn-outline {
+    background-color: #FFFFFF;
+    color: #000000 !important;
+    border: 1px solid #000000;
+}
+
+.btn-secondary:hover, .btn-outline:hover {
+    background-color: #F5F5F5;
+    color: #000000 !important;
+}
+
+.btn-danger {
+    background-color: #000000;
+    color: #FFFFFF !important;
+    border: 1px solid #000000;
+}
+
+.btn-danger:hover {
+    background-color: #333333;
+}
+
+.action-link {
+    display: inline-block;
+    padding: 0.35rem 0.75rem;
+    background: #000000;
+    color: #FFFFFF !important;
+    border-radius: 4px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    text-decoration: none;
+}
+
+.action-link:hover {
+    background: #333333;
+}
+
+/* ----------------- PANELS & CONTAINERS ----------------- */
+.glass-panel, .card {
+    background-color: var(--bg-card);
+    border: 1px solid var(--border-light);
+    border-radius: 6px;
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
+.container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 2rem 1.5rem;
+    width: 100%;
+}
+
+.flex-center {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 80vh;
+}
+
+/* ----------------- FORMS ----------------- */
+.form-group {
+    margin-bottom: 1.25rem;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 0.4rem;
+    color: var(--text-primary);
+    font-weight: 600;
+    font-size: 0.85rem;
+}
+
+.form-control {
+    width: 100%;
+    padding: 0.65rem 0.9rem;
+    background-color: #FFFFFF;
+    border: 1px solid var(--border-mid);
+    border-radius: 4px;
+    color: var(--text-primary);
+    font-size: 0.95rem;
+    font-family: inherit;
+    transition: border-color 0.15s ease;
+}
+
+.form-control:focus {
+    outline: none;
+    border-color: #000000;
+    box-shadow: 0 0 0 1px #000000;
+}
+
+/* ----------------- TABLES ----------------- */
+table, .portal-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 0.75rem;
+    font-size: 0.88rem;
+    background: #FFFFFF;
+}
+
+table th, .portal-table th {
+    background-color: var(--bg-subtle);
+    color: var(--text-primary);
+    font-weight: 700;
+    text-transform: uppercase;
+    font-size: 0.75rem;
+    letter-spacing: 0.05em;
+    padding: 0.75rem 1rem;
+    border-top: 1px solid #000000;
+    border-bottom: 2px solid #000000;
+    text-align: left;
+}
+
+table td, .portal-table td {
+    padding: 0.85rem 1rem;
+    border-bottom: 1px solid var(--border-light);
+    color: var(--text-primary);
+    vertical-align: middle;
+}
+
+table tbody tr:hover, .portal-table tbody tr:hover {
+    background-color: var(--bg-hover);
+}
+
+/* ----------------- BADGES ----------------- */
+.badge {
+    display: inline-block;
+    padding: 0.2rem 0.6rem;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    background: var(--bg-subtle);
+    color: var(--text-primary);
+    border: 1px solid var(--border-mid);
+}
+
+.badge-dept {
+    display: inline-block;
+    padding: 0.2rem 0.6rem;
+    background: #000000;
+    color: #FFFFFF;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+}
+
+.badge-excellent, .badge-verygood, .badge-good, .badge-pass {
+    background: #000000;
+    color: #FFFFFF;
+    border: 1px solid #000000;
+}
+
+.badge-warning {
+    background: #FFFFFF;
+    color: #000000;
+    border: 1px dashed #000000;
+}
+
+.badge-danger, .badge-fail {
+    background: #F5F5F5;
+    color: #444444;
+    border: 1px solid #999999;
+}
+
+/* ----------------- RANK BADGE ----------------- */
+.rank-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    font-weight: 700;
+    font-size: 0.85rem;
+    border: 1px solid #000000;
+    background: #FFFFFF;
+    color: #000000;
+}
+
+.rank-1 {
+    background: #000000;
+    color: #FFFFFF;
+}
+
+.rank-2 {
+    background: #333333;
+    color: #FFFFFF;
+}
+
+.rank-3 {
+    background: #666666;
+    color: #FFFFFF;
+}
+
+.rank-normal, .rank-other {
+    background: #FFFFFF;
+    color: #000000;
+}
+
+/* ----------------- SKILL TAGS ----------------- */
+.skill-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35rem;
+}
+
+.skill-pill {
+    background: #FFFFFF;
+    border: 1px solid var(--border-mid);
+    color: var(--text-primary);
+    font-size: 0.75rem;
+    padding: 0.15rem 0.5rem;
+    border-radius: 3px;
+    font-weight: 500;
+}
+
+/* ----------------- FLASH MESSAGES ----------------- */
+.flash-messages {
+    margin-bottom: 1.5rem;
+}
+
+.flash-error, .flash-danger {
+    color: #000000;
+    background: #FFFFFF;
+    padding: 0.85rem 1.25rem;
+    border-radius: 4px;
+    border: 2px solid #000000;
+    font-weight: 600;
+    margin-bottom: 0.75rem;
+}
+
+.flash-success {
+    color: #000000;
+    background: #FAFAFA;
+    padding: 0.85rem 1.25rem;
+    border-radius: 4px;
+    border: 1px solid #000000;
+    font-weight: 600;
+    margin-bottom: 0.75rem;
+}
+
+.flash-info, .flash-warning {
+    color: #000000;
+    background: #FAFAFA;
+    padding: 0.85rem 1.25rem;
+    border-radius: 4px;
+    border: 1px solid var(--border-mid);
+    margin-bottom: 0.75rem;
+}
+
+/* ----------------- METRIC CARDS GRID ----------------- */
+.stat-cards-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+    margin-bottom: 1.75rem;
+}
+
+.metric-card {
+    background: #FFFFFF;
+    border: 1px solid var(--border-light);
+    border-radius: 6px;
+    padding: 1.25rem;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+}
+
+.metric-val {
+    font-size: 1.85rem;
+    font-weight: 700;
+    color: #000000;
+    line-height: 1.1;
+    margin-bottom: 0.35rem;
+}
+
+.metric-label {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-secondary);
+    font-weight: 600;
+}
+
+/* ----------------- PORTAL LAYOUT ----------------- */
+.portal-layout {
+    display: flex;
+    min-height: 100vh;
+    background: #FFFFFF;
+}
+
+/* Sidebar */
+.portal-sidebar {
+    width: 270px;
+    background: #FFFFFF;
+    border-right: 1px solid var(--border-light);
+    display: flex;
+    flex-direction: column;
+    position: sticky;
+    top: 0;
+    height: 100vh;
+    z-index: 50;
+    flex-shrink: 0;
+}
+
+.portal-brand {
+    padding: 1.25rem 1.25rem;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    border-bottom: 1px solid var(--border-light);
+}
+
+.portal-brand-logo-img {
+    width: 44px;
+    height: 44px;
+    object-fit: contain;
+    border-radius: 4px;
+}
+
+.portal-brand-title {
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: #000000;
+    line-height: 1.2;
+}
+
+.portal-brand-subtitle {
+    font-size: 0.72rem;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+.portal-nav {
+    flex: 1;
+    padding: 1rem 0.75rem;
+    overflow-y: auto;
+}
+
+.portal-nav-heading {
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-muted);
+    padding: 0.5rem 0.75rem;
+    font-weight: 700;
+}
+
+.portal-nav-link {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.65rem 0.85rem;
+    color: #333333;
+    text-decoration: none;
+    font-size: 0.88rem;
+    font-weight: 500;
+    border-radius: 4px;
+    margin-bottom: 0.2rem;
+    transition: all 0.15s ease;
+}
+
+.portal-nav-link:hover {
+    background: var(--bg-hover);
+    color: #000000;
+    opacity: 1;
+}
+
+.portal-nav-link.active {
+    background: #000000;
+    color: #FFFFFF !important;
+    font-weight: 600;
+}
+
+.portal-sidebar-footer {
+    padding: 1rem;
+    border-top: 1px solid var(--border-light);
+    background: var(--bg-subtle);
+}
+
+.portal-user-card {
+    margin-bottom: 0.75rem;
+}
+
+.portal-user-name {
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: #000000;
+}
+
+.portal-user-role {
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+}
+
+/* Main Area */
+.portal-main {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    background: #FFFFFF;
+}
+
+.portal-topbar {
+    height: 60px;
+    border-bottom: 1px solid var(--border-light);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 2rem;
+    background: #FFFFFF;
+    position: sticky;
+    top: 0;
+    z-index: 40;
+}
+
+.portal-breadcrumb {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+}
+
+.portal-breadcrumb a {
+    color: var(--text-secondary);
+    text-decoration: none;
+}
+
+.portal-breadcrumb a:hover {
+    color: #000000;
+}
+
+.portal-topbar-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.portal-container {
+    padding: 2rem;
+    max-width: 1300px;
+    margin: 0 auto;
+    width: 100%;
+}
+
+/* Standard Nav Bar for non-portal pages */
+.nav {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.9rem 2rem;
+    background: #FFFFFF;
+    border-bottom: 1px solid var(--border-light);
+}
+
+.nav-brand {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    text-decoration: none;
+    color: #000000;
+    font-weight: 700;
+    font-size: 1.1rem;
+}
+
+.nav-brand img {
+    height: 40px;
+    width: 40px;
+    object-fit: contain;
+}
+
+/* Clean Banner */
+.clean-banner {
+    background: var(--bg-subtle);
+    border: 1px solid var(--border-light);
+    border-left: 4px solid #000000;
+    border-radius: 4px;
+    padding: 1.25rem 1.5rem;
+    margin-bottom: 1.75rem;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .portal-layout {
+        flex-direction: column;
+    }
+    .portal-sidebar {
+        width: 100%;
+        height: auto;
+        position: relative;
+    }
+    .portal-topbar {
+        padding: 0 1rem;
+    }
+    .portal-container {
+        padding: 1rem;
+    }
+}

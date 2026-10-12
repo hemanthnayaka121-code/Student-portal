@@ -1,0 +1,422 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ department.name }} HOD Dashboard - MIT Placement Portal</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+</head>
+<body style="background: #ffffff; color: #000000;">
+    <div style="max-width: 1350px; margin: 0 auto; padding: 2rem 1.5rem;">
+        
+        <!-- Header with College Logo -->
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 2rem; flex-wrap: wrap; gap: 1rem; border-bottom: 1px solid #000; padding-bottom: 1.5rem;">
+            <div style="display: flex; align-items: center; gap: 1rem;">
+                <img src="{{ url_for('static', filename='images/mit_logo.png') }}" alt="MIT Mysore Logo" style="width: 54px; height: 54px; object-fit: contain;">
+                <div>
+                    <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.25rem;">
+                        <span class="badge-dept" style="font-size: 0.85rem; padding: 0.2rem 0.6rem;">{{ department.code }}</span>
+                        <h1 style="font-size: 1.5rem; font-weight: 700; color: #000; margin: 0; text-transform: uppercase;">
+                            {{ department.name }} HOD Dashboard
+                        </h1>
+                    </div>
+                    <p style="color: #666; font-size: 0.85rem; margin: 0;">
+                        Authenticated HOD: <strong style="color: #000;">{{ department.hod_name }}</strong> (<span style="font-family: monospace;">{{ department.hod_id }}</span>)
+                    </p>
+                </div>
+            </div>
+
+            <div style="display: flex; gap: 0.75rem; align-items: center;">
+                <a href="{{ url_for('hod_logout') }}" class="btn" style="font-size: 0.85rem; padding: 0.55rem 1rem; background: #000; color: #fff; border: 1px solid #000;">
+                    Logout HOD
+                </a>
+                <a href="{{ url_for('portal_dashboard') }}" class="btn btn-secondary" style="border: 1px solid #000; color: #000; font-size: 0.85rem; padding: 0.55rem 1rem; background: #fff;">
+                    Main Placement Admin
+                </a>
+            </div>
+        </div>
+
+        <!-- Flashed Messages -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                <div class="flash-messages" style="margin-bottom: 1.5rem;">
+                    {% for category, message in messages %}
+                        <div class="flash-{{ category }}">{{ message }}</div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        {% endwith %}
+
+        <!-- View-Only Security Notice -->
+        <div class="card" style="border: 1px solid #000; border-radius: 4px; padding: 1rem 1.25rem; margin-bottom: 2rem; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.75rem; background: #fafafa;">
+            <div>
+                <strong style="color: #000; font-size: 0.92rem; text-transform: uppercase;">Department Authority: View & Approval</strong>
+                <div style="color: #666; font-size: 0.82rem; margin-top: 2px;">
+                    Approve/reject candidate registrations for {{ department.name }} and review placement analytics. Placement activities and marks are recorded exclusively by the Placement Coordinator.
+                </div>
+            </div>
+            <span class="badge" style="background: #000; color: #fff; font-size: 0.8rem;">
+                {{ department.code }} Department Isolated
+            </span>
+        </div>
+
+        <!-- 1. DEPARTMENT KPI CARDS -->
+        <div class="stat-cards-grid" style="margin-bottom: 2rem;">
+            <div class="metric-card" style="border: 1px solid #000; background: #fff;">
+                <div>
+                    <div class="metric-val" style="color: #000;">{{ stats.total_students }}</div>
+                    <div class="metric-label" style="color: #666;">Total Students</div>
+                </div>
+            </div>
+
+            <div class="metric-card" style="border: 1px solid #000; background: #fff;">
+                <div>
+                    <div class="metric-val" style="color: #000;">{{ stats.eligible_students }}</div>
+                    <div class="metric-label" style="color: #666;">Eligible Students</div>
+                </div>
+            </div>
+
+            <div class="metric-card" style="border: 1px solid #000; background: #fff;">
+                <div>
+                    <div class="metric-val" style="color: #000;">{{ pending_students|length }}</div>
+                    <div class="metric-label" style="color: #666;">Pending Approval</div>
+                </div>
+            </div>
+
+            <div class="metric-card" style="border: 1px solid #000; background: #fff;">
+                <div>
+                    <div class="metric-val" style="color: #000;">{{ approved_students|length }}</div>
+                    <div class="metric-label" style="color: #666;">Approved Students</div>
+                </div>
+            </div>
+
+            <div class="metric-card" style="border: 1px solid #000; background: #fff;">
+                <div>
+                    <div class="metric-val" style="color: #000;">{{ stats.placed_count }}</div>
+                    <div class="metric-label" style="color: #666;">Placed Students</div>
+                </div>
+            </div>
+
+            <div class="metric-card" style="border: 1px solid #000; background: #fff;">
+                <div>
+                    <div class="metric-val" style="color: #000;">{{ stats.unplaced_count }}</div>
+                    <div class="metric-label" style="color: #666;">Unplaced Students</div>
+                </div>
+            </div>
+
+            <div class="metric-card" style="border: 1px solid #000; background: #fff;">
+                <div>
+                    <div class="metric-val" style="color: #000;">{{ stats.placement_pct }}%</div>
+                    <div class="metric-label" style="color: #666;">Placement Rate</div>
+                </div>
+            </div>
+
+            <div class="metric-card" style="border: 1px solid #000; background: #fff;">
+                <div>
+                    <div class="metric-val" style="color: #000;">₹{{ stats.avg_package }} LPA</div>
+                    <div class="metric-label" style="color: #666;">Average Package</div>
+                </div>
+            </div>
+
+            <div class="metric-card" style="border: 1px solid #000; background: #fff;">
+                <div>
+                    <div class="metric-val" style="color: #000;">₹{{ stats.highest_package }} LPA</div>
+                    <div class="metric-label" style="color: #666;">Highest Package</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 2. PENDING PLACEMENT APPROVALS QUEUE (STAGE 2 OF WORKFLOW) -->
+        <div class="card" style="margin-bottom: 2.5rem; border: 1px solid #000; padding: 1.5rem;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem; flex-wrap: wrap; gap: 0.75rem; border-bottom: 1px solid #e5e5e5; padding-bottom: 0.75rem;">
+                <div>
+                    <div style="display: flex; align-items: center; gap: 0.5rem;">
+                        <h3 style="font-size: 1.15rem; font-weight: 700; color: #000; margin: 0; text-transform: uppercase;">
+                            Pending Placement Approvals Queue
+                        </h3>
+                        <span class="badge" style="border: 1px solid #000; color: #000; background: #fff; font-size: 0.8rem;">
+                            {{ pending_students|length }} Pending
+                        </span>
+                    </div>
+                    <p style="color: #666; font-size: 0.85rem; margin: 3px 0 0;">
+                        Students registered by the Placement Coordinator awaiting {{ department.code }} HOD eligibility review.
+                    </p>
+                </div>
+            </div>
+
+            {% if pending_students %}
+            <div style="overflow-x: auto;">
+                <table class="portal-table">
+                    <thead>
+                        <tr>
+                            <th>Student</th>
+                            <th>USN</th>
+                            <th>Department</th>
+                            <th>Semester</th>
+                            <th>CGPA</th>
+                            <th>Skills</th>
+                            <th>Resume</th>
+                            <th>Status</th>
+                            <th style="text-align: right; width: 280px;">HOD Decision</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for st in pending_students %}
+                        <tr>
+                            <td>
+                                <strong>{{ st.name }}</strong>
+                            </td>
+                            <td>
+                                <span style="font-family: monospace; font-weight: 600;">{{ st.usn }}</span>
+                            </td>
+                            <td>
+                                <span class="badge-dept">{{ st.department.code }}</span>
+                            </td>
+                            <td><span>Sem {{ st.semester }}</span></td>
+                            <td><strong>{{ st.cgpa }}</strong></td>
+                            <td>
+                                <div class="skill-tags">
+                                    {% for s in st.skills.split(',') %}
+                                        <span class="skill-pill">{{ s.strip() }}</span>
+                                    {% endfor %}
+                                </div>
+                            </td>
+                            <td>
+                                <span style="font-size: 0.8rem; font-family: monospace;">{{ st.resume }}</span>
+                            </td>
+                            <td>
+                                <span class="badge" style="border: 1px solid #000; color: #000; background: #fafafa;">
+                                    PENDING
+                                </span>
+                            </td>
+                            <td style="text-align: right;">
+                                <div style="display: flex; gap: 0.4rem; justify-content: flex-end;">
+                                    <!-- APPROVE FORM -->
+                                    <form method="POST" action="{{ url_for('hod_approve_student', usn=st.usn) }}" style="display: inline;">
+                                        <button type="submit" class="btn" style="background: #000; color: #fff; font-size: 0.78rem; padding: 0.45rem 0.8rem; font-weight: 600; border: 1px solid #000;">
+                                            APPROVE
+                                        </button>
+                                    </form>
+
+                                    <!-- REJECT BUTTON (TOGGLES REJECTION REASON) -->
+                                    <button type="button" onclick="document.getElementById('reject-form-{{ st.usn }}').style.display='block'" class="btn btn-secondary" style="font-size: 0.78rem; padding: 0.45rem 0.8rem; border: 1px solid #000; color: #000; background: #fff;">
+                                        REJECT
+                                    </button>
+                                </div>
+
+                                <!-- Hidden Rejection Reason Box -->
+                                <div id="reject-form-{{ st.usn }}" style="display: none; margin-top: 0.6rem; text-align: left; background: #fafafa; padding: 0.75rem; border-radius: 4px; border: 1px solid #000;">
+                                    <form method="POST" action="{{ url_for('hod_reject_student', usn=st.usn) }}">
+                                        <label style="font-size: 0.75rem; color: #000; display: block; margin-bottom: 0.25rem; font-weight: 600;">Rejection Reason:</label>
+                                        <input type="text" name="rejection_reason" class="form-control" required placeholder="Reason for rejection..." style="padding: 0.4rem 0.6rem; font-size: 0.8rem; margin-bottom: 0.5rem; border: 1px solid #000;" value="Student has not met the department's placement eligibility criteria.">
+                                        <div style="display: flex; gap: 0.4rem; justify-content: flex-end;">
+                                            <button type="submit" class="btn" style="font-size: 0.75rem; padding: 0.35rem 0.7rem; background: #000; color: #fff; border: 1px solid #000;">Confirm Reject</button>
+                                            <button type="button" onclick="document.getElementById('reject-form-{{ st.usn }}').style.display='none'" class="btn btn-secondary" style="font-size: 0.75rem; padding: 0.35rem 0.7rem; border: 1px solid #000; color: #000; background: #fff;">Cancel</button>
+                                        </div>
+                                    </form>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div style="text-align: center; padding: 1.5rem; color: #666; font-size: 0.9rem;">
+                No pending placement approvals for {{ department.name }} at this time. All students reviewed.
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- 3. PLACEMENT PERFORMANCE GRAPHS (MONOCHROME) -->
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(480px, 1fr)); gap: 1.5rem; margin-bottom: 2.5rem;">
+            <div class="card" style="border: 1px solid #000; padding: 1.5rem;">
+                <h3 style="font-size: 1.1rem; font-weight: 700; color: #000; margin-bottom: 0.35rem; text-transform: uppercase;">
+                    Placement Status & Approval Pipeline
+                </h3>
+                <p style="color: #666; font-size: 0.82rem; margin-bottom: 1rem;">
+                    Status breakdown of all candidates in {{ department.code }}
+                </p>
+                <div id="hodStatusChart" style="height: 320px;"></div>
+            </div>
+
+            <div class="card" style="border: 1px solid #000; padding: 1.5rem;">
+                <h3 style="font-size: 1.1rem; font-weight: 700; color: #000; margin-bottom: 0.35rem; text-transform: uppercase;">
+                    Approved Candidate Performance & Salary (LPA)
+                </h3>
+                <p style="color: #666; font-size: 0.82rem; margin-bottom: 1rem;">
+                    Top approved candidates evaluation score vs highest package received
+                </p>
+                <div id="hodPerformanceChart" style="height: 320px;"></div>
+            </div>
+        </div>
+
+        <!-- 4. STUDENT PLACEMENT LEADERBOARD FOR HOD -->
+        <div class="card" style="border: 1px solid #000; padding: 1.5rem;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem; flex-wrap: wrap; gap: 0.75rem; border-bottom: 1px solid #e5e5e5; padding-bottom: 0.75rem;">
+                <div>
+                    <h3 style="font-size: 1.15rem; font-weight: 700; color: #000; margin-bottom: 0.25rem; text-transform: uppercase;">
+                        {{ department.code }} Student Placement Leaderboard
+                    </h3>
+                    <p style="color: #666; font-size: 0.85rem; margin: 0;">
+                        Approved candidates participating in placement drives. View-only access.
+                    </p>
+                </div>
+
+                <form method="GET" action="{{ url_for('hod_dashboard', dept_code=department.code) }}" style="display: flex; gap: 0.5rem;">
+                    <input type="text" name="search" value="{{ search_query }}" placeholder="Search {{ department.code }} students..." class="form-control" style="padding: 0.45rem 0.85rem; font-size: 0.85rem; width: 220px; border: 1px solid #000;">
+                    <button type="submit" class="btn" style="padding: 0.45rem 0.85rem; font-size: 0.85rem; background: #000; color: #fff; border: 1px solid #000;">Filter</button>
+                    {% if search_query %}
+                        <a href="{{ url_for('hod_dashboard', dept_code=department.code) }}" class="btn btn-secondary" style="padding: 0.45rem 0.75rem; font-size: 0.85rem; border: 1px solid #000; color: #000; background: #fff;">Clear</a>
+                    {% endif %}
+                </form>
+            </div>
+
+            <div style="overflow-x: auto;">
+                <table class="portal-table">
+                    <thead>
+                        <tr>
+                            <th style="width: 70px;">Rank</th>
+                            <th>Student</th>
+                            <th>USN</th>
+                            <th>Placement Score</th>
+                            <th>Status</th>
+                            <th>Package</th>
+                            <th style="text-align: right;">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for student in approved_students %}
+                        <tr onclick="window.location.href='{{ url_for('hod_student_view', usn=student.usn) }}'" style="cursor: pointer;">
+                            <td>
+                                <span class="rank-badge rank-normal" style="border: 1px solid #000; background: #fff; color: #000;">
+                                    {{ loop.index }}
+                                </span>
+                            </td>
+                            <td>
+                                <div style="font-weight: 700;">{{ student.name }}</div>
+                                <div style="font-size: 0.78rem; color: #666;">CGPA: {{ student.cgpa }} | Sem {{ student.semester }}</div>
+                            </td>
+                            <td>
+                                <span style="font-family: monospace; font-weight: 600;">{{ student.usn }}</span>
+                            </td>
+                            <td>
+                                <div style="font-weight: 700; font-size: 1rem;">
+                                    {{ student.placement_score }} / 100
+                                </div>
+                                <span class="badge" style="border: 1px solid #000; font-size: 0.7rem; padding: 0.15rem 0.45rem; background: #fff; color: #000;">
+                                    {{ student.placement_level }}
+                                </span>
+                            </td>
+                            <td>
+                                {% if student.placement_status == 'Placed' %}
+                                    <span class="badge" style="background: #000; color: #fff;">
+                                        Placed ({{ student.offers_count }} Offers)
+                                    </span>
+                                {% else %}
+                                    <span class="badge" style="border: 1px solid #000; color: #000; background: #fff;">
+                                        {{ student.placement_status }}
+                                    </span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if student.highest_package > 0 %}
+                                    <strong style="font-size: 1rem;">₹{{ student.highest_package }} LPA</strong>
+                                    <div style="font-size: 0.72rem; color: #666;">Avg: ₹{{ student.average_package }} LPA</div>
+                                {% else %}
+                                    <span style="color: #999;">—</span>
+                                {% endif %}
+                            </td>
+                            <td style="text-align: right;">
+                                <span class="btn" style="font-size: 0.75rem; padding: 0.3rem 0.65rem; background: #000; color: #fff; border: 1px solid #000;">
+                                    View Profile
+                                </span>
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="7" style="text-align: center; padding: 2rem; color: #666;">
+                                No approved placement candidates found for {{ department.name }}.
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Plotly Charts Script (Monochrome) -->
+    <script>
+        const chartData = {{ chart_data | safe }};
+
+        // 1. Donut Chart for Status (Monochrome)
+        const statusTrace = {
+            values: chartData.status_counts,
+            labels: chartData.status_labels,
+            type: 'pie',
+            hole: 0.55,
+            marker: {
+                colors: ['#000000', '#666666', '#aaaaaa', '#e5e5e5']
+            },
+            textinfo: 'label+value',
+            hoverinfo: 'label+percent+value',
+            textfont: { color: '#000000', size: 12 }
+        };
+
+        const statusLayout = {
+            paper_bgcolor: '#ffffff',
+            plot_bgcolor: '#ffffff',
+            margin: { t: 20, b: 20, l: 20, r: 20 },
+            showlegend: true,
+            legend: {
+                font: { color: '#000000' },
+                orientation: 'h',
+                y: -0.15
+            }
+        };
+
+        Plotly.newPlot('hodStatusChart', [statusTrace], statusLayout, { responsive: true, displayModeBar: false });
+
+        // 2. Bar Chart for Performance & Salary (Monochrome)
+        const perfTraceScore = {
+            x: chartData.student_names,
+            y: chartData.scores,
+            name: 'Placement Score (/100)',
+            type: 'bar',
+            marker: { color: '#000000' }
+        };
+
+        const perfTracePkg = {
+            x: chartData.student_names,
+            y: chartData.packages,
+            name: 'Package (LPA)',
+            type: 'bar',
+            marker: { color: '#777777' }
+        };
+
+        const perfLayout = {
+            paper_bgcolor: '#ffffff',
+            plot_bgcolor: '#ffffff',
+            margin: { t: 20, b: 40, l: 40, r: 20 },
+            barmode: 'group',
+            xaxis: {
+                tickfont: { color: '#000000', size: 10 }
+            },
+            yaxis: {
+                tickfont: { color: '#000000', size: 10 },
+                gridcolor: '#e5e5e5'
+            },
+            legend: {
+                font: { color: '#000000' },
+                orientation: 'h',
+                y: 1.15
+            }
+        };
+
+        Plotly.newPlot('hodPerformanceChart', [perfTraceScore, perfTracePkg], perfLayout, { responsive: true, displayModeBar: false });
+    </script>
+</body>
+</html>

@@ -1,0 +1,105 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+    <div>
+        <h1>Welcome, {{ student.name }}</h1>
+        <p style="color: var(--text-muted);">USN: {{ student.usn }} | Department: {{ student.department.name }}</p>
+    </div>
+    <div style="text-align: right;">
+        <p style="font-size: 0.9rem; color: var(--text-muted);">Overall Aggregate</p>
+        {% if perf %}
+            <h2 style="color: var(--primary); font-size: 2.5rem;">{{ "%.2f"|format(perf.overall_aggregate) }}</h2>
+        {% else %}
+            <h2>N/A</h2>
+        {% endif %}
+    </div>
+</div>
+
+<div class="glass-panel" style="margin-bottom: 2rem;">
+    <h2>Your Performance Metrics</h2>
+    {% if perf %}
+    <table>
+        <thead>
+            <tr>
+                <th>Round</th>
+                <th>Score / Status</th>
+                <th>Assessment</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>Aptitude</td>
+                <td>{{ perf.aptitude_score }}</td>
+                <td>
+                    {% if perf.aptitude_score >= 50 %}
+                        <span class="badge badge-pass">Strong</span>
+                    {% else %}
+                        <span class="badge badge-fail">Needs Improvement</span>
+                    {% endif %}
+                </td>
+            </tr>
+            <tr>
+                <td>Group Discussion</td>
+                <td>{{ 'Pass' if perf.gd_status else 'Fail' }}</td>
+                <td>
+                    <span class="badge {% if perf.gd_status %}badge-pass{% else %}badge-fail{% endif %}">
+                        {{ 'Satisfactory' if perf.gd_status else 'Focus Area' }}
+                    </span>
+                </td>
+            </tr>
+            <tr>
+                <td>HR Round</td>
+                <td>{{ 'Pass' if perf.hr_status else 'Fail' }}</td>
+                <td>
+                    <span class="badge {% if perf.hr_status %}badge-pass{% else %}badge-fail{% endif %}">
+                        {{ 'Satisfactory' if perf.hr_status else 'Focus Area' }}
+                    </span>
+                </td>
+            </tr>
+            <tr>
+                <td>Coding (C/Java/DSA)</td>
+                <td>{{ perf.coding_c_score }} / {{ perf.coding_java_score }} / {{ perf.coding_dsa_score }}</td>
+                <td>
+                    {% if perf.coding_c_score >= 50 and perf.coding_java_score >= 50 and perf.coding_dsa_score >= 50 %}
+                        <span class="badge badge-pass">Strong</span>
+                    {% else %}
+                        <span class="badge badge-fail">Needs Improvement</span>
+                    {% endif %}
+                </td>
+            </tr>
+        </tbody>
+    </table>
+    {% else %}
+        <p style="color: var(--text-muted);">No performance records available yet.</p>
+    {% endif %}
+</div>
+
+{% if weaknesses %}
+<div class="glass-panel" style="border-color: rgba(239, 68, 68, 0.3);">
+    <h2 style="color: var(--danger); margin-bottom: 1rem;">Action Plan & Solution Hub</h2>
+    <p style="margin-bottom: 1.5rem;">Based on your recent performance, we identified areas for improvement. Here are curated resources to help you upskill:</p>
+    
+    <div class="grid">
+        {% for res in resources %}
+        <div class="glass-panel resource-card">
+            <h3>{{ res.topic }}</h3>
+            <p><strong>Faculty Mentor:</strong><br> {{ res.faculty_contact }}</p>
+            <p><strong>Recommended Course:</strong><br> {{ res.course_recommendation }}</p>
+            <div style="margin-top: 1rem;">
+                <a href="{{ res.video_url }}" target="_blank" class="btn" style="padding: 0.5rem 1rem; font-size: 0.9rem;">Watch Tutorial Video</a>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% else %}
+    {% if perf %}
+    <div class="glass-panel" style="border-color: rgba(16, 185, 129, 0.3); text-align: center;">
+        <h2 style="color: var(--success); margin-bottom: 0.5rem;">Outstanding Performance!</h2>
+        <p>You are currently passing all rounds effectively. Keep practicing advanced coding problems and interview scenarios.</p>
+    </div>
+    {% endif %}
+{% endif %}
+
+{% endblock %}

@@ -1,0 +1,151 @@
+{% extends 'portal_base.html' %}
+
+{% block title %}Principal Section - College Placement Performance{% endblock %}
+{% block breadcrumb %}Principal View{% endblock %}
+
+{% block portal_content %}
+
+<!-- Header -->
+<div style="margin-bottom: 2rem;">
+    <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.5rem;">
+        <span style="font-size: 2rem;">👑</span>
+        <div>
+            <h2 style="font-size: 1.75rem; font-weight: 700; color: #fff;">College Placement Executive Overview</h2>
+            <p style="color: var(--text-muted); font-size: 0.9rem;">
+                Official institutional placement records for the Principal and Governing Council
+            </p>
+        </div>
+    </div>
+</div>
+
+<!-- College-Level Metrics Required in Prompt Section 3 -->
+<div class="stat-cards-grid">
+    <div class="metric-card">
+        <div class="metric-icon-box" style="background: rgba(59, 130, 246, 0.15); color: #60a5fa;">👥</div>
+        <div>
+            <div class="metric-val">{{ metrics.total_students }}</div>
+            <div class="metric-label">Total Students</div>
+        </div>
+    </div>
+
+    <div class="metric-card">
+        <div class="metric-icon-box" style="background: rgba(16, 185, 129, 0.15); color: #34d399;">🎓</div>
+        <div>
+            <div class="metric-val">{{ metrics.placed_count }}</div>
+            <div class="metric-label">Total Placed Students</div>
+        </div>
+    </div>
+
+    <div class="metric-card">
+        <div class="metric-icon-box" style="background: rgba(239, 68, 68, 0.15); color: #f87171;">⏳</div>
+        <div>
+            <div class="metric-val">{{ metrics.unplaced_count }}</div>
+            <div class="metric-label">Total Unplaced Students</div>
+        </div>
+    </div>
+
+    <div class="metric-card">
+        <div class="metric-icon-box" style="background: rgba(245, 158, 11, 0.15); color: #fbbf24;">📊</div>
+        <div>
+            <div class="metric-val">{{ metrics.placement_pct }}%</div>
+            <div class="metric-label">Overall Placement %</div>
+        </div>
+    </div>
+
+    <div class="metric-card">
+        <div class="metric-icon-box" style="background: rgba(14, 165, 233, 0.15); color: #38bdf8;">🏢</div>
+        <div>
+            <div class="metric-val">{{ metrics.total_companies }}</div>
+            <div class="metric-label">Total Companies</div>
+        </div>
+    </div>
+
+    <div class="metric-card">
+        <div class="metric-icon-box" style="background: rgba(236, 72, 153, 0.15); color: #f472b6;">📄</div>
+        <div>
+            <div class="metric-val">{{ metrics.total_offers }}</div>
+            <div class="metric-label">Total Offers</div>
+        </div>
+    </div>
+
+    <div class="metric-card">
+        <div class="metric-icon-box" style="background: rgba(168, 85, 247, 0.15); color: #c084fc;">💎</div>
+        <div>
+            <div class="metric-val">₹{{ metrics.max_package }} LPA</div>
+            <div class="metric-label">Highest Package</div>
+        </div>
+    </div>
+
+    <div class="metric-card">
+        <div class="metric-icon-box" style="background: rgba(16, 185, 129, 0.15); color: #6ee7b7;">📈</div>
+        <div>
+            <div class="metric-val">₹{{ metrics.overall_avg_package }} LPA</div>
+            <div class="metric-label">Average Package</div>
+        </div>
+    </div>
+</div>
+
+<!-- Department-Wise Placement Performance Comparison -->
+<div class="glass-panel" style="margin-bottom: 2rem;">
+    <div style="margin-bottom: 1.25rem;">
+        <h3 style="font-size: 1.25rem; font-weight: 700; color: #fff;">
+            College-Wide Department Placement Performance
+        </h3>
+        <p style="color: var(--text-muted); font-size: 0.85rem;">
+            Comparative analysis of placement outcomes across all academic departments
+        </p>
+    </div>
+
+    <div style="overflow-x: auto;">
+        <table class="portal-table">
+            <thead>
+                <tr>
+                    <th>Rank</th>
+                    <th>Department</th>
+                    <th>Total Students</th>
+                    <th>Placed</th>
+                    <th>Unplaced</th>
+                    <th>Placement Rate</th>
+                    <th>Avg Package</th>
+                    <th>Highest Package</th>
+                    <th>Total Offers</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for dept in dept_leaderboard %}
+                <tr onclick="window.location.href='{{ url_for('portal_department_leaderboard', dept_code=dept.code) }}'">
+                    <td>
+                        <span class="rank-badge {% if loop.index == 1 %}rank-1{% elif loop.index == 2 %}rank-2{% elif loop.index == 3 %}rank-3{% else %}rank-normal{% endif %}">
+                            {{ loop.index }}
+                        </span>
+                    </td>
+                    <td>
+                        <div style="font-weight: 600; color: #fff;">{{ dept.name }}</div>
+                        <span class="badge-dept">{{ dept.code }}</span>
+                    </td>
+                    <td><strong style="color: #cbd5e1;">{{ dept.total_students }}</strong></td>
+                    <td><strong style="color: #34d399;">{{ dept.placed_count }}</strong></td>
+                    <td><span style="color: #f87171;">{{ dept.unplaced_count }}</span></td>
+                    <td>
+                        <div style="font-weight: 700; color: #34d399;">{{ dept.placement_pct }}%</div>
+                        <div class="score-bar-container">
+                            <div class="score-bar-fill" style="width: {{ dept.placement_pct }}%;"></div>
+                        </div>
+                    </td>
+                    <td><strong style="color: #facc15;">₹{{ dept.avg_package }} LPA</strong></td>
+                    <td><strong style="color: #f43f5e;">₹{{ dept.highest_package }} LPA</strong></td>
+                    <td><span style="color: #c084fc; font-weight: 600;">{{ dept.total_offers }}</span></td>
+                    <td>
+                        <span class="action-link" style="font-size: 0.8rem; padding: 0.25rem 0.6rem;">
+                            Review ➔
+                        </span>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+{% endblock %}

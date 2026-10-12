@@ -1,0 +1,227 @@
+{% extends 'portal_base.html' %}
+
+{% block title %}{{ student.name }} ({{ student.usn }}) - Student Details{% endblock %}
+{% block breadcrumb %}Student Profile: {{ student.usn }}{% endblock %}
+
+{% block portal_content %}
+
+<!-- Back Navigation -->
+<div style="margin-bottom: 1.5rem;">
+    <a href="{{ url_for('portal_department_leaderboard', dept_code=student.department.code) }}" class="btn btn-secondary" style="border: 1px solid #000; color: #000; font-size: 0.85rem; padding: 0.45rem 1rem; display: inline-block; background: #fff;">
+        Back to Department Leaderboard
+    </a>
+</div>
+
+<!-- Header Card -->
+<div class="card" style="margin-bottom: 2rem; border: 1px solid #000; padding: 1.5rem; background: #fafafa;">
+    <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 1rem;">
+        <div>
+            <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.35rem;">
+                <h2 style="font-size: 1.65rem; font-weight: 700; color: #000; margin: 0;">{{ student.name }}</h2>
+                <span class="badge-dept" style="font-size: 0.85rem; padding: 0.2rem 0.6rem;">{{ student.department.code }}</span>
+            </div>
+            <p style="color: #666; font-size: 0.9rem; margin: 0;">
+                USN: <strong style="color: #000; font-family: monospace;">{{ student.usn }}</strong> | {{ student.department.name }} | Semester {{ student.semester }}
+            </p>
+        </div>
+
+        <div style="display: flex; gap: 0.5rem; align-items: center;">
+            <span class="badge" style="background: #000; color: #fff; font-size: 0.85rem; padding: 0.4rem 0.85rem;">
+                {{ student.placement_status }}
+            </span>
+        </div>
+    </div>
+</div>
+
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(360px, 1fr)); gap: 1.75rem; margin-bottom: 2rem;">
+
+    <!-- 1. STUDENT PROFILE -->
+    <div class="card" style="border: 1px solid #000; padding: 1.5rem;">
+        <div style="margin-bottom: 1.25rem; border-bottom: 1px solid #e5e5e5; padding-bottom: 0.75rem;">
+            <h3 style="font-size: 1.1rem; font-weight: 700; color: #000; margin: 0; text-transform: uppercase;">Student Profile</h3>
+        </div>
+
+        <div style="display: flex; flex-direction: column; gap: 0.85rem; font-size: 0.9rem;">
+            <div style="display: flex; justify-content: space-between; border-bottom: 1px solid #f0f0f0; padding-bottom: 0.4rem;">
+                <span style="color: #666;">Full Name:</span>
+                <strong style="color: #000;">{{ student.name }}</strong>
+            </div>
+
+            <div style="display: flex; justify-content: space-between; border-bottom: 1px solid #f0f0f0; padding-bottom: 0.4rem;">
+                <span style="color: #666;">USN:</span>
+                <strong style="color: #000; font-family: monospace;">{{ student.usn }}</strong>
+            </div>
+
+            <div style="display: flex; justify-content: space-between; border-bottom: 1px solid #f0f0f0; padding-bottom: 0.4rem;">
+                <span style="color: #666;">Department:</span>
+                <strong style="color: #000;">{{ student.department.name }} ({{ student.department.code }})</strong>
+            </div>
+
+            <div style="display: flex; justify-content: space-between; border-bottom: 1px solid #f0f0f0; padding-bottom: 0.4rem;">
+                <span style="color: #666;">Semester:</span>
+                <strong style="color: #000;">Semester {{ student.semester }}</strong>
+            </div>
+
+            <div style="display: flex; justify-content: space-between; border-bottom: 1px solid #f0f0f0; padding-bottom: 0.4rem;">
+                <span style="color: #666;">CGPA:</span>
+                <strong style="color: #000;">{{ student.cgpa }} / 10.0</strong>
+            </div>
+
+            <div style="border-bottom: 1px solid #f0f0f0; padding-bottom: 0.4rem;">
+                <div style="color: #666; margin-bottom: 0.35rem;">Skills:</div>
+                <div class="skill-tags">
+                    {% for s in student.skills.split(',') %}
+                        <span class="skill-pill">{{ s.strip() }}</span>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <div style="border-bottom: 1px solid #f0f0f0; padding-bottom: 0.4rem;">
+                <div style="color: #666; margin-bottom: 0.35rem;">Projects:</div>
+                <div style="color: #000; font-size: 0.88rem; background: #fafafa; padding: 0.65rem; border-radius: 4px; border: 1px solid #e5e5e5;">
+                    {{ student.projects }}
+                </div>
+            </div>
+
+            <div>
+                <div style="color: #666; margin-bottom: 0.35rem;">Certifications:</div>
+                <div style="color: #000; font-size: 0.88rem; background: #fafafa; padding: 0.65rem; border-radius: 4px; border: 1px solid #e5e5e5;">
+                    {{ student.certifications }}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 2. PLACEMENT INFORMATION -->
+    <div class="card" style="border: 1px solid #000; padding: 1.5rem;">
+        <div style="margin-bottom: 1.25rem; border-bottom: 1px solid #e5e5e5; padding-bottom: 0.75rem;">
+            <h3 style="font-size: 1.1rem; font-weight: 700; color: #000; margin: 0; text-transform: uppercase;">Placement Information</h3>
+        </div>
+
+        <div style="display: flex; flex-direction: column; gap: 0.85rem; font-size: 0.9rem;">
+            <div style="display: flex; justify-content: space-between; border-bottom: 1px solid #f0f0f0; padding-bottom: 0.4rem;">
+                <span style="color: #666;">Companies Attended:</span>
+                <strong style="color: #000;">{{ student.companies_attended }}</strong>
+            </div>
+
+            <div style="display: flex; justify-content: space-between; border-bottom: 1px solid #f0f0f0; padding-bottom: 0.4rem;">
+                <span style="color: #666;">Companies Selected:</span>
+                <strong style="color: #000;">{{ student.companies_selected }}</strong>
+            </div>
+
+            <div style="display: flex; justify-content: space-between; border-bottom: 1px solid #f0f0f0; padding-bottom: 0.4rem;">
+                <span style="color: #666;">Placement Status:</span>
+                <span class="badge" style="border: 1px solid #000; background: #fff; color: #000;">
+                    {{ student.placement_status }}
+                </span>
+            </div>
+
+            <div style="display: flex; justify-content: space-between; border-bottom: 1px solid #f0f0f0; padding-bottom: 0.4rem;">
+                <span style="color: #666;">Number of Offers:</span>
+                <strong style="color: #000;">{{ student.offers_count }}</strong>
+            </div>
+
+            <div style="display: flex; justify-content: space-between; border-bottom: 1px solid #f0f0f0; padding-bottom: 0.4rem;">
+                <span style="color: #666;">Highest Package:</span>
+                <strong style="color: #000;">₹{{ student.highest_package }} LPA</strong>
+            </div>
+
+            <div style="display: flex; justify-content: space-between;">
+                <span style="color: #666;">Average Package:</span>
+                <strong style="color: #000;">₹{{ student.average_package }} LPA</strong>
+            </div>
+        </div>
+
+        <!-- Placement Drives History -->
+        {% if activities %}
+        <div style="margin-top: 1.5rem; padding-top: 1rem; border-top: 1px solid #e5e5e5;">
+            <div style="font-weight: 700; color: #000; font-size: 0.85rem; margin-bottom: 0.75rem; text-transform: uppercase;">
+                Attended Recruitment Drives:
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+                {% for act in activities %}
+                <div style="background: #fafafa; padding: 0.65rem 0.85rem; border-radius: 4px; border: 1px solid #e5e5e5; display: flex; justify-content: space-between; align-items: center; font-size: 0.85rem;">
+                    <div>
+                        <strong style="color: #000;">{{ act.company_name }}</strong>
+                        <span style="color: #666; font-size: 0.78rem; margin-left: 0.35rem;">({{ act.job_role }})</span>
+                    </div>
+                    <div style="text-align: right;">
+                        <span style="color: #000; font-weight: 700;">₹{{ act.package }} LPA</span>
+                        <span style="font-size: 0.72rem; color: #666; display: block;">{{ act.drive_date }}</span>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+</div>
+
+<!-- 3. PLACEMENT PERFORMANCE MARKS -->
+<div class="card" style="margin-bottom: 2rem; border: 1px solid #000; padding: 1.5rem;">
+    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.5rem; border-bottom: 1px solid #e5e5e5; padding-bottom: 0.75rem; flex-wrap: wrap; gap: 1rem;">
+        <div>
+            <h3 style="font-size: 1.15rem; font-weight: 700; color: #000; margin: 0; text-transform: uppercase;">
+                Placement Performance Breakdown
+            </h3>
+        </div>
+
+        <div style="display: flex; align-items: center; gap: 1rem;">
+            <div>
+                <span style="color: #666; font-size: 0.8rem; text-transform: uppercase;">Level:</span>
+                <span class="badge" style="border: 1px solid #000; font-size: 0.8rem; background: #fff; color: #000; margin-left: 0.35rem;">
+                    {{ student.placement_level }}
+                </span>
+            </div>
+            <div style="background: #fafafa; border: 1px solid #000; padding: 0.35rem 0.8rem; border-radius: 4px;">
+                <span style="color: #666; font-size: 0.8rem; text-transform: uppercase;">Score:</span>
+                <strong style="color: #000; font-size: 1.05rem; margin-left: 0.35rem;">{{ student.placement_score }} / 100</strong>
+            </div>
+        </div>
+    </div>
+
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1.25rem;">
+        
+        <!-- Aptitude Marks -->
+        <div style="background: #fafafa; padding: 1.1rem; border-radius: 4px; border: 1px solid #e5e5e5;">
+            <div style="color: #666; font-size: 0.8rem; margin-bottom: 0.35rem; text-transform: uppercase;">Aptitude Marks</div>
+            <div style="font-size: 1.5rem; font-weight: 700; color: #000;">
+                {{ perf.aptitude_score if perf else 0 }} / 100
+            </div>
+        </div>
+
+        <!-- Coding Marks -->
+        <div style="background: #fafafa; padding: 1.1rem; border-radius: 4px; border: 1px solid #e5e5e5;">
+            <div style="color: #666; font-size: 0.8rem; margin-bottom: 0.35rem; text-transform: uppercase;">Coding Marks (Avg)</div>
+            <div style="font-size: 1.5rem; font-weight: 700; color: #000;">
+                {{ perf.coding_overall_score if perf else 0 }} / 100
+            </div>
+            <div style="font-size: 0.72rem; color: #666; margin-top: 0.35rem;">
+                C: {{ perf.coding_c_score if perf else 0 }} | Java: {{ perf.coding_java_score if perf else 0 }} | DSA: {{ perf.coding_dsa_score if perf else 0 }}
+            </div>
+        </div>
+
+        <!-- Technical Marks -->
+        <div style="background: #fafafa; padding: 1.1rem; border-radius: 4px; border: 1px solid #e5e5e5;">
+            <div style="color: #666; font-size: 0.8rem; margin-bottom: 0.35rem; text-transform: uppercase;">Technical Interview Marks</div>
+            <div style="font-size: 1.5rem; font-weight: 700; color: #000;">
+                {{ perf.technical_interview_score if perf else 0 }} / 100
+            </div>
+        </div>
+
+        <!-- Interview Marks (HR & GD) -->
+        <div style="background: #fafafa; padding: 1.1rem; border-radius: 4px; border: 1px solid #e5e5e5;">
+            <div style="color: #666; font-size: 0.8rem; margin-bottom: 0.35rem; text-transform: uppercase;">Interview / HR Marks</div>
+            <div style="font-size: 1.5rem; font-weight: 700; color: #000;">
+                {{ perf.hr_score if perf else 0 }} / 100
+            </div>
+            <div style="font-size: 0.72rem; color: #666; margin-top: 0.35rem;">
+                GD Cleared: {{ 'Yes' if perf and perf.gd_status else 'No' }} | HR Cleared: {{ 'Yes' if perf and perf.hr_status else 'No' }}
+            </div>
+        </div>
+
+    </div>
+</div>
+
+{% endblock %}

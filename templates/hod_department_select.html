@@ -1,0 +1,68 @@
+{% extends 'portal_base.html' %}
+
+{% block title %}Department HOD Access - MIT Placement Portal{% endblock %}
+{% block breadcrumb %}Department HOD Access{% endblock %}
+
+{% block portal_content %}
+
+<div style="max-width: 520px; margin: 2rem auto;">
+    
+    <!-- Generic Notice Banner (No department data exposed) -->
+    <div class="card" style="padding: 2.25rem 2rem; border: 1px solid #000; text-align: center; background: #fff;">
+        
+        <img src="{{ url_for('static', filename='images/mit_logo.png') }}" alt="MIT Mysore Logo" style="width: 75px; height: 75px; object-fit: contain; margin: 0 auto 1.25rem; display: block;">
+
+        <h2 style="font-size: 1.4rem; font-weight: 700; color: #000; margin-bottom: 0.5rem; letter-spacing: 0.5px; text-transform: uppercase;">
+            Department HOD Access
+        </h2>
+
+        <p style="color: #666; font-size: 0.9rem; line-height: 1.5; margin-bottom: 1.75rem;">
+            Please authenticate with your assigned HOD credentials to access your department portal.
+        </p>
+
+        <!-- Secure HOD Authentication Form -->
+        <div style="text-align: left; background: #fafafa; padding: 1.5rem; border: 1px solid #e5e5e5; border-radius: 4px; margin-bottom: 1.5rem;">
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.25rem; border-bottom: 1px solid #e5e5e5; padding-bottom: 0.75rem;">
+                <span style="font-weight: 700; color: #000; font-size: 0.95rem;">
+                    HOD Authentication
+                </span>
+                <span class="badge" style="background: #000; color: #fff; font-size: 0.7rem; padding: 2px 6px;">
+                    Department Isolation
+                </span>
+            </div>
+
+            <form method="POST" action="{{ url_for('hod_login') }}">
+                <div class="form-group" style="margin-bottom: 1.25rem;">
+                    <label for="hod_user" style="font-weight: 600; color: #000; font-size: 0.85rem; display: block; margin-bottom: 0.35rem;">
+                        User ID
+                    </label>
+                    <input type="text" id="hod_user" name="username" class="form-control" required 
+                           placeholder="Enter HOD User ID"
+                           style="padding: 0.65rem 0.75rem; font-size: 0.95rem; border: 1px solid #000; background: #fff; color: #000;">
+                </div>
+
+                <div class="form-group" style="margin-bottom: 1.5rem;">
+                    <label for="hod_pass" style="font-weight: 600; color: #000; font-size: 0.85rem; display: block; margin-bottom: 0.35rem;">
+                        Password
+                    </label>
+                    <input type="password" id="hod_pass" name="password" class="form-control" required 
+                           placeholder="Enter HOD password"
+                           style="padding: 0.65rem 0.75rem; font-size: 0.95rem; border: 1px solid #000; background: #fff; color: #000;">
+                </div>
+
+                <button type="submit" class="btn" style="width: 100%; font-size: 0.95rem; padding: 0.75rem; font-weight: 600; background: #000; color: #fff; border: 1px solid #000;">
+                    LOGIN AS HOD
+                </button>
+            </form>
+        </div>
+
+        <!-- Security Notice -->
+        <div style="font-size: 0.78rem; color: #666; line-height: 1.5; border-top: 1px solid #eee; padding-top: 1rem;">
+            Department student records, approval queues, and placement statistics are strictly isolated to authenticated department heads.
+        </div>
+
+    </div>
+
+</div>
+
+{% endblock %}

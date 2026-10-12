@@ -1,0 +1,286 @@
+{% extends 'portal_base.html' %}
+
+{% block title %}Department Placement Performance - MIT Placement Portal{% endblock %}
+{% block breadcrumb %}Department Placement Performance{% endblock %}
+
+{% block portal_content %}
+
+<!-- Header -->
+<div style="margin-bottom: 2rem;">
+    <h2 style="font-size: 1.5rem; font-weight: 700; color: #000; text-transform: uppercase;">Department Placement Performance Leaderboard</h2>
+    <p style="color: #666; font-size: 0.88rem; margin: 3px 0 0;">
+        Real-time comparative performance analytics across all 10 departments. Click any department to drill down into its student leaderboard.
+    </p>
+</div>
+
+<!-- Dominating Department Banner -->
+<div class="card" id="dominatingDeptCard" style="border: 1px solid #000; margin-bottom: 2rem; padding: 1.5rem; background: #fafafa;">
+    <div style="margin-bottom: 0.75rem;">
+        <span class="badge" style="background: #000; color: #fff; font-size: 0.75rem; text-transform: uppercase;">
+            Top Performing Department
+        </span>
+    </div>
+    
+    <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 1rem; border-bottom: 1px solid #e5e5e5; padding-bottom: 1rem; margin-bottom: 1.25rem;">
+        <div>
+            <h2 id="domDeptName" style="font-size: 1.5rem; font-weight: 700; color: #000; margin-bottom: 0.35rem; text-transform: uppercase;">
+                {{ dominating_dept.name }}
+            </h2>
+            <p style="color: #666; font-size: 0.85rem; margin: 0;">
+                Department Code: <span id="domDeptCode" class="badge-dept">{{ dominating_dept.code }}</span> | Leading in <span id="domDeptReason" style="color: #000; font-weight: 700;">Overall Placement Performance</span>
+            </p>
+        </div>
+
+        <a id="domDeptLink" href="{{ url_for('portal_department_leaderboard', dept_code=dominating_dept.code) }}" class="btn btn-secondary" style="border: 1px solid #000; color: #000; font-size: 0.85rem; padding: 0.55rem 1.15rem; background: #fff;">
+            View {{ dominating_dept.code }} Student Leaderboard
+        </a>
+    </div>
+
+    <!-- Dominating Stats Row -->
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 1rem;">
+        <div style="background: #fff; border: 1px solid #e5e5e5; padding: 0.85rem; border-radius: 4px;">
+            <div style="color: #666; font-size: 0.75rem; text-transform: uppercase;">Placement Rate</div>
+            <div id="domPlacementPct" style="font-size: 1.3rem; font-weight: 700; color: #000;">{{ dominating_dept.placement_pct }}%</div>
+        </div>
+        <div style="background: #fff; border: 1px solid #e5e5e5; padding: 0.85rem; border-radius: 4px;">
+            <div style="color: #666; font-size: 0.75rem; text-transform: uppercase;">Placed Students</div>
+            <div id="domPlacedCount" style="font-size: 1.3rem; font-weight: 700; color: #000;">{{ dominating_dept.placed_count }} / {{ dominating_dept.total_students }}</div>
+        </div>
+        <div style="background: #fff; border: 1px solid #e5e5e5; padding: 0.85rem; border-radius: 4px;">
+            <div style="color: #666; font-size: 0.75rem; text-transform: uppercase;">Average Package</div>
+            <div id="domAvgPkg" style="font-size: 1.3rem; font-weight: 700; color: #000;">₹{{ dominating_dept.avg_package }} LPA</div>
+        </div>
+        <div style="background: #fff; border: 1px solid #e5e5e5; padding: 0.85rem; border-radius: 4px;">
+            <div style="color: #666; font-size: 0.75rem; text-transform: uppercase;">Highest Package</div>
+            <div id="domHighestPkg" style="font-size: 1.3rem; font-weight: 700; color: #000;">₹{{ dominating_dept.highest_package }} LPA</div>
+        </div>
+        <div style="background: #fff; border: 1px solid #e5e5e5; padding: 0.85rem; border-radius: 4px;">
+            <div style="color: #666; font-size: 0.75rem; text-transform: uppercase;">Total Offers</div>
+            <div id="domOffers" style="font-size: 1.3rem; font-weight: 700; color: #000;">{{ dominating_dept.total_offers }}</div>
+        </div>
+    </div>
+</div>
+
+<!-- Interactive Department Performance Graph -->
+<div class="card" style="border: 1px solid #000; padding: 1.5rem; margin-bottom: 2rem;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem; flex-wrap: wrap; gap: 1rem; border-bottom: 1px solid #e5e5e5; padding-bottom: 0.75rem;">
+        <div>
+            <h3 style="font-size: 1.15rem; font-weight: 700; color: #000; margin: 0; text-transform: uppercase;">
+                Department Performance Graphical Visualization
+            </h3>
+            <p style="color: #666; font-size: 0.85rem; margin: 3px 0 0;">
+                Select performance metric to update the chart and determine leading departments
+            </p>
+        </div>
+
+        <div style="display: flex; align-items: center; gap: 0.65rem;">
+            <label for="metricSelect" style="color: #000; font-size: 0.85rem; font-weight: 600;">Metric:</label>
+            <select id="metricSelect" class="form-control" style="width: auto; min-width: 200px; border: 1px solid #000; font-size: 0.85rem;" onchange="switchMetric(this.value)">
+                <option value="placed_count">Placed Students</option>
+                <option value="placement_pct">Placement Percentage</option>
+                <option value="avg_package">Average Package</option>
+                <option value="highest_package">Highest Package</option>
+                <option value="total_offers">Total Offers</option>
+                <option value="avg_score">Overall Placement Score</option>
+            </select>
+        </div>
+    </div>
+
+    <div id="deptPerformanceChart" style="height: 400px; width: 100%;"></div>
+</div>
+
+<!-- Complete Department Comparison Leaderboard Table -->
+<div class="card" style="border: 1px solid #000; padding: 1.5rem;">
+    <div style="margin-bottom: 1.25rem; border-bottom: 1px solid #e5e5e5; padding-bottom: 0.75rem;">
+        <h3 style="font-size: 1.15rem; font-weight: 700; color: #000; margin: 0; text-transform: uppercase;">
+            Institutional Department Leaderboard
+        </h3>
+        <p style="color: #666; font-size: 0.85rem; margin: 3px 0 0;">
+            Rankings reflect real-time student placement offers, packages, and performance scores. Click a row to view students.
+        </p>
+    </div>
+
+    <div style="overflow-x: auto;">
+        <table class="portal-table">
+            <thead>
+                <tr>
+                    <th style="width: 70px;">Rank</th>
+                    <th>Department</th>
+                    <th>Total Students</th>
+                    <th>Placed</th>
+                    <th>Placement %</th>
+                    <th>Avg Package</th>
+                    <th>Highest Package</th>
+                    <th style="text-align: right;">Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for dept in dept_leaderboard %}
+                <tr onclick="window.location.href='{{ url_for('portal_department_leaderboard', dept_code=dept.code) }}'" style="cursor: pointer;">
+                    <td>
+                        <span class="rank-badge rank-normal" style="border: 1px solid #000; background: #fff; color: #000;">
+                            {{ loop.index }}
+                        </span>
+                    </td>
+                    <td>
+                        <div style="font-weight: 700;">{{ dept.name }}</div>
+                        <span class="badge-dept" style="font-size: 0.72rem; padding: 0.15rem 0.5rem;">{{ dept.code }}</span>
+                    </td>
+                    <td><strong>{{ dept.total_students }}</strong></td>
+                    <td>
+                        <strong>{{ dept.placed_count }}</strong>
+                        <span style="color: #666; font-size: 0.78rem;">({{ dept.unplaced_count }} unplaced)</span>
+                    </td>
+                    <td>
+                        <div style="font-weight: 700;">
+                            {{ dept.placement_pct }}%
+                        </div>
+                    </td>
+                    <td>
+                        <strong>₹{{ dept.avg_package }} LPA</strong>
+                    </td>
+                    <td>
+                        <strong>₹{{ dept.highest_package }} LPA</strong>
+                    </td>
+                    <td style="text-align: right;">
+                        <span class="btn" style="font-size: 0.75rem; padding: 0.3rem 0.65rem; background: #000; color: #fff; border: 1px solid #000;">
+                            View Students
+                        </span>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Graph JavaScript (Monochrome) -->
+<script>
+const chartData = {{ chart_payload | safe }};
+const deptStats = {{ dept_stats_json | safe }};
+
+const metricConfigs = {
+    'placed_count': {
+        title: 'Placed Students by Department',
+        dataKey: 'placed_students',
+        yTitle: 'Number of Students Placed',
+        unit: '',
+        reason: 'Total Placed Students'
+    },
+    'placement_pct': {
+        title: 'Placement Percentage by Department (%)',
+        dataKey: 'placement_pct',
+        yTitle: 'Placement Rate (%)',
+        unit: '%',
+        reason: 'Placement Percentage'
+    },
+    'avg_package': {
+        title: 'Average Package by Department (₹ LPA)',
+        dataKey: 'avg_package',
+        yTitle: 'Average Package (LPA)',
+        unit: ' LPA',
+        reason: 'Average Package'
+    },
+    'highest_package': {
+        title: 'Highest Package by Department (₹ LPA)',
+        dataKey: 'highest_package',
+        yTitle: 'Highest Package (LPA)',
+        unit: ' LPA',
+        reason: 'Highest Package Achieved'
+    },
+    'total_offers': {
+        title: 'Total Offers by Department',
+        dataKey: 'total_offers',
+        yTitle: 'Number of Offers',
+        unit: '',
+        reason: 'Total Placement Offers'
+    },
+    'avg_score': {
+        title: 'Overall Placement Score by Department',
+        dataKey: 'avg_score',
+        yTitle: 'Average Placement Score (out of 100)',
+        unit: ' pts',
+        reason: 'Overall Student Placement Readiness Score'
+    }
+};
+
+function renderChart(metricKey) {
+    const config = metricConfigs[metricKey];
+    const yValues = chartData[config.dataKey];
+
+    const trace = {
+        x: chartData.dept_codes,
+        y: yValues,
+        text: yValues.map(v => `${v}${config.unit}`),
+        textposition: 'auto',
+        type: 'bar',
+        marker: {
+            color: '#000000',
+            line: {
+                color: '#000000',
+                width: 1
+            }
+        },
+        hoverinfo: 'x+text',
+        hovertext: chartData.dept_names.map((name, idx) => `${name}: ${yValues[idx]}${config.unit}`)
+    };
+
+    const layout = {
+        title: {
+            text: config.title,
+            font: { color: '#000000', size: 14 }
+        },
+        paper_bgcolor: '#ffffff',
+        plot_bgcolor: '#ffffff',
+        xaxis: {
+            tickfont: { color: '#000000', size: 11 },
+            gridcolor: '#e5e5e5'
+        },
+        yaxis: {
+            title: {
+                text: config.yTitle,
+                font: { color: '#000000', size: 12 }
+            },
+            tickfont: { color: '#000000', size: 11 },
+            gridcolor: '#e5e5e5'
+        },
+        margin: { l: 50, r: 20, t: 50, b: 40 }
+    };
+
+    Plotly.newPlot('deptPerformanceChart', [trace], layout, { responsive: true, displayModeBar: false });
+}
+
+function updateDominatingDept(metricKey) {
+    const config = metricConfigs[metricKey];
+    const sorted = [...deptStats].sort((a, b) => {
+        let valA = a[metricKey] || 0;
+        let valB = b[metricKey] || 0;
+        return valB - valA;
+    });
+
+    if (sorted.length === 0) return;
+    const topDept = sorted[0];
+
+    document.getElementById('domDeptName').innerText = topDept.name;
+    document.getElementById('domDeptCode').innerText = topDept.code;
+    document.getElementById('domDeptReason').innerText = config.reason;
+    document.getElementById('domPlacementPct').innerText = topDept.placement_pct + '%';
+    document.getElementById('domPlacedCount').innerText = `${topDept.placed_count} / ${topDept.total_students}`;
+    document.getElementById('domAvgPkg').innerText = '₹' + topDept.avg_package + ' LPA';
+    document.getElementById('domHighestPkg').innerText = '₹' + topDept.highest_package + ' LPA';
+    document.getElementById('domOffers').innerText = topDept.total_offers;
+    document.getElementById('domDeptLink').href = `/portal/department/${topDept.code}`;
+    document.getElementById('domDeptLink').innerText = `View ${topDept.code} Student Leaderboard`;
+}
+
+function switchMetric(metricKey) {
+    renderChart(metricKey);
+    updateDominatingDept(metricKey);
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    switchMetric('placed_count');
+});
+</script>
+
+{% endblock %}

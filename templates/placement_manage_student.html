@@ -1,0 +1,181 @@
+{% extends 'base.html' %}
+
+{% block title %}Manage Placement - {{ student.name }} ({{ student.usn }}){% endblock %}
+
+{% block content %}
+<!-- Back button -->
+<div style="margin-bottom: 1.5rem;">
+    <a href="{{ url_for('placement_dashboard') }}" class="btn" style="background: rgba(255,255,255,0.08); border: 1px solid var(--glass-border); display: inline-flex; align-items: center; gap: 0.5rem;">
+        ← Back to Placement Portal
+    </a>
+</div>
+
+<!-- Student Header Card -->
+<div class="glass-panel" style="margin-bottom: 2rem; border-left: 5px solid var(--success);">
+    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1.5rem;">
+        <div style="display: flex; gap: 1.5rem; align-items: center;">
+            <img src="https://ui-avatars.com/api/?name={{ student.name }}&background=10b981&color=fff&size=96&bold=true" alt="{{ student.name }}" style="border-radius: 50%; width: 80px; height: 80px;">
+            <div>
+                <div style="display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap; margin-bottom: 0.25rem;">
+                    <h1 style="font-size: 1.8rem; font-weight: 700; color: #fff; margin: 0;">{{ student.name }}</h1>
+                    <span style="font-family: monospace; color: #93c5fd; background: rgba(59, 130, 246, 0.15); padding: 0.15rem 0.5rem; border-radius: 4px;">{{ student.usn }}</span>
+                    <span class="badge badge-dept">{{ student.department.name }} ({{ student.department.code }})</span>
+                </div>
+                <p style="color: var(--text-muted); font-size: 0.9rem; margin: 0;">
+                    Semester: <strong>{{ student.semester }}th Sem</strong> &nbsp;|&nbsp; 
+                    CGPA: <strong>{{ "%.2f"|format(student.cgpa) }}</strong> &nbsp;|&nbsp; 
+                    Attendance: <strong>{{ "%.1f"|format(student.attendance) }}%</strong> &nbsp;|&nbsp;
+                    Contact: <strong>{{ student.mobile_number }}</strong>
+                </p>
+            </div>
+        </div>
+
+        <div style="text-align: right; background: rgba(255,255,255,0.03); padding: 0.85rem 1.5rem; border-radius: 12px; border: 1px solid var(--glass-border);">
+            <div style="font-size: 0.8rem; color: var(--text-muted); text-transform: uppercase;">Current Highest Package</div>
+            <div style="font-size: 1.85rem; font-weight: 800; color: #fbbf24;">₹{{ "%.1f"|format(student.highest_package) }} <span style="font-size: 0.9rem; color: var(--text-muted); font-weight: normal;">LPA</span></div>
+            <div style="font-size: 0.85rem; color: var(--text-muted);">
+                Offers: <strong style="color: #34d399;">{{ student.offers_count }}</strong> | Status: <strong style="color: #fff;">{{ student.placement_status }}</strong>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Add / Update Placement Activity Form -->
+<div class="glass-panel" style="margin-bottom: 2rem; border: 1px solid rgba(16, 185, 129, 0.4);">
+    <div style="border-bottom: 1px solid var(--glass-border); padding-bottom: 1rem; margin-bottom: 1.5rem;">
+        <h2 style="font-size: 1.35rem; color: var(--success); margin: 0 0 0.25rem 0; display: flex; align-items: center; gap: 0.5rem;">
+            <span>➕</span> Record Placement Drive & Evaluation Marks
+        </h2>
+        <p style="color: var(--text-muted); font-size: 0.85rem; margin: 0;">
+            Submitting this form updates the student's record, recalculates the placement score, and automatically synchronizes all department and college leaderboards.
+        </p>
+    </div>
+
+    <form action="{{ url_for('placement_add_activity') }}" method="POST">
+        <input type="hidden" name="usn" value="{{ student.usn }}">
+
+        <!-- 1. Placement Activity Section -->
+        <h3 style="color: #60a5fa; font-size: 1.05rem; margin-bottom: 1rem;">1. Company & Drive Details</h3>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1.25rem; margin-bottom: 1.5rem;">
+            <div class="form-group" style="margin-bottom: 0;">
+                <label>Company Name *</label>
+                <input type="text" name="company_name" class="form-control" required placeholder="e.g. Google, Microsoft, Infosys">
+            </div>
+            <div class="form-group" style="margin-bottom: 0;">
+                <label>Job Role *</label>
+                <input type="text" name="job_role" class="form-control" required placeholder="e.g. SDE-1, Cloud Associate">
+            </div>
+            <div class="form-group" style="margin-bottom: 0;">
+                <label>Drive Date</label>
+                <input type="date" name="drive_date" class="form-control" value="2026-10-15">
+            </div>
+            <div class="form-group" style="margin-bottom: 0;">
+                <label>Offered Package (LPA)</label>
+                <input type="number" step="0.1" name="package" class="form-control" placeholder="e.g. 12.5" value="0.0">
+            </div>
+            <div class="form-group" style="margin-bottom: 0;">
+                <label>Selection Status *</label>
+                <select name="status" class="form-control">
+                    <option value="Selected">Selected (Job Offer Received)</option>
+                    <option value="In Progress">In Progress (Shortlisted)</option>
+                    <option value="Rejected">Rejected</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- 2. Selection Process & Marks Section -->
+        <h3 style="color: #a78bfa; font-size: 1.05rem; margin-bottom: 1rem;">2. Selection Process & Evaluation Marks (0-100)</h3>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1.25rem; margin-bottom: 1.5rem;">
+            <div class="form-group" style="margin-bottom: 0;">
+                <label>Aptitude Marks (Weight: 25%)</label>
+                <input type="number" step="0.1" name="aptitude_score" class="form-control" value="{{ perf.aptitude_score if perf else 75.0 }}" min="0" max="100">
+            </div>
+            <div class="form-group" style="margin-bottom: 0;">
+                <label>Coding Marks (Weight: 35%)</label>
+                <input type="number" step="0.1" name="coding_score" class="form-control" value="{{ perf.coding_overall_score if perf else 75.0 }}" min="0" max="100">
+            </div>
+            <div class="form-group" style="margin-bottom: 0;">
+                <label>Technical Marks (Weight: 20%)</label>
+                <input type="number" step="0.1" name="technical_score" class="form-control" value="{{ perf.technical_interview_score if perf else 75.0 }}" min="0" max="100">
+            </div>
+            <div class="form-group" style="margin-bottom: 0;">
+                <label>HR Marks (Weight: 10%)</label>
+                <input type="number" step="0.1" name="hr_score" class="form-control" value="{{ perf.hr_score if perf else 75.0 }}" min="0" max="100">
+            </div>
+        </div>
+
+        <div style="display: flex; justify-content: flex-end; gap: 1rem; margin-top: 1.5rem;">
+            <button type="submit" class="btn" style="background: var(--success); padding: 0.85rem 2rem; font-size: 1rem;">
+                💾 Save Placement Record & Update Leaderboards
+            </button>
+        </div>
+    </form>
+</div>
+
+<!-- Drive History & Audit Log -->
+<div class="grid" style="grid-template-columns: 2fr 1fr; gap: 1.5rem; margin-bottom: 2rem;">
+    <!-- Drives for this student -->
+    <div class="glass-panel">
+        <h3 style="color: #fff; margin-bottom: 1rem; font-size: 1.2rem; display: flex; align-items: center; gap: 0.5rem;">
+            <span>🏢</span> Company Drives Attended by {{ student.name }}
+        </h3>
+        {% if activities %}
+        <div style="overflow-x: auto;">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Company</th>
+                        <th>Job Role</th>
+                        <th>Drive Date</th>
+                        <th>Package</th>
+                        <th>Status</th>
+                        <th>Logged By</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for act in activities %}
+                    <tr>
+                        <td style="font-weight: 600; color: #fff;">{{ act.company_name }}</td>
+                        <td>{{ act.job_role }}</td>
+                        <td style="color: var(--text-muted); font-size: 0.85rem;">{{ act.drive_date }}</td>
+                        <td style="color: #fbbf24; font-weight: 700;">₹{{ "%.1f"|format(act.package) }} LPA</td>
+                        <td>
+                            <span class="badge {% if act.status == 'Selected' %}badge-pass{% else %}badge-fail{% endif %}">
+                                {{ act.status }}
+                            </span>
+                        </td>
+                        <td style="font-size: 0.8rem; color: var(--text-muted);">{{ act.changed_by }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+            <p style="color: var(--text-muted);">No placement activities recorded for this student yet.</p>
+        {% endif %}
+    </div>
+
+    <!-- Student Audit History -->
+    <div class="glass-panel">
+        <h3 style="color: #cbd5e1; margin-bottom: 1rem; font-size: 1.2rem; display: flex; align-items: center; gap: 0.5rem;">
+            <span>📝</span> Audit History
+        </h3>
+        {% if audit_logs %}
+        <div style="display: flex; flex-direction: column; gap: 0.75rem;">
+            {% for log in audit_logs %}
+            <div style="background: rgba(255,255,255,0.02); border: 1px solid var(--glass-border); border-radius: 8px; padding: 0.75rem; font-size: 0.85rem;">
+                <div style="display: flex; justify-content: space-between; color: var(--text-muted); font-size: 0.75rem; margin-bottom: 0.25rem;">
+                    <span>By: <strong style="color: #fff;">{{ log.changed_by }}</strong></span>
+                    <span>{{ log.timestamp.strftime('%d-%b %H:%M') }}</span>
+                </div>
+                <div style="font-weight: 600; color: #38bdf8;">{{ log.action }}</div>
+                <div style="color: #94a3b8; font-size: 0.8rem; margin-top: 0.2rem;">{{ log.details }}</div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+            <p style="color: var(--text-muted);">No audit events for this student.</p>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,215 @@
+{% extends 'base.html' %}
+
+{% block title %}Placement Officer Portal - College Placement Management{% endblock %}
+
+{% block content %}
+<!-- Placement Admin Header Banner -->
+<div class="glass-panel" style="margin-bottom: 2rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1.5rem; background: linear-gradient(135deg, rgba(30, 41, 59, 0.9) 0%, rgba(15, 23, 42, 0.95) 100%); border-left: 5px solid var(--success);">
+    <div>
+        <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.5rem;">
+            <span class="badge" style="background: rgba(16, 185, 129, 0.2); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.4); font-weight: 700;">
+                💼 PLACEMENT ADMINISTRATOR
+            </span>
+            <span style="color: var(--text-muted); font-size: 0.9rem;">Global Placement Governance (All Departments)</span>
+        </div>
+        <h1 style="font-size: 1.95rem; font-weight: 700; color: #fff; margin-bottom: 0.25rem;">
+            Placement Operations & Drive Management
+        </h1>
+        <p style="color: var(--text-muted); font-size: 0.95rem; margin: 0;">
+            Search students across any branch, record placement drive outcomes, update interview marks, and track recruitment activities.
+        </p>
+    </div>
+    <div style="display: flex; gap: 0.75rem; align-items: center;">
+        <span style="background: rgba(255,255,255,0.06); padding: 0.5rem 1rem; border-radius: 8px; font-size: 0.9rem; color: var(--text-muted); border: 1px solid var(--glass-border);">
+            👤 Officer: <strong style="color: #fff;">{{ admin.username }}</strong>
+        </span>
+    </div>
+</div>
+
+<!-- College Placement KPI Cards -->
+<div class="stats-grid">
+    <div class="stat-card">
+        <div class="stat-label">Total Registered Students</div>
+        <div class="stat-value" style="color: #60a5fa;">{{ metrics.total_students }}</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-label">Total Placed Students</div>
+        <div class="stat-value" style="color: #34d399;">{{ metrics.placed_count }}</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-label">Overall Placement %</div>
+        <div class="stat-value" style="color: #a78bfa;">{{ metrics.placement_pct }}%</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-label">Total Job Offers</div>
+        <div class="stat-value" style="color: #f472b6;">{{ metrics.total_offers }}</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-label">Highest Package</div>
+        <div class="stat-value" style="color: #fbbf24;">₹{{ "%.1f"|format(metrics.max_package) }} <span style="font-size: 0.85rem; color: var(--text-muted); font-weight: normal;">LPA</span></div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-label">Average Package</div>
+        <div class="stat-value" style="color: #38bdf8;">₹{{ "%.2f"|format(metrics.overall_avg_package) }} <span style="font-size: 0.85rem; color: var(--text-muted); font-weight: normal;">LPA</span></div>
+    </div>
+</div>
+
+<!-- Global Student Search Section (Any Department) -->
+<div class="glass-panel" style="margin-bottom: 2rem;">
+    <h2 style="font-size: 1.35rem; color: #fff; margin-bottom: 0.25rem; display: flex; align-items: center; gap: 0.5rem;">
+        <span>🔍</span> Global Student Search & Placement Management
+    </h2>
+    <p style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 1.25rem;">
+        As Placement Administrator, you can access, update, and manage placement activities for students from <strong>any department</strong>.
+    </p>
+
+    <form method="GET" action="{{ url_for('placement_dashboard') }}" style="display: flex; gap: 0.75rem; flex-wrap: wrap; margin-bottom: 1.5rem;">
+        <select name="dept_id" class="form-control" style="max-width: 260px;">
+            <option value="">All Departments (10 Branches)</option>
+            {% for d in departments %}
+                <option value="{{ d.id }}" {% if dept_filter == d.id|string %}selected{% endif %}>
+                    {{ d.code }} - {{ d.name }}
+                </option>
+            {% endfor %}
+        </select>
+        <input 
+            type="text" 
+            name="search" 
+            class="form-control" 
+            placeholder="Search by Student Name, USN, or Skills..." 
+            value="{{ search_query }}"
+            style="flex: 1; min-width: 250px;"
+        >
+        <button type="submit" class="btn" style="padding: 0.75rem 1.5rem;">Search Students</button>
+        {% if search_query or dept_filter %}
+            <a href="{{ url_for('placement_dashboard') }}" class="btn" style="background: rgba(255,255,255,0.1);">Clear</a>
+        {% endif %}
+    </form>
+
+    <!-- Search Results Table -->
+    {% if search_results %}
+    <div style="overflow-x: auto; margin-top: 1rem;">
+        <h4 style="color: #38bdf8; font-size: 0.95rem; margin-bottom: 0.75rem;">
+            Search Results ({{ search_results|length }} student{{ 's' if search_results|length != 1 else '' }} found):
+        </h4>
+        <table>
+            <thead>
+                <tr>
+                    <th>USN</th>
+                    <th>Student Name</th>
+                    <th>Department</th>
+                    <th>CGPA</th>
+                    <th>Placement Status</th>
+                    <th>Offers</th>
+                    <th>Highest Package</th>
+                    <th style="text-align: right;">Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for st in search_results %}
+                <tr>
+                    <td><span style="font-family: monospace; color: #93c5fd;">{{ st.usn }}</span></td>
+                    <td style="font-weight: 600; color: #fff;">{{ st.name }}</td>
+                    <td><span class="badge badge-dept">{{ st.department.code }}</span> {{ st.department.name }}</td>
+                    <td>{{ "%.2f"|format(st.cgpa) }}</td>
+                    <td>
+                        <span class="badge {% if st.placement_status == 'Placed' %}badge-pass{% else %}badge-fail{% endif %}">
+                            {{ st.placement_status }}
+                        </span>
+                    </td>
+                    <td style="font-weight: 700; color: #34d399;">{{ st.offers_count }}</td>
+                    <td style="color: #fbbf24; font-weight: 600;">
+                        {% if st.highest_package > 0 %}₹{{ "%.1f"|format(st.highest_package) }} LPA{% else %}—{% endif %}
+                    </td>
+                    <td style="text-align: right;">
+                        <a href="{{ url_for('placement_manage_student', usn=st.usn) }}" class="btn" style="padding: 0.4rem 0.85rem; font-size: 0.85rem; background: var(--success);">
+                            Manage Placement ➔
+                        </a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% elif search_query or dept_filter %}
+        <p style="text-align: center; padding: 2rem; color: var(--danger); background: rgba(239, 68, 68, 0.05); border-radius: 8px;">
+            No students found matching your criteria. Try adjusting the search query or department filter.
+        </p>
+    {% endif %}
+</div>
+
+<!-- Two-Column Grid: Recent Placement Activities & Audit Trail -->
+<div class="grid" style="grid-template-columns: 2fr 1fr; gap: 1.5rem; margin-bottom: 2rem;">
+    <!-- Recent Activities -->
+    <div class="glass-panel">
+        <h3 style="color: #fff; margin-bottom: 1rem; font-size: 1.2rem; display: flex; align-items: center; gap: 0.5rem;">
+            <span>🏢</span> Recent Company Placement Activities Across College
+        </h3>
+        {% if recent_activities %}
+        <div style="overflow-x: auto;">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Student</th>
+                        <th>Department</th>
+                        <th>Company</th>
+                        <th>Role</th>
+                        <th>Package</th>
+                        <th>Status</th>
+                        <th>Date</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for act in recent_activities %}
+                    <tr>
+                        <td>
+                            <a href="{{ url_for('placement_manage_student', usn=act.student.usn) }}" style="color: #fff; text-decoration: none; font-weight: 600;">
+                                {{ act.student.name }}
+                            </a>
+                            <div style="font-size: 0.75rem; color: #94a3b8; font-family: monospace;">{{ act.student.usn }}</div>
+                        </td>
+                        <td><span class="badge badge-dept">{{ act.student.department.code }}</span></td>
+                        <td style="font-weight: 600; color: #60a5fa;">{{ act.company_name }}</td>
+                        <td>{{ act.job_role }}</td>
+                        <td style="color: #fbbf24; font-weight: 700;">₹{{ "%.1f"|format(act.package) }} LPA</td>
+                        <td>
+                            <span class="badge {% if act.status == 'Selected' %}badge-pass{% else %}badge-fail{% endif %}">
+                                {{ act.status }}
+                            </span>
+                        </td>
+                        <td style="font-size: 0.8rem; color: var(--text-muted);">{{ act.drive_date }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+            <p style="color: var(--text-muted);">No placement activities recorded yet.</p>
+        {% endif %}
+    </div>
+
+    <!-- Audit Log -->
+    <div class="glass-panel">
+        <h3 style="color: #cbd5e1; margin-bottom: 1rem; font-size: 1.2rem; display: flex; align-items: center; gap: 0.5rem;">
+            <span>📝</span> Placement Audit Log
+        </h3>
+        {% if recent_audits %}
+        <div style="display: flex; flex-direction: column; gap: 0.75rem; max-height: 480px; overflow-y: auto;">
+            {% for log in recent_audits %}
+            <div style="background: rgba(255,255,255,0.02); border: 1px solid var(--glass-border); border-radius: 8px; padding: 0.75rem; font-size: 0.85rem;">
+                <div style="display: flex; justify-content: space-between; color: var(--text-muted); font-size: 0.75rem; margin-bottom: 0.25rem;">
+                    <span>Student: <strong style="color: #fff;">{{ log.student_usn }}</strong></span>
+                    <span>{{ log.timestamp.strftime('%d-%b %H:%M') }}</span>
+                </div>
+                <div style="font-weight: 600; color: #38bdf8;">{{ log.action }}</div>
+                <div style="color: #94a3b8; font-size: 0.8rem; margin-top: 0.2rem;">{{ log.details }}</div>
+                <div style="color: var(--text-muted); font-size: 0.72rem; margin-top: 0.2rem;">By: {{ log.changed_by }}</div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+            <p style="color: var(--text-muted);">No audit events recorded.</p>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

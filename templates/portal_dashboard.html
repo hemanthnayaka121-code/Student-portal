@@ -1,0 +1,375 @@
+{% extends 'portal_base.html' %}
+
+{% block title %}MIT Placement Admin - Central Dashboard{% endblock %}
+{% block breadcrumb %}Placement Admin Dashboard{% endblock %}
+
+{% block portal_content %}
+
+<!-- Role & Permission Info Banner -->
+<div class="card" style="border: 1px solid #000; border-radius: 4px; padding: 1.1rem 1.35rem; margin-bottom: 2rem; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.75rem; background: #fafafa;">
+    <div>
+        <div style="font-size: 1.05rem; font-weight: 700; color: #000; text-transform: uppercase;">
+            Central Placement Management &amp; Performance Overview
+        </div>
+        <p style="color: #666; font-size: 0.85rem; margin: 3px 0 0;">
+            Logged in as <strong>Placement Admin</strong>. College-wide visibility into overall placement metrics, graphs, and leaderboards.
+        </p>
+    </div>
+    <div style="display: flex; gap: 0.5rem; align-items: center;">
+        <span class="badge" style="background: #000; color: #fff; font-size: 0.8rem; padding: 0.35rem 0.75rem;">
+            Placement Admin Access
+        </span>
+        <a href="{{ url_for('coordinator_portal') }}" class="btn" style="background: #000; color: #fff; font-size: 0.82rem; padding: 0.45rem 0.9rem; border: 1px solid #000;">
+            Placement Coordinator Login
+        </a>
+    </div>
+</div>
+
+<!-- 1. KPI CARDS -->
+<div class="stat-cards-grid">
+    <div class="metric-card" style="border: 1px solid #000; background: #fff;">
+        <div>
+            <div class="metric-val" style="color: #000;">{{ metrics.total_students }}</div>
+            <div class="metric-label" style="color: #666;">Total Students</div>
+        </div>
+    </div>
+
+    <div class="metric-card" style="border: 1px solid #000; background: #fff;">
+        <div>
+            <div class="metric-val" style="color: #000;">{{ metrics.placed_count }}</div>
+            <div class="metric-label" style="color: #666;">Placed Students</div>
+        </div>
+    </div>
+
+    <div class="metric-card" style="border: 1px solid #000; background: #fff;">
+        <div>
+            <div class="metric-val" style="color: #000;">{{ metrics.placement_pct }}%</div>
+            <div class="metric-label" style="color: #666;">Placement Rate</div>
+        </div>
+    </div>
+
+    <div class="metric-card" style="border: 1px solid #000; background: #fff;">
+        <div>
+            <div class="metric-val" style="color: #000;">₹{{ metrics.max_package }} LPA</div>
+            <div class="metric-label" style="color: #666;">Highest Package</div>
+        </div>
+    </div>
+
+    <div class="metric-card" style="border: 1px solid #000; background: #fff;">
+        <div>
+            <div class="metric-val" style="color: #000;">₹{{ metrics.overall_avg_package }} LPA</div>
+            <div class="metric-label" style="color: #666;">Average Package</div>
+        </div>
+    </div>
+
+    <div class="metric-card" style="border: 1px solid #000; background: #fff;">
+        <div>
+            <div class="metric-val" style="color: #000;">{{ metrics.total_offers }}</div>
+            <div class="metric-label" style="color: #666;">Total Offers</div>
+        </div>
+    </div>
+</div>
+
+<!-- 2. DOMINATING DEPARTMENT BANNER -->
+<div class="card" id="dominatingDeptCard" style="border: 1px solid #000; margin-bottom: 2rem; padding: 1.5rem; background: #fafafa;">
+    <div style="margin-bottom: 0.75rem;">
+        <span class="badge" style="background: #000; color: #fff; font-size: 0.75rem; text-transform: uppercase;">
+            Top Performing Department
+        </span>
+    </div>
+    
+    <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 1rem; border-bottom: 1px solid #e5e5e5; padding-bottom: 1rem; margin-bottom: 1.25rem;">
+        <div>
+            <h2 id="domDeptName" style="font-size: 1.5rem; font-weight: 700; color: #000; margin-bottom: 0.35rem; text-transform: uppercase;">
+                {{ dominating_dept.name }}
+            </h2>
+            <p style="color: #666; font-size: 0.85rem; margin: 0;">
+                Department Code: <span id="domDeptCode" class="badge-dept">{{ dominating_dept.code }}</span> | Leading in <span id="domDeptReason" style="color: #000; font-weight: 700;">Overall Placement Performance</span>
+            </p>
+        </div>
+
+        <a id="domDeptLink" href="{{ url_for('portal_performance') }}" class="btn btn-secondary" style="border: 1px solid #000; color: #000; font-size: 0.85rem; padding: 0.55rem 1.15rem; background: #fff;">
+            Compare All Departments
+        </a>
+    </div>
+
+    <!-- Dominating Stats Row -->
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 1rem;">
+        <div style="background: #fff; border: 1px solid #e5e5e5; padding: 0.85rem; border-radius: 4px;">
+            <div style="color: #666; font-size: 0.75rem; text-transform: uppercase;">Placement Rate</div>
+            <div id="domPlacementPct" style="font-size: 1.3rem; font-weight: 700; color: #000;">{{ dominating_dept.placement_pct }}%</div>
+        </div>
+        <div style="background: #fff; border: 1px solid #e5e5e5; padding: 0.85rem; border-radius: 4px;">
+            <div style="color: #666; font-size: 0.75rem; text-transform: uppercase;">Placed Students</div>
+            <div id="domPlacedCount" style="font-size: 1.3rem; font-weight: 700; color: #000;">{{ dominating_dept.placed_count }} / {{ dominating_dept.total_students }}</div>
+        </div>
+        <div style="background: #fff; border: 1px solid #e5e5e5; padding: 0.85rem; border-radius: 4px;">
+            <div style="color: #666; font-size: 0.75rem; text-transform: uppercase;">Average Package</div>
+            <div id="domAvgPkg" style="font-size: 1.3rem; font-weight: 700; color: #000;">₹{{ dominating_dept.avg_package }} LPA</div>
+        </div>
+        <div style="background: #fff; border: 1px solid #e5e5e5; padding: 0.85rem; border-radius: 4px;">
+            <div style="color: #666; font-size: 0.75rem; text-transform: uppercase;">Highest Package</div>
+            <div id="domHighestPkg" style="font-size: 1.3rem; font-weight: 700; color: #000;">₹{{ dominating_dept.highest_package }} LPA</div>
+        </div>
+        <div style="background: #fff; border: 1px solid #e5e5e5; padding: 0.85rem; border-radius: 4px;">
+            <div style="color: #666; font-size: 0.75rem; text-transform: uppercase;">Total Offers</div>
+            <div id="domOffers" style="font-size: 1.3rem; font-weight: 700; color: #000;">{{ dominating_dept.total_offers }}</div>
+        </div>
+    </div>
+</div>
+
+<!-- 3. INTERACTIVE DEPARTMENT PERFORMANCE GRAPH & METRIC SWITCHER -->
+<div class="card" style="border: 1px solid #000; padding: 1.5rem; margin-bottom: 2rem;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem; flex-wrap: wrap; gap: 1rem; border-bottom: 1px solid #e5e5e5; padding-bottom: 0.75rem;">
+        <div>
+            <h3 style="font-size: 1.15rem; font-weight: 700; color: #000; margin: 0; text-transform: uppercase;">
+                Department Placement Performance Comparison
+            </h3>
+            <p style="color: #666; font-size: 0.85rem; margin: 3px 0 0;">
+                Comparing all 10 MIT engineering departments across live placement indicators
+            </p>
+        </div>
+
+        <div style="display: flex; align-items: center; gap: 0.65rem;">
+            <label for="metricSelect" style="color: #000; font-size: 0.85rem; font-weight: 600;">Metric:</label>
+            <select id="metricSelect" class="form-control" style="width: auto; min-width: 200px; border: 1px solid #000; font-size: 0.85rem;" onchange="switchMetric(this.value)">
+                <option value="placed_count">Placed Students</option>
+                <option value="placement_pct">Placement Percentage</option>
+                <option value="avg_package">Average Package</option>
+                <option value="highest_package">Highest Package</option>
+                <option value="total_offers">Total Offers</option>
+                <option value="avg_score">Overall Placement Score</option>
+            </select>
+        </div>
+    </div>
+
+    <!-- Chart Canvas -->
+    <div id="deptPerformanceChart" style="height: 380px; width: 100%;"></div>
+</div>
+
+<!-- 4. DEPARTMENT LEADERBOARD TABLE -->
+<div class="card" style="border: 1px solid #000; padding: 1.5rem; margin-bottom: 2rem;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem; flex-wrap: wrap; gap: 0.75rem; border-bottom: 1px solid #e5e5e5; padding-bottom: 0.75rem;">
+        <div>
+            <h3 style="font-size: 1.15rem; font-weight: 700; color: #000; margin: 0; text-transform: uppercase;">
+                Department Placement Performance Leaderboard
+            </h3>
+            <p style="color: #666; font-size: 0.85rem; margin: 3px 0 0;">
+                All metrics dynamically generated from live database records.
+            </p>
+        </div>
+
+        <a href="{{ url_for('portal_performance') }}" class="btn btn-secondary" style="border: 1px solid #000; color: #000; font-size: 0.82rem; padding: 0.45rem 0.9rem; background: #fff;">
+            Full Performance Analytics
+        </a>
+    </div>
+
+    <div style="overflow-x: auto;">
+        <table class="portal-table">
+            <thead>
+                <tr>
+                    <th style="width: 70px;">Rank</th>
+                    <th>Department</th>
+                    <th>Total Students</th>
+                    <th>Placed</th>
+                    <th>Placement %</th>
+                    <th>Avg Package</th>
+                    <th>Highest Package</th>
+                    <th style="text-align: right;">Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for dept in dept_leaderboard %}
+                <tr>
+                    <td>
+                        <span class="rank-badge rank-normal" style="border: 1px solid #000; background: #fff; color: #000;">
+                            {{ loop.index }}
+                        </span>
+                    </td>
+                    <td>
+                        <div style="font-weight: 700;">{{ dept.name }}</div>
+                        <span class="badge-dept" style="font-size: 0.72rem; padding: 0.15rem 0.5rem;">{{ dept.code }}</span>
+                    </td>
+                    <td><strong>{{ dept.total_students }}</strong></td>
+                    <td>
+                        <strong>{{ dept.placed_count }}</strong>
+                        <span style="color: #666; font-size: 0.78rem;">({{ dept.unplaced_count }} unplaced)</span>
+                    </td>
+                    <td>
+                        <div style="font-weight: 700;">
+                            {{ dept.placement_pct }}%
+                        </div>
+                    </td>
+                    <td>
+                        <strong>₹{{ dept.avg_package }} LPA</strong>
+                    </td>
+                    <td>
+                        <strong>₹{{ dept.highest_package }} LPA</strong>
+                    </td>
+                    <td style="text-align: right;">
+                        <a href="{{ url_for('hod_login', dept_code=dept.code) }}" class="btn" style="font-size: 0.75rem; padding: 0.3rem 0.65rem; background: #000; color: #fff; border: 1px solid #000;">
+                            HOD Portal
+                        </a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- 5. PORTAL QUICK ACCESS MODULES -->
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.25rem;">
+    <a href="{{ url_for('coordinator_portal') }}" class="card" style="text-decoration: none; display: block; border: 1px solid #000; padding: 1.35rem; background: #fff;">
+        <div style="font-size: 1.1rem; font-weight: 700; color: #000; margin-bottom: 0.25rem; text-transform: uppercase;">Placement Coordinator</div>
+        <p style="color: #666; font-size: 0.85rem; margin-bottom: 0.75rem;">
+            Protected login. The Placement Coordinator is the <strong>sole role authorized to add or update student placement activities</strong> and marks.
+        </p>
+        <span style="color: #000; font-size: 0.82rem; font-weight: 700; text-decoration: underline;">Open Coordinator Login &rarr;</span>
+    </a>
+
+    <a href="{{ url_for('portal_hods') }}" class="card" style="text-decoration: none; display: block; border: 1px solid #000; padding: 1.35rem; background: #fff;">
+        <div style="font-size: 1.1rem; font-weight: 700; color: #000; margin-bottom: 0.25rem; text-transform: uppercase;">Department HODs</div>
+        <p style="color: #666; font-size: 0.85rem; margin-bottom: 0.75rem;">
+            Department authentication. HODs have <strong>view-only access</strong> strictly restricted to their own department's students and analytics.
+        </p>
+        <span style="color: #000; font-size: 0.82rem; font-weight: 700; text-decoration: underline;">Authenticate Department HOD &rarr;</span>
+    </a>
+
+    <a href="{{ url_for('portal_analytics') }}" class="card" style="text-decoration: none; display: block; border: 1px solid #000; padding: 1.35rem; background: #fff;">
+        <div style="font-size: 1.1rem; font-weight: 700; color: #000; margin-bottom: 0.25rem; text-transform: uppercase;">Placement Analytics</div>
+        <p style="color: #666; font-size: 0.85rem; margin-bottom: 0.75rem;">
+            Deep-dive departmental visualizations, offer distributions, salary metrics, and placement rates.
+        </p>
+        <span style="color: #000; font-size: 0.82rem; font-weight: 700; text-decoration: underline;">View Analytics &rarr;</span>
+    </a>
+</div>
+
+<!-- CLIENT JAVASCRIPT FOR GRAPH & DOMINATING DEPT DYNAMIC SWITCHER (MONOCHROME) -->
+<script>
+const chartData = {{ chart_payload | safe }};
+const deptStats = {{ dept_stats_json | safe }};
+
+const metricConfigs = {
+    'placed_count': {
+        title: 'Placed Students by Department',
+        dataKey: 'placed_students',
+        yTitle: 'Number of Students Placed',
+        unit: '',
+        reason: 'Total Placed Students'
+    },
+    'placement_pct': {
+        title: 'Placement Percentage by Department (%)',
+        dataKey: 'placement_pct',
+        yTitle: 'Placement Rate (%)',
+        unit: '%',
+        reason: 'Placement Percentage'
+    },
+    'avg_package': {
+        title: 'Average Package by Department (₹ LPA)',
+        dataKey: 'avg_package',
+        yTitle: 'Average Package (LPA)',
+        unit: ' LPA',
+        reason: 'Average Package'
+    },
+    'highest_package': {
+        title: 'Highest Package by Department (₹ LPA)',
+        dataKey: 'highest_package',
+        yTitle: 'Highest Package (LPA)',
+        unit: ' LPA',
+        reason: 'Highest Package Achieved'
+    },
+    'total_offers': {
+        title: 'Total Offers by Department',
+        dataKey: 'total_offers',
+        yTitle: 'Number of Offers',
+        unit: '',
+        reason: 'Total Placement Offers'
+    },
+    'avg_score': {
+        title: 'Overall Placement Score by Department',
+        dataKey: 'avg_score',
+        yTitle: 'Average Placement Score (out of 100)',
+        unit: ' pts',
+        reason: 'Overall Student Placement Readiness Score'
+    }
+};
+
+function renderChart(metricKey) {
+    const config = metricConfigs[metricKey];
+    const yValues = chartData[config.dataKey];
+
+    const trace = {
+        x: chartData.dept_codes,
+        y: yValues,
+        text: yValues.map(v => `${v}${config.unit}`),
+        textposition: 'auto',
+        type: 'bar',
+        marker: {
+            color: '#000000',
+            line: {
+                color: '#000000',
+                width: 1
+            }
+        },
+        hoverinfo: 'x+text',
+        hovertext: chartData.dept_names.map((name, idx) => `${name}: ${yValues[idx]}${config.unit}`)
+    };
+
+    const layout = {
+        title: {
+            text: config.title,
+            font: { color: '#000000', size: 14 }
+        },
+        paper_bgcolor: '#ffffff',
+        plot_bgcolor: '#ffffff',
+        xaxis: {
+            tickfont: { color: '#000000', size: 11 },
+            gridcolor: '#e5e5e5'
+        },
+        yaxis: {
+            title: {
+                text: config.yTitle,
+                font: { color: '#000000', size: 12 }
+            },
+            tickfont: { color: '#000000', size: 11 },
+            gridcolor: '#e5e5e5'
+        },
+        margin: { l: 50, r: 20, t: 50, b: 40 }
+    };
+
+    Plotly.newPlot('deptPerformanceChart', [trace], layout, { responsive: true, displayModeBar: false });
+}
+
+function updateDominatingDept(metricKey) {
+    const config = metricConfigs[metricKey];
+    const sorted = [...deptStats].sort((a, b) => {
+        let valA = a[metricKey] || 0;
+        let valB = b[metricKey] || 0;
+        return valB - valA;
+    });
+
+    if (sorted.length === 0) return;
+    const topDept = sorted[0];
+
+    document.getElementById('domDeptName').innerText = topDept.name;
+    document.getElementById('domDeptCode').innerText = topDept.code;
+    document.getElementById('domDeptReason').innerText = config.reason;
+    document.getElementById('domPlacementPct').innerText = topDept.placement_pct + '%';
+    document.getElementById('domPlacedCount').innerText = `${topDept.placed_count} / ${topDept.total_students}`;
+    document.getElementById('domAvgPkg').innerText = '₹' + topDept.avg_package + ' LPA';
+    document.getElementById('domHighestPkg').innerText = '₹' + topDept.highest_package + ' LPA';
+    document.getElementById('domOffers').innerText = topDept.total_offers;
+}
+
+function switchMetric(metricKey) {
+    renderChart(metricKey);
+    updateDominatingDept(metricKey);
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    switchMetric('placed_count');
+});
+</script>
+
+{% endblock %}

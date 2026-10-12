@@ -1,0 +1,265 @@
+{% extends 'portal_base.html' %}
+
+{% block title %}Placement Activity Management - MIT Placement Portal{% endblock %}
+{% block breadcrumb %}Placement Activity Management{% endblock %}
+
+{% block portal_content %}
+
+<!-- Header -->
+<div style="margin-bottom: 2rem;">
+    <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.35rem;">
+        <span style="font-size: 2rem;">📝</span>
+        <h2 style="font-size: 1.75rem; font-weight: 700; color: #fff;">Placement Activity Management Console</h2>
+    </div>
+    <p style="color: var(--text-muted); font-size: 0.9rem;">
+        Register recruitment drives, company selection, interview evaluation scores, and packages with instant real-time leaderboard cascade
+    </p>
+</div>
+
+<!-- 1. STUDENT SEARCH -->
+<div class="glass-panel" style="margin-bottom: 2rem; border-left: 4px solid var(--primary);">
+    <h3 style="font-size: 1.15rem; font-weight: 700; color: #fff; margin-bottom: 0.75rem;">
+        🔍 Search Student (by Name, USN, Department, or ID)
+    </h3>
+    <form method="GET" action="{{ url_for('portal_activity') }}" style="display: flex; gap: 0.75rem; flex-wrap: wrap;">
+        <input type="text" name="search" value="{{ search_query }}" 
+               placeholder="Enter Student Name, USN (e.g. 4MH24CS001), or Department code..." 
+               class="form-control" style="flex: 1; min-width: 280px; padding: 0.75rem 1rem;">
+        
+        <select name="dept_filter" class="form-control" style="width: auto; min-width: 180px;">
+            <option value="">All Departments</option>
+            {% for d in departments %}
+                <option value="{{ d.code }}" {% if dept_filter == d.code %}selected{% endif %}>{{ d.code }} - {{ d.name }}</option>
+            {% endfor %}
+        </select>
+
+        <button type="submit" class="btn" style="padding: 0.75rem 1.5rem;">
+            Search Records
+        </button>
+        {% if search_query or dept_filter %}
+            <a href="{{ url_for('portal_activity') }}" class="btn" style="background: rgba(255,255,255,0.08); padding: 0.75rem 1.25rem;">
+                Reset
+            </a>
+        {% endif %}
+    </form>
+</div>
+
+<!-- Search Results Table if search made and no specific student selected -->
+{% if search_results %}
+<div class="glass-panel" style="margin-bottom: 2rem;">
+    <h4 style="color: #93c5fd; font-size: 1rem; margin-bottom: 1rem;">
+        Select Student from Search Results ({{ search_results|length }} matched):
+    </h4>
+    <div style="overflow-x: auto;">
+        <table class="portal-table">
+            <thead>
+                <tr>
+                    <th>USN</th>
+                    <th>Student Name</th>
+                    <th>Department</th>
+                    <th>CGPA</th>
+                    <th>Placement Status</th>
+                    <th>Highest Package</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for st in search_results %}
+                <tr>
+                    <td><strong style="color: #93c5fd; font-family: monospace;">{{ st.usn }}</strong></td>
+                    <td><strong style="color: #fff;">{{ st.name }}</strong></td>
+                    <td><span class="badge-dept">{{ st.department.code }}</span></td>
+                    <td>{{ st.cgpa }}</td>
+                    <td>
+                        <span class="badge {% if st.placement_status == 'Placed' %}badge-excellent{% elif st.placement_status == 'In Progress' %}badge-warning{% else %}badge-good{% endif %}">
+                            {{ st.placement_status }}
+                        </span>
+                    </td>
+                    <td>
+                        <span style="color: #facc15; font-weight: 700;">₹{{ st.highest_package }} LPA</span>
+                    </td>
+                    <td>
+                        <a href="{{ url_for('portal_activity') }}?selected_usn={{ st.usn }}" class="btn" style="padding: 0.35rem 0.8rem; font-size: 0.82rem;">
+                            Select Student ➔
+                        </a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endif %}
+
+<!-- 2. SELECTED STUDENT DETAILS & ACTIVITY ENTRY FORM -->
+{% if selected_student %}
+<div class="glass-panel" style="margin-bottom: 2rem; border-top: 4px solid #10b981; background: rgba(15, 23, 42, 0.9);">
+    
+    <!-- Existing Student Info Banner -->
+    <div style="background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.3); border-radius: 12px; padding: 1.25rem; margin-bottom: 1.75rem;">
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.75rem;">
+            <div>
+                <span style="color: #34d399; font-size: 0.8rem; font-weight: 700; text-transform: uppercase;">
+                    Currently Selected Student Profile
+                </span>
+                <h3 style="font-size: 1.4rem; font-weight: 700; color: #fff; margin-top: 0.2rem;">
+                    {{ selected_student.name }} (<span style="font-family: monospace; color: #93c5fd;">{{ selected_student.usn }}</span>)
+                </h3>
+                <p style="color: #cbd5e1; font-size: 0.85rem; margin-top: 2px;">
+                    Department: <strong>{{ selected_student.department.name }} ({{ selected_student.department.code }})</strong> | CGPA: {{ selected_student.cgpa }} | Sem: {{ selected_student.semester }}
+                </p>
+            </div>
+
+            <div style="display: flex; gap: 0.75rem; text-align: center;">
+                <div style="background: rgba(15,23,42,0.6); padding: 0.5rem 0.85rem; border-radius: 8px;">
+                    <div style="font-size: 0.72rem; color: #94a3b8;">Current Status</div>
+                    <div style="font-weight: 700; color: #34d399;">{{ selected_student.placement_status }}</div>
+                </div>
+                <div style="background: rgba(15,23,42,0.6); padding: 0.5rem 0.85rem; border-radius: 8px;">
+                    <div style="font-size: 0.72rem; color: #94a3b8;">Highest Package</div>
+                    <div style="font-weight: 700; color: #facc15;">₹{{ selected_student.highest_package }} LPA</div>
+                </div>
+                <div style="background: rgba(15,23,42,0.6); padding: 0.5rem 0.85rem; border-radius: 8px;">
+                    <div style="font-size: 0.72rem; color: #94a3b8;">Placement Score</div>
+                    <div style="font-weight: 700; color: #60a5fa;">{{ selected_student.placement_score }}/100</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Placement Activity Form -->
+    <h3 style="font-size: 1.25rem; font-weight: 700; color: #fff; margin-bottom: 1.25rem;">
+        ➕ Add New Placement Drive & Evaluation Record
+    </h3>
+
+    <form method="POST" action="{{ url_for('portal_activity_add') }}">
+        <input type="hidden" name="usn" value="{{ selected_student.usn }}">
+
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 1.25rem; margin-bottom: 1.5rem;">
+            
+            <div class="form-group">
+                <label style="font-weight: 600; color: #cbd5e1;">Company Name *</label>
+                <input type="text" name="company_name" class="form-control" required placeholder="e.g. Microsoft, Infosys, Cisco, TCS">
+            </div>
+
+            <div class="form-group">
+                <label style="font-weight: 600; color: #cbd5e1;">Job Role *</label>
+                <input type="text" name="job_role" class="form-control" required value="Software Engineer" placeholder="e.g. Software Engineer, Cloud Architect">
+            </div>
+
+            <div class="form-group">
+                <label style="font-weight: 600; color: #cbd5e1;">Drive Date *</label>
+                <input type="date" name="drive_date" class="form-control" required value="{{ current_date }}">
+            </div>
+
+            <div class="form-group">
+                <label style="font-weight: 600; color: #cbd5e1;">Offered Package (₹ LPA) *</label>
+                <input type="number" step="0.1" name="package" class="form-control" required value="8.5" placeholder="Package in LPA">
+            </div>
+
+            <div class="form-group">
+                <label style="font-weight: 600; color: #cbd5e1;">Selection Status</label>
+                <select name="status" class="form-control">
+                    <option value="Selected">Selected</option>
+                    <option value="In Progress">In Progress</option>
+                    <option value="Rejected">Rejected</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label style="font-weight: 600; color: #cbd5e1;">Overall Placement Status</label>
+                <select name="placement_status" class="form-control">
+                    <option value="Placed" selected>Placed</option>
+                    <option value="In Progress">In Progress</option>
+                    <option value="Eligible">Eligible</option>
+                </select>
+            </div>
+        </div>
+
+        <h4 style="color: #93c5fd; font-size: 1rem; margin-bottom: 1rem; border-top: 1px solid rgba(255,255,255,0.08); padding-top: 1rem;">
+            📊 Evaluation & Performance Marks (Out of 100)
+        </h4>
+
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1.25rem; margin-bottom: 1.75rem;">
+            <div class="form-group">
+                <label style="font-weight: 500; color: #cbd5e1;">Aptitude Marks</label>
+                <input type="number" step="1" name="aptitude_score" min="0" max="100" class="form-control" value="85">
+            </div>
+
+            <div class="form-group">
+                <label style="font-weight: 500; color: #cbd5e1;">Coding Marks</label>
+                <input type="number" step="1" name="coding_score" min="0" max="100" class="form-control" value="88">
+            </div>
+
+            <div class="form-group">
+                <label style="font-weight: 500; color: #cbd5e1;">Technical Interview Marks</label>
+                <input type="number" step="1" name="technical_score" min="0" max="100" class="form-control" value="90">
+            </div>
+
+            <div class="form-group">
+                <label style="font-weight: 500; color: #cbd5e1;">HR / Interview Marks</label>
+                <input type="number" step="1" name="hr_score" min="0" max="100" class="form-control" value="88">
+            </div>
+        </div>
+
+        <button type="submit" class="btn" style="padding: 0.85rem 2rem; font-size: 1rem; font-weight: 700; background: linear-gradient(135deg, #10b981, #059669); box-shadow: 0 4px 16px rgba(16, 185, 129, 0.4);">
+            Save & Update Dynamic Placement Leaderboards ➔
+        </button>
+    </form>
+</div>
+{% endif %}
+
+<!-- 3. RECENT PLACEMENT ACTIVITIES & AUDIT LOG -->
+<div class="glass-panel" style="margin-bottom: 2rem;">
+    <h3 style="font-size: 1.25rem; font-weight: 700; color: #fff; margin-bottom: 0.35rem;">
+        Live Campus Placement Activity Stream
+    </h3>
+    <p style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 1.25rem;">
+        Recently posted placement drive outcomes with automated leaderboard cascades
+    </p>
+
+    <div style="overflow-x: auto;">
+        <table class="portal-table">
+            <thead>
+                <tr>
+                    <th>Date</th>
+                    <th>Student Name</th>
+                    <th>USN</th>
+                    <th>Company</th>
+                    <th>Role</th>
+                    <th>Package</th>
+                    <th>Status</th>
+                    <th>Logged By</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for act in recent_activities %}
+                <tr>
+                    <td style="color: #94a3b8; font-size: 0.82rem;">{{ act.drive_date }}</td>
+                    <td><strong style="color: #fff;">{{ act.student.name }}</strong></td>
+                    <td><span style="font-family: monospace; color: #93c5fd;">{{ act.student_usn }}</span></td>
+                    <td><strong style="color: #38bdf8;">{{ act.company_name }}</strong></td>
+                    <td style="color: #cbd5e1;">{{ act.job_role }}</td>
+                    <td>
+                        <strong style="color: #facc15;">₹{{ act.package }} LPA</strong>
+                    </td>
+                    <td>
+                        <span class="badge {% if act.status == 'Selected' %}badge-excellent{% elif act.status == 'In Progress' %}badge-warning{% else %}badge-danger{% endif %}">
+                            {{ act.status }}
+                        </span>
+                    </td>
+                    <td style="color: #94a3b8; font-size: 0.8rem;">{{ act.changed_by }}</td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="8" style="text-align: center; padding: 2rem; color: #94a3b8;">
+                        No placement activities recorded yet. Search a student above to record a drive!
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+{% endblock %}

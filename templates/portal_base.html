@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}MIT Placement Admin Portal{% endblock %}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+</head>
+<body>
+    <div class="portal-layout">
+        
+        <!-- SIDEBAR NAVIGATION -->
+        <aside class="portal-sidebar">
+            <!-- Brand -->
+            <div class="portal-brand">
+                <img src="{{ url_for('static', filename='images/mit_logo.png') }}" alt="MIT Mysore Logo" class="portal-brand-logo-img">
+                <div>
+                    <div class="portal-brand-title">MIT MYSORE</div>
+                    <div class="portal-brand-subtitle">Placement Portal</div>
+                </div>
+            </div>
+
+            <!-- Nav Links (Clean Monochrome) -->
+            <nav class="portal-nav">
+                <div class="portal-nav-heading">Main Navigation</div>
+
+                <!-- 1. Dashboard -->
+                <a href="{{ url_for('portal_dashboard') }}" class="portal-nav-link {% if active_page == 'dashboard' %}active{% endif %}">
+                    <span>Dashboard</span>
+                </a>
+
+                <!-- 2. Placement Coordinator (Separate Login Required) -->
+                <a href="{{ url_for('coordinator_portal') }}" class="portal-nav-link {% if active_page == 'coordinator' %}active{% endif %}">
+                    <span>Placement Coordinator</span>
+                </a>
+
+                <!-- 3. Department HODs (Separate Login Required) -->
+                <a href="{{ url_for('portal_hods') }}" class="portal-nav-link {% if active_page == 'hods' %}active{% endif %}">
+                    <span>Department HODs</span>
+                </a>
+
+                <!-- 4. Department Placement Performance -->
+                <a href="{{ url_for('portal_performance') }}" class="portal-nav-link {% if active_page == 'performance' %}active{% endif %}">
+                    <span>Department Performance</span>
+                </a>
+
+                <!-- 5. Student Details -->
+                <a href="{{ url_for('portal_students') }}" class="portal-nav-link {% if active_page == 'students' %}active{% endif %}">
+                    <span>Student Details</span>
+                </a>
+
+                <!-- 6. Placement Analytics -->
+                <a href="{{ url_for('portal_analytics') }}" class="portal-nav-link {% if active_page == 'analytics' %}active{% endif %}">
+                    <span>Placement Analytics</span>
+                </a>
+
+                <!-- 7. Reports -->
+                <a href="{{ url_for('portal_reports') }}" class="portal-nav-link {% if active_page == 'reports' %}active{% endif %}">
+                    <span>Reports</span>
+                </a>
+            </nav>
+
+            <!-- User Footer & Logout -->
+            <div class="portal-sidebar-footer">
+                <div class="portal-user-card">
+                    <div class="portal-user-name">Mit_placement</div>
+                    <div class="portal-user-role">Role: Placement Admin</div>
+                </div>
+                <a href="{{ url_for('admin_logout') }}" class="btn btn-secondary" style="width: 100%; font-size: 0.82rem; padding: 0.45rem;">
+                    Logout
+                </a>
+            </div>
+        </aside>
+
+        <!-- MAIN VIEW AREA -->
+        <div class="portal-main">
+            <!-- Topbar -->
+            <header class="portal-topbar">
+                <div class="portal-breadcrumb">
+                    <a href="{{ url_for('portal_dashboard') }}">Portal</a>
+                    <span>/</span>
+                    <span style="font-weight: 600; color: #000;">{% block breadcrumb %}Dashboard{% endblock %}</span>
+                </div>
+
+                <div class="portal-topbar-actions">
+                    <span class="badge" style="background: #000; color: #fff;">
+                        Role: Placement Admin
+                    </span>
+                    <span class="badge" style="border: 1px solid #000;">
+                        AY 2025-2026
+                    </span>
+                </div>
+            </header>
+
+            <!-- Container for View Content -->
+            <div class="portal-container">
+                <!-- Flashed Messages -->
+                {% with messages = get_flashed_messages(with_categories=true) %}
+                    {% if messages %}
+                        <div class="flash-messages">
+                            {% for category, message in messages %}
+                                <div class="flash-{{ category }}">{{ message }}</div>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                {% endwith %}
+
+                {% block portal_content %}{% endblock %}
+            </div>
+        </div>
+
+    </div>
+</body>
+</html>

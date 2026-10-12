@@ -1,0 +1,123 @@
+{% extends 'base.html' %}
+
+{% block title %}Principal View - {{ student.name }} ({{ student.usn }}){% endblock %}
+
+{% block content %}
+<div style="margin-bottom: 1.5rem;">
+    <a href="{{ url_for('principal_view_department', dept_code=student.department.code) }}" class="btn" style="background: rgba(255,255,255,0.08); border: 1px solid var(--glass-border); display: inline-flex; align-items: center; gap: 0.5rem;">
+        ← Back to {{ student.department.name }}
+    </a>
+</div>
+
+<!-- Header Card -->
+<div class="glass-panel" style="margin-bottom: 2rem; border-left: 5px solid #facc15;">
+    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1.5rem;">
+        <div style="display: flex; gap: 1.5rem; align-items: center;">
+            <img src="https://ui-avatars.com/api/?name={{ student.name }}&background=facc15&color=000&size=96&bold=true" alt="{{ student.name }}" style="border-radius: 50%; width: 80px; height: 80px;">
+            <div>
+                <h1 style="font-size: 1.8rem; font-weight: 700; color: #fff; margin: 0 0 0.25rem 0;">{{ student.name }}</h1>
+                <p style="color: var(--text-muted); font-size: 0.9rem; margin: 0;">
+                    <span style="font-family: monospace; color: #93c5fd; background: rgba(59, 130, 246, 0.15); padding: 0.15rem 0.5rem; border-radius: 4px;">{{ student.usn }}</span>
+                    &nbsp;|&nbsp; Department: <strong style="color: #fff;">{{ student.department.name }} ({{ student.department.code }})</strong>
+                    &nbsp;|&nbsp; Sem: <strong>{{ student.semester }}</strong>
+                </p>
+            </div>
+        </div>
+
+        <div style="text-align: right; background: rgba(255,255,255,0.03); padding: 0.85rem 1.5rem; border-radius: 12px; border: 1px solid var(--glass-border);">
+            <div style="font-size: 0.8rem; color: var(--text-muted); text-transform: uppercase;">Composite Placement Score</div>
+            <div style="font-size: 2rem; font-weight: 800; color: #60a5fa;">{{ student.placement_score }} <span style="font-size: 0.9rem; color: var(--text-muted);">/ 100</span></div>
+            <span class="badge badge-excellent">{{ student.placement_level }}</span>
+        </div>
+    </div>
+</div>
+
+<!-- Metrics Overview Grid -->
+<div class="grid" style="grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 1.5rem; margin-bottom: 2rem;">
+    <!-- Academic -->
+    <div class="glass-panel">
+        <h3 style="color: #38bdf8; margin-bottom: 1rem; font-size: 1.15rem;">🎓 Academic Records</h3>
+        <p><strong>Cumulative CGPA:</strong> {{ "%.2f"|format(student.cgpa) }} / 10</p>
+        <p><strong>Overall Attendance:</strong> {{ "%.1f"|format(student.attendance) }}%</p>
+        <p><strong>Academic Score:</strong> {{ "%.1f"|format(student.academic_score) }} / 100</p>
+        <p><strong>Contact:</strong> {{ student.mobile_number }} | {{ student.email or 'N/A' }}</p>
+    </div>
+
+    <!-- Placement -->
+    <div class="glass-panel">
+        <h3 style="color: #34d399; margin-bottom: 1rem; font-size: 1.15rem;">💼 Placement Summary</h3>
+        <p><strong>Placement Status:</strong> <span class="badge {% if student.placement_status == 'Placed' %}badge-pass{% else %}badge-fail{% endif %}">{{ student.placement_status }}</span></p>
+        <p><strong>Companies Attended:</strong> {{ student.companies_attended }} | <strong>Selected:</strong> {{ student.companies_selected }}</p>
+        <p><strong>Number of Offers:</strong> <strong style="color: #34d399;">{{ student.offers_count }}</strong></p>
+        <p><strong>Highest Package:</strong> <strong style="color: #fbbf24;">₹{{ "%.1f"|format(student.highest_package) }} LPA</strong> | <strong>Average:</strong> ₹{{ "%.1f"|format(student.average_package) }} LPA</p>
+    </div>
+
+    <!-- Technical Skills -->
+    <div class="glass-panel">
+        <h3 style="color: #a78bfa; margin-bottom: 1rem; font-size: 1.15rem;">💻 Skills & Projects</h3>
+        <p style="margin-bottom: 0.5rem;"><strong>Languages:</strong> {{ student.programming_languages }}</p>
+        <p style="margin-bottom: 0.5rem;"><strong>Tech Skills:</strong> {{ student.technical_skills }}</p>
+        <p style="margin-bottom: 0.5rem;"><strong>Certifications:</strong> {{ student.certifications }}</p>
+        <p><strong>Projects:</strong> {{ student.projects }}</p>
+    </div>
+</div>
+
+<!-- Placement Drives & Audit Log -->
+<div class="grid" style="grid-template-columns: 2fr 1fr; gap: 1.5rem; margin-bottom: 2rem;">
+    <!-- Drives History -->
+    <div class="glass-panel">
+        <h3 style="color: #fff; margin-bottom: 1rem; font-size: 1.15rem;">🏢 Company Placement Drives</h3>
+        {% if activities %}
+        <table>
+            <thead>
+                <tr>
+                    <th>Company</th>
+                    <th>Role</th>
+                    <th>Date</th>
+                    <th>Package</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for act in activities %}
+                <tr>
+                    <td style="font-weight: 600; color: #fff;">{{ act.company_name }}</td>
+                    <td>{{ act.job_role }}</td>
+                    <td>{{ act.drive_date }}</td>
+                    <td style="color: #fbbf24; font-weight: 600;">₹{{ "%.1f"|format(act.package) }} LPA</td>
+                    <td>
+                        <span class="badge {% if act.status == 'Selected' %}badge-pass{% else %}badge-fail{% endif %}">
+                            {{ act.status }}
+                        </span>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+            <p style="color: var(--text-muted);">No drive activities recorded.</p>
+        {% endif %}
+    </div>
+
+    <!-- Audit Log -->
+    <div class="glass-panel">
+        <h3 style="color: #cbd5e1; margin-bottom: 1rem; font-size: 1.15rem;">📝 Placement Audit Trail</h3>
+        {% if audit_logs %}
+        <div style="display: flex; flex-direction: column; gap: 0.75rem;">
+            {% for log in audit_logs %}
+            <div style="background: rgba(255,255,255,0.02); border: 1px solid var(--glass-border); border-radius: 8px; padding: 0.75rem; font-size: 0.85rem;">
+                <div style="display: flex; justify-content: space-between; color: var(--text-muted); font-size: 0.75rem; margin-bottom: 0.25rem;">
+                    <span>By: <strong style="color: #fff;">{{ log.changed_by }}</strong></span>
+                    <span>{{ log.timestamp.strftime('%d-%b-%Y %H:%M') }}</span>
+                </div>
+                <div style="font-weight: 600; color: #38bdf8;">{{ log.action }} - {{ log.company_name or '' }}</div>
+                <div style="color: #94a3b8; font-size: 0.8rem; margin-top: 0.2rem;">{{ log.details }}</div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+            <p style="color: var(--text-muted);">No audit events.</p>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

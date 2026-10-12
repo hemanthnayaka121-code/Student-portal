@@ -1,0 +1,130 @@
+{% extends 'portal_base.html' %}
+
+{% block title %}{{ department.name }} ({{ department.code }}) - Student Placement Leaderboard{% endblock %}
+{% block breadcrumb %}{{ department.code }} Student Leaderboard{% endblock %}
+
+{% block portal_content %}
+
+<!-- Back Navigation & Header -->
+<div style="margin-bottom: 1.5rem;">
+    <a href="{{ url_for('portal_performance') }}" class="btn btn-secondary" style="border: 1px solid #000; color: #000; font-size: 0.85rem; padding: 0.45rem 1rem; margin-bottom: 1rem; display: inline-block; background: #fff;">
+        Back to Department Performance
+    </a>
+
+    <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 1rem; border-bottom: 1px solid #000; padding-bottom: 1rem;">
+        <div>
+            <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.35rem;">
+                <span class="badge-dept" style="font-size: 0.85rem; padding: 0.2rem 0.6rem;">{{ department.code }}</span>
+                <h2 style="font-size: 1.5rem; font-weight: 700; color: #000; margin: 0; text-transform: uppercase;">
+                    {{ department.name }} Student Placement Leaderboard
+                </h2>
+            </div>
+            <p style="color: #666; font-size: 0.85rem; margin: 0;">
+                Department HOD: <strong style="color: #000;">{{ department.hod_name }}</strong> ({{ department.hod_email }})
+            </p>
+        </div>
+
+        <!-- Dept Quick Metrics -->
+        <div style="display: flex; gap: 0.75rem; flex-wrap: wrap;">
+            <div style="background: #fff; border: 1px solid #000; border-radius: 4px; padding: 0.5rem 1rem; text-align: center;">
+                <div style="font-size: 0.72rem; color: #666; text-transform: uppercase;">Placed / Total</div>
+                <div style="font-weight: 700; color: #000; font-size: 1.1rem;">{{ stats.placed_count }} / {{ stats.total_students }}</div>
+            </div>
+            <div style="background: #fff; border: 1px solid #000; border-radius: 4px; padding: 0.5rem 1rem; text-align: center;">
+                <div style="font-size: 0.72rem; color: #666; text-transform: uppercase;">Placement %</div>
+                <div style="font-weight: 700; color: #000; font-size: 1.1rem;">{{ stats.placement_pct }}%</div>
+            </div>
+            <div style="background: #fff; border: 1px solid #000; border-radius: 4px; padding: 0.5rem 1rem; text-align: center;">
+                <div style="font-size: 0.72rem; color: #666; text-transform: uppercase;">Highest Package</div>
+                <div style="font-weight: 700; color: #000; font-size: 1.1rem;">₹{{ stats.highest_package }} LPA</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Search within department -->
+<div class="card" style="padding: 1rem 1.25rem; margin-bottom: 1.5rem; border: 1px solid #e5e5e5; background: #fafafa;">
+    <form method="GET" style="display: flex; gap: 0.75rem; align-items: center;">
+        <input type="text" name="search" value="{{ search_query }}" placeholder="Filter {{ department.code }} students by Name, USN, or Skill..." class="form-control" style="flex: 1; padding: 0.6rem 0.85rem; border: 1px solid #000;">
+        <button type="submit" class="btn" style="padding: 0.6rem 1.25rem; background: #000; color: #fff; border: 1px solid #000;">Search</button>
+        {% if search_query %}
+            <a href="{{ url_for('portal_department_leaderboard', dept_code=department.code) }}" class="btn btn-secondary" style="border: 1px solid #000; color: #000; background: #fff; padding: 0.6rem 1rem;">Clear</a>
+        {% endif %}
+    </form>
+</div>
+
+<!-- Student Placement Leaderboard Table -->
+<div class="card" style="border: 1px solid #000; padding: 1.5rem;">
+    <div style="overflow-x: auto;">
+        <table class="portal-table">
+            <thead>
+                <tr>
+                    <th style="width: 70px;">Rank</th>
+                    <th>Student Name</th>
+                    <th>USN</th>
+                    <th>Placement Score</th>
+                    <th>Status</th>
+                    <th>Package (LPA)</th>
+                    <th style="text-align: right;">Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for student in students %}
+                <tr onclick="window.location.href='{{ url_for('portal_student_details', usn=student.usn) }}'" style="cursor: pointer;">
+                    <td>
+                        <span class="rank-badge rank-normal" style="border: 1px solid #000; background: #fff; color: #000;">
+                            {{ loop.index }}
+                        </span>
+                    </td>
+                    <td>
+                        <div style="font-weight: 700;">{{ student.name }}</div>
+                        <div style="font-size: 0.78rem; color: #666;">CGPA: {{ student.cgpa }} | Sem: {{ student.semester }}</div>
+                    </td>
+                    <td>
+                        <span style="font-family: monospace; font-weight: 600;">{{ student.usn }}</span>
+                    </td>
+                    <td>
+                        <div style="font-weight: 700; font-size: 1rem;">
+                            {{ student.placement_score }} / 100
+                        </div>
+                        <span class="badge" style="border: 1px solid #000; font-size: 0.7rem; padding: 0.15rem 0.45rem; background: #fff; color: #000;">
+                            {{ student.placement_level }}
+                        </span>
+                    </td>
+                    <td>
+                        {% if student.placement_status == 'Placed' %}
+                            <span class="badge" style="background: #000; color: #fff;">
+                                Placed ({{ student.offers_count }} Offers)
+                            </span>
+                        {% else %}
+                            <span class="badge" style="border: 1px solid #000; background: #fff; color: #000;">
+                                {{ student.placement_status }}
+                            </span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if student.highest_package > 0 %}
+                            <strong>₹{{ student.highest_package }} LPA</strong>
+                        {% else %}
+                            <span style="color: #999;">—</span>
+                        {% endif %}
+                    </td>
+                    <td style="text-align: right;">
+                        <span class="btn" style="font-size: 0.75rem; padding: 0.3rem 0.65rem; background: #000; color: #fff; border: 1px solid #000;">
+                            View Details
+                        </span>
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="7" style="text-align: center; padding: 2rem; color: #666;">
+                        No students found matching your search.
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+{% endblock %}

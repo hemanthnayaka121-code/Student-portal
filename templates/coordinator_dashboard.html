@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Placement Coordinator Dashboard - MIT Placement Portal</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body style="background: #ffffff; color: #000000;">
+    <div style="max-width: 1350px; margin: 0 auto; padding: 2rem 1.5rem;">
+        
+        <!-- Header with College Logo -->
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; flex-wrap: wrap; gap: 1rem; border-bottom: 1px solid #000; padding-bottom: 1.5rem;">
+            <div style="display: flex; align-items: center; gap: 1rem;">
+                <img src="{{ url_for('static', filename='images/mit_logo.png') }}" alt="MIT Mysore Logo" style="width: 54px; height: 54px; object-fit: contain;">
+                <div>
+                    <h1 style="font-size: 1.5rem; font-weight: 700; color: #000; margin: 0; text-transform: uppercase; letter-spacing: 0.5px;">
+                        Placement Coordinator Dashboard
+                    </h1>
+                    <p style="color: #666; font-size: 0.85rem; margin: 3px 0 0;">
+                        Authorized Role: Student Placement Registration & Drive Activity Management
+                    </p>
+                </div>
+            </div>
+
+            <div style="display: flex; align-items: center; gap: 0.75rem;">
+                <button type="button" onclick="document.getElementById('registerStudentModal').style.display='block'" class="btn" style="background: #000; color: #fff; font-size: 0.85rem; font-weight: 600; padding: 0.55rem 1.25rem; border: 1px solid #000;">
+                    Add Student for Placement
+                </button>
+                <a href="{{ url_for('portal_dashboard') }}" class="btn btn-secondary" style="font-size: 0.85rem; padding: 0.55rem 1rem; border: 1px solid #000; color: #000; background: #fff;">
+                    Main Placement Admin
+                </a>
+                <a href="{{ url_for('coordinator_logout') }}" class="btn" style="font-size: 0.85rem; padding: 0.55rem 1rem; background: #000; color: #fff; border: 1px solid #000;">
+                    Coordinator Logout
+                </a>
+            </div>
+        </div>
+
+        <!-- Flashed Messages -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                <div class="flash-messages" style="margin-bottom: 1.5rem;">
+                    {% for category, message in messages %}
+                        <div class="flash-{{ category }}">{{ message }}</div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        {% endwith %}
+
+        <!-- Two-Stage Workflow Explanation Banner -->
+        <div style="background: #fafafa; border: 1px solid #000; border-radius: 4px; padding: 1rem 1.25rem; margin-bottom: 2rem; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.75rem;">
+            <div>
+                <strong style="color: #000; font-size: 0.92rem; text-transform: uppercase;">Two-Stage Placement Workflow Active</strong>
+                <div style="color: #666; font-size: 0.82rem; margin-top: 2px;">
+                    1. Register Student (PENDING) &rarr; 2. Department HOD Approves &rarr; 3. Eligible List &rarr; 4. Record Placement Activity
+                </div>
+            </div>
+            <div style="display: flex; gap: 0.5rem;">
+                <span class="badge" style="border: 1px solid #000; color: #000; background: #fff; font-size: 0.78rem;">{{ pending_students|length }} Pending HOD</span>
+                <span class="badge" style="background: #000; color: #fff; font-size: 0.78rem;">{{ approved_students|length }} Approved & Eligible</span>
+            </div>
+        </div>
+
+        <!-- 1. POPUP/MODAL FORM: ADD STUDENT FOR PLACEMENT -->
+        <div id="registerStudentModal" class="card" style="display: none; margin-bottom: 2.5rem; border: 1px solid #000; background: #fff; box-shadow: 0 4px 20px rgba(0,0,0,0.1);">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem; border-bottom: 1px solid #000; padding-bottom: 0.75rem;">
+                <h3 style="font-size: 1.15rem; font-weight: 700; color: #000; margin: 0; text-transform: uppercase;">
+                    Add Student for Placement
+                </h3>
+                <button type="button" onclick="document.getElementById('registerStudentModal').style.display='none'" style="background: none; border: none; color: #000; font-size: 1.5rem; cursor: pointer; line-height: 1;">&times;</button>
+            </div>
+            
+            <p style="color: #666; font-size: 0.85rem; margin-bottom: 1.5rem;">
+                Upon submission, this student will be created with status <strong>PENDING</strong> and automatically routed to the selected department's HOD for approval.
+            </p>
+
+            <form method="POST" action="{{ url_for('coordinator_register_student') }}">
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 1.25rem; margin-bottom: 1.5rem;">
+                    <div class="form-group">
+                        <label style="font-weight: 600; color: #000; font-size: 0.85rem; display: block; margin-bottom: 0.35rem;">Student Name *</label>
+                        <input type="text" name="name" class="form-control" required placeholder="e.g. Aditi Rao" style="border: 1px solid #000;">
+                    </div>
+
+                    <div class="form-group">
+                        <label style="font-weight: 600; color: #000; font-size: 0.85rem; display: block; margin-bottom: 0.35rem;">USN *</label>
+                        <input type="text" name="usn" class="form-control" required placeholder="e.g. 4MH24IS045" style="border: 1px solid #000;">
+                    </div>
+
+                    <div class="form-group">
+                        <label style="font-weight: 600; color: #000; font-size: 0.85rem; display: block; margin-bottom: 0.35rem;">Department *</label>
+                        <select name="department_id" class="form-control" required style="border: 1px solid #000;">
+                            <option value="">Select Department</option>
+                            {% for d in departments %}
+                                <option value="{{ d.id }}">{{ d.code }} - {{ d.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label style="font-weight: 600; color: #000; font-size: 0.85rem; display: block; margin-bottom: 0.35rem;">Semester *</label>
+                        <input type="number" name="semester" class="form-control" required value="8" min="1" max="8" style="border: 1px solid #000;">
+                    </div>
+
+                    <div class="form-group">
+                        <label style="font-weight: 600; color: #000; font-size: 0.85rem; display: block; margin-bottom: 0.35rem;">Email Address *</label>
+                        <input type="email" name="email" class="form-control" required placeholder="e.g. student@mitm.ac.in" style="border: 1px solid #000;">
+                    </div>
+
+                    <div class="form-group">
+                        <label style="font-weight: 600; color: #000; font-size: 0.85rem; display: block; margin-bottom: 0.35rem;">Phone (Mobile) *</label>
+                        <input type="tel" name="phone" class="form-control" required placeholder="e.g. 9845012345" style="border: 1px solid #000;">
+                    </div>
+
+                    <div class="form-group">
+                        <label style="font-weight: 600; color: #000; font-size: 0.85rem; display: block; margin-bottom: 0.35rem;">CGPA *</label>
+                        <input type="number" step="0.01" name="cgpa" class="form-control" required placeholder="e.g. 8.75" min="0" max="10" style="border: 1px solid #000;">
+                    </div>
+
+                    <div class="form-group">
+                        <label style="font-weight: 600; color: #000; font-size: 0.85rem; display: block; margin-bottom: 0.35rem;">Technical Skills *</label>
+                        <input type="text" name="skills" class="form-control" required placeholder="e.g. Python, SQL, React" style="border: 1px solid #000;">
+                    </div>
+
+                    <div class="form-group">
+                        <label style="font-weight: 600; color: #000; font-size: 0.85rem; display: block; margin-bottom: 0.35rem;">Resume File / Title</label>
+                        <input type="text" name="resume" class="form-control" value="Resume_Uploaded.pdf" placeholder="Resume_Filename.pdf" style="border: 1px solid #000;">
+                    </div>
+                </div>
+
+                <div style="display: flex; gap: 1rem; align-items: center;">
+                    <button type="submit" class="btn" style="background: #000; color: #fff; font-weight: 600; padding: 0.75rem 1.75rem; border: 1px solid #000;">
+                        SUBMIT FOR HOD APPROVAL
+                    </button>
+                    <button type="button" onclick="document.getElementById('registerStudentModal').style.display='none'" class="btn btn-secondary" style="border: 1px solid #000; color: #000; background: #fff; padding: 0.75rem 1.5rem;">
+                        Cancel
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <!-- 2. SEARCH & FILTER BAR -->
+        <div class="card" style="padding: 1.25rem; margin-bottom: 2rem; border: 1px solid #e5e5e5; background: #fafafa;">
+            <form method="GET" action="{{ url_for('coordinator_dashboard') }}" style="display: flex; gap: 0.75rem; flex-wrap: wrap;">
+                <input type="text" name="search" value="{{ search_query }}" placeholder="Search by student name or USN..." class="form-control" style="flex: 1; min-width: 250px; border: 1px solid #000;">
+                <select name="dept_filter" class="form-control" style="width: auto; min-width: 180px; border: 1px solid #000;">
+                    <option value="">All Departments</option>
+                    {% for d in departments %}
+                        <option value="{{ d.code }}" {% if dept_filter == d.code %}selected{% endif %}>{{ d.code }}</option>
+                    {% endfor %}
+                </select>
+                <button type="submit" class="btn" style="padding: 0.65rem 1.25rem; background: #000; color: #fff; border: 1px solid #000;">Search</button>
+                {% if search_query or dept_filter %}
+                    <a href="{{ url_for('coordinator_dashboard') }}" class="btn btn-secondary" style="padding: 0.65rem 1rem; border: 1px solid #000; color: #000; background: #fff;">Clear</a>
+                {% endif %}
+            </form>
+        </div>
+
+        <!-- 3. LIST 1: APPROVED / ELIGIBLE STUDENTS -->
+        <div class="card" style="margin-bottom: 2.5rem; border: 1px solid #000; padding: 1.5rem;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem; flex-wrap: wrap; gap: 0.75rem; border-bottom: 1px solid #e5e5e5; padding-bottom: 0.75rem;">
+                <div>
+                    <h3 style="font-size: 1.15rem; font-weight: 700; color: #000; margin: 0; text-transform: uppercase;">
+                        Approved Students (Eligible for Placement Activity)
+                    </h3>
+                    <p style="color: #666; font-size: 0.85rem; margin: 3px 0 0;">
+                        Approved by respective Department HOD. Click any student to open profile and record placement activity.
+                    </p>
+                </div>
+                <span class="badge" style="background: #000; color: #fff; font-size: 0.8rem;">
+                    {{ approved_students|length }} Approved
+                </span>
+            </div>
+
+            <div style="overflow-x: auto;">
+                <table class="portal-table">
+                    <thead>
+                        <tr>
+                            <th>Student</th>
+                            <th>USN</th>
+                            <th>Department</th>
+                            <th>CGPA</th>
+                            <th>HOD Approval</th>
+                            <th>Placement Status</th>
+                            <th>Highest Package</th>
+                            <th style="text-align: right;">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for st in approved_students %}
+                        <tr onclick="window.location.href='{{ url_for('coordinator_student_profile', usn=st.usn) }}'" style="cursor: pointer;">
+                            <td>
+                                <strong>{{ st.name }}</strong>
+                                <div style="font-size: 0.75rem; color: #666;">Sem {{ st.semester }}</div>
+                            </td>
+                            <td><span style="font-family: monospace; font-weight: 600;">{{ st.usn }}</span></td>
+                            <td><span class="badge-dept">{{ st.department.code }}</span></td>
+                            <td><strong>{{ st.cgpa }}</strong></td>
+                            <td>
+                                <span class="badge" style="border: 1px solid #000; color: #000; background: #fff;">
+                                    APPROVED by {{ st.approved_by or 'HOD' }}
+                                </span>
+                            </td>
+                            <td>
+                                {% if st.placement_status == 'Placed' %}
+                                    <span style="font-weight: 700;">Placed ({{ st.offers_count }} Offers)</span>
+                                {% else %}
+                                    <span>{{ st.placement_status }}</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if st.highest_package > 0 %}
+                                    <strong>₹{{ st.highest_package }} LPA</strong>
+                                {% else %}
+                                    <span style="color: #999;">—</span>
+                                {% endif %}
+                            </td>
+                            <td style="text-align: right;">
+                                <a href="{{ url_for('coordinator_student_profile', usn=st.usn) }}" class="btn" style="background: #000; color: #fff; font-size: 0.78rem; padding: 0.35rem 0.85rem; border: 1px solid #000;">
+                                    Profile &amp; Activity
+                                </a>
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="8" style="text-align: center; padding: 2rem; color: #666;">
+                                No approved students matching the filter.
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- 4. LIST 2: PENDING HOD APPROVAL -->
+        <div class="card" style="margin-bottom: 2.5rem; border: 1px solid #000; padding: 1.5rem;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem; flex-wrap: wrap; gap: 0.75rem; border-bottom: 1px solid #e5e5e5; padding-bottom: 0.75rem;">
+                <div>
+                    <h3 style="font-size: 1.15rem; font-weight: 700; color: #000; margin: 0; text-transform: uppercase;">
+                        Pending HOD Approval
+                    </h3>
+                    <p style="color: #666; font-size: 0.85rem; margin: 3px 0 0;">
+                        Students registered for placement waiting for respective HOD approval. Placement activity cannot be added until approved.
+                    </p>
+                </div>
+                <span class="badge" style="border: 1px solid #000; color: #000; background: #fff; font-size: 0.8rem;">
+                    {{ pending_students|length }} Pending Review
+                </span>
+            </div>
+
+            <div style="overflow-x: auto;">
+                <table class="portal-table">
+                    <thead>
+                        <tr>
+                            <th>Student</th>
+                            <th>USN</th>
+                            <th>Department</th>
+                            <th>CGPA</th>
+                            <th>Skills</th>
+                            <th>Approval Status</th>
+                            <th>Routed To</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for st in pending_students %}
+                        <tr>
+                            <td><strong>{{ st.name }}</strong></td>
+                            <td><span style="font-family: monospace;">{{ st.usn }}</span></td>
+                            <td><span class="badge-dept">{{ st.department.code }}</span></td>
+                            <td><strong>{{ st.cgpa }}</strong></td>
+                            <td><span style="color: #666; font-size: 0.85rem;">{{ st.skills }}</span></td>
+                            <td>
+                                <span class="badge" style="border: 1px solid #000; color: #000; background: #fafafa;">
+                                    PENDING HOD APPROVAL
+                                </span>
+                            </td>
+                            <td>
+                                <strong>{{ st.department.code }} HOD</strong>
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="7" style="text-align: center; padding: 1.5rem; color: #666;">
+                                No pending approval requests.
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- 5. LIST 3: REJECTED STUDENTS -->
+        {% if rejected_students %}
+        <div class="card" style="margin-bottom: 2.5rem; border: 1px solid #000; padding: 1.5rem;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem; border-bottom: 1px solid #e5e5e5; padding-bottom: 0.75rem;">
+                <div>
+                    <h3 style="font-size: 1.15rem; font-weight: 700; color: #000; margin: 0; text-transform: uppercase;">
+                        Rejected by HOD (Not Eligible for Placement)
+                    </h3>
+                    <p style="color: #666; font-size: 0.85rem; margin: 3px 0 0;">
+                        These students were rejected by their department HOD and are excluded from placement activity.
+                    </p>
+                </div>
+                <span class="badge" style="background: #000; color: #fff; font-size: 0.8rem;">
+                    {{ rejected_students|length }} Rejected
+                </span>
+            </div>
+
+            <div style="overflow-x: auto;">
+                <table class="portal-table">
+                    <thead>
+                        <tr>
+                            <th>Student</th>
+                            <th>USN</th>
+                            <th>Department</th>
+                            <th>Status</th>
+                            <th>Rejected By</th>
+                            <th>Rejection Reason</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for st in rejected_students %}
+                        <tr>
+                            <td><strong>{{ st.name }}</strong></td>
+                            <td><span style="font-family: monospace;">{{ st.usn }}</span></td>
+                            <td><span class="badge-dept">{{ st.department.code }}</span></td>
+                            <td>
+                                <span class="badge" style="border: 1px solid #000; color: #000; background: #fff;">REJECTED</span>
+                            </td>
+                            <td>{{ st.rejected_by }}</td>
+                            <td><span style="color: #666; font-style: italic;">{{ st.rejection_reason or 'Eligibility criteria not met' }}</span></td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- 6. LIST 4: RECENT PLACEMENT ACTIVITIES LOG -->
+        <div class="card" style="border: 1px solid #000; padding: 1.5rem;">
+            <div style="border-bottom: 1px solid #e5e5e5; padding-bottom: 0.75rem; margin-bottom: 1.25rem;">
+                <h3 style="font-size: 1.15rem; font-weight: 700; color: #000; margin: 0; text-transform: uppercase;">
+                    Campus Recruitment Drives History
+                </h3>
+                <p style="color: #666; font-size: 0.85rem; margin: 3px 0 0;">
+                    All recent placement drive outcomes recorded by the Placement Coordinator
+                </p>
+            </div>
+
+            <div style="overflow-x: auto;">
+                <table class="portal-table">
+                    <thead>
+                        <tr>
+                            <th>Drive Date</th>
+                            <th>Student</th>
+                            <th>USN</th>
+                            <th>Company</th>
+                            <th>Role</th>
+                            <th>Package</th>
+                            <th>Status</th>
+                            <th>Recorded By</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for act in recent_activities %}
+                        <tr>
+                            <td style="color: #666; font-size: 0.82rem;">{{ act.drive_date }}</td>
+                            <td><strong>{{ act.student.name }}</strong></td>
+                            <td><span style="font-family: monospace;">{{ act.student_usn }}</span></td>
+                            <td><strong>{{ act.company_name }}</strong></td>
+                            <td>{{ act.job_role }}</td>
+                            <td><strong>₹{{ act.package }} LPA</strong></td>
+                            <td>
+                                <span class="badge" style="border: 1px solid #000; color: #000; background: #fff;">
+                                    {{ act.status }}
+                                </span>
+                            </td>
+                            <td style="color: #666; font-size: 0.8rem;">{{ act.created_by or act.changed_by }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+    </div>
+</body>
+</html>

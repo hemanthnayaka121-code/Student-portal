@@ -1,0 +1,318 @@
+{% extends 'base.html' %}
+
+{% block title %}Principal - College Placement Overview Dashboard{% endblock %}
+
+{% block content %}
+<!-- Principal Header Banner -->
+<div class="glass-panel" style="margin-bottom: 2rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1.5rem; background: linear-gradient(135deg, rgba(30, 41, 59, 0.9) 0%, rgba(15, 23, 42, 0.95) 100%); border-left: 5px solid #facc15;">
+    <div>
+        <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.5rem;">
+            <span class="badge" style="background: rgba(234, 179, 8, 0.2); color: #facc15; border: 1px solid rgba(234, 179, 8, 0.4); font-weight: 700;">
+                👑 SUPER ADMIN / PRINCIPAL
+            </span>
+            <span style="color: var(--text-muted); font-size: 0.9rem;">MITM College-Wide Placement Governance</span>
+        </div>
+        <h1 style="font-size: 1.95rem; font-weight: 700; color: #fff; margin-bottom: 0.25rem;">
+            College Placement Overview Dashboard
+        </h1>
+        <p style="color: var(--text-muted); font-size: 0.95rem; margin: 0;">
+            Institutional analytics, inter-departmental benchmarking, and real-time placement tracking across all 10 departments.
+        </p>
+    </div>
+    <div style="display: flex; gap: 0.75rem; align-items: center;">
+        <span style="background: rgba(255,255,255,0.06); padding: 0.5rem 1rem; border-radius: 8px; font-size: 0.9rem; color: var(--text-muted); border: 1px solid var(--glass-border);">
+            👤 Logged in as: <strong style="color: #fff;">{{ admin.username }}</strong>
+        </span>
+    </div>
+</div>
+
+<!-- College-Wide Placement KPI Cards -->
+<div class="stats-grid">
+    <div class="stat-card">
+        <div class="stat-label">Total College Students</div>
+        <div class="stat-value" style="color: #60a5fa;">{{ metrics.total_students }}</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-label">Total Placed Students</div>
+        <div class="stat-value" style="color: #34d399;">{{ metrics.placed_count }}</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-label">Overall Placement %</div>
+        <div class="stat-value" style="color: #a78bfa;">{{ metrics.placement_pct }}%</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-label">Total Job Offers</div>
+        <div class="stat-value" style="color: #f472b6;">{{ metrics.total_offers }}</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-label">Highest Package</div>
+        <div class="stat-value" style="color: #fbbf24;">₹{{ "%.1f"|format(metrics.max_package) }} <span style="font-size: 0.85rem; color: var(--text-muted); font-weight: normal;">LPA</span></div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-label">Average Package</div>
+        <div class="stat-value" style="color: #38bdf8;">₹{{ "%.2f"|format(metrics.overall_avg_package) }} <span style="font-size: 0.85rem; color: var(--text-muted); font-weight: normal;">LPA</span></div>
+    </div>
+</div>
+
+<!-- Department Placement Comparison Section -->
+<div class="glass-panel" style="margin-bottom: 2rem;">
+    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; margin-bottom: 1.5rem; border-bottom: 1px solid var(--glass-border); padding-bottom: 1rem;">
+        <div>
+            <h2 style="font-size: 1.35rem; color: #fff; margin-bottom: 0.25rem; display: flex; align-items: center; gap: 0.5rem;">
+                <span>📊</span> Department Placement Comparison
+            </h2>
+            <p style="color: var(--text-muted); font-size: 0.85rem; margin: 0;">
+                Compare performance across all 10 engineering departments dynamically.
+            </p>
+        </div>
+
+        <!-- Metric Switcher Dropdown -->
+        <div style="display: flex; align-items: center; gap: 0.75rem;">
+            <label for="metric-selector" style="color: var(--text-muted); font-size: 0.9rem; font-weight: 500;">Compare By:</label>
+            <select id="metric-selector" onchange="updateComparisonChart(this.value)" class="form-control" style="width: auto; min-width: 210px; padding: 0.5rem 1rem; font-weight: 600; color: #60a5fa; background: rgba(15, 23, 42, 0.9);">
+                <option value="placed_students">Placed Students</option>
+                <option value="placement_pct">Placement Percentage (%)</option>
+                <option value="avg_package">Average Package (LPA)</option>
+                <option value="highest_package">Highest Package (LPA)</option>
+                <option value="total_offers">Total Offers</option>
+                <option value="avg_score">Overall Placement Score</option>
+            </select>
+        </div>
+    </div>
+
+    <!-- Chart Grid: Bar Comparison + College Ratio Donut -->
+    <div class="grid" style="grid-template-columns: 2fr 1fr; gap: 1.5rem; align-items: center;">
+        <div>
+            <div id="dept-comparison-chart" style="width: 100%; height: 350px;"></div>
+        </div>
+        <div style="background: rgba(255,255,255,0.02); border: 1px solid var(--glass-border); border-radius: 12px; padding: 1rem; text-align: center;">
+            <h4 style="font-size: 0.95rem; color: #cbd5e1; margin-bottom: 0.5rem;">College Placed vs Unplaced</h4>
+            <div id="college-donut-chart" style="width: 100%; height: 260px;"></div>
+            <div style="display: flex; justify-content: center; gap: 1.5rem; font-size: 0.85rem; margin-top: 0.5rem;">
+                <span style="color: #34d399;">● Placed: {{ metrics.placed_count }}</span>
+                <span style="color: #ef4444;">● Seeking: {{ metrics.unplaced_count }}</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- College-Level Department Leaderboard -->
+<div class="glass-panel" style="margin-bottom: 2rem;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; border-bottom: 1px solid var(--glass-border); padding-bottom: 1rem; flex-wrap: wrap; gap: 1rem;">
+        <div>
+            <h2 style="font-size: 1.35rem; color: #fff; margin-bottom: 0.25rem; display: flex; align-items: center; gap: 0.5rem;">
+                <span>🏆</span> College Department Leaderboard
+            </h2>
+            <p style="color: var(--text-muted); font-size: 0.85rem; margin: 0;">
+                Departments ranked dynamically by average student placement readiness, offers, and packages.
+            </p>
+        </div>
+    </div>
+
+    <div style="overflow-x: auto;">
+        <table>
+            <thead>
+                <tr>
+                    <th style="width: 60px; text-align: center;">Rank</th>
+                    <th>Department</th>
+                    <th>Code</th>
+                    <th style="text-align: center;">Total Students</th>
+                    <th style="text-align: center;">Placed Students</th>
+                    <th>Placement %</th>
+                    <th>Average Package</th>
+                    <th>Highest Package</th>
+                    <th style="text-align: center;">Offers</th>
+                    <th style="text-align: right;">Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for dept in dept_leaderboard %}
+                <tr>
+                    <!-- Rank Column -->
+                    <td style="text-align: center;">
+                        {% if loop.index == 1 %}
+                            <span class="rank-badge rank-1" title="Top Department">🥇</span>
+                        {% elif loop.index == 2 %}
+                            <span class="rank-badge rank-2">🥈</span>
+                        {% elif loop.index == 3 %}
+                            <span class="rank-badge rank-3">🥉</span>
+                        {% else %}
+                            <span class="rank-badge rank-other">{{ loop.index }}</span>
+                        {% endif %}
+                    </td>
+
+                    <!-- Department Name -->
+                    <td>
+                        <a href="{{ url_for('principal_view_department', dept_code=dept.code) }}" style="color: #fff; font-weight: 600; text-decoration: none; font-size: 0.95rem;">
+                            {{ dept.name }}
+                        </a>
+                        <div style="font-size: 0.78rem; color: var(--text-muted);">
+                            Avg Placement Score: <strong style="color: #60a5fa;">{{ dept.avg_score }}/100</strong>
+                        </div>
+                    </td>
+
+                    <!-- Code -->
+                    <td>
+                        <span class="badge badge-dept">{{ dept.code }}</span>
+                    </td>
+
+                    <!-- Total Students -->
+                    <td style="text-align: center; color: #cbd5e1; font-weight: 500;">
+                        {{ dept.total_students }}
+                    </td>
+
+                    <!-- Placed Count -->
+                    <td style="text-align: center;">
+                        <span style="background: rgba(16, 185, 129, 0.15); color: #34d399; font-weight: 700; padding: 0.2rem 0.6rem; border-radius: 999px; border: 1px solid rgba(16, 185, 129, 0.3);">
+                            {{ dept.placed_count }}
+                        </span>
+                    </td>
+
+                    <!-- Placement % -->
+                    <td>
+                        <div style="display: flex; align-items: center; gap: 0.5rem;">
+                            <strong style="color: #fff;">{{ dept.placement_pct }}%</strong>
+                        </div>
+                        <div class="score-bar-container" style="width: 90px;">
+                            <div class="score-bar-fill" style="width: {{ dept.placement_pct }}%;"></div>
+                        </div>
+                    </td>
+
+                    <!-- Avg Package -->
+                    <td>
+                        {% if dept.avg_package > 0 %}
+                            <span style="color: #38bdf8; font-weight: 600;">₹{{ "%.2f"|format(dept.avg_package) }} LPA</span>
+                        {% else %}
+                            <span style="color: var(--text-muted);">—</span>
+                        {% endif %}
+                    </td>
+
+                    <!-- Highest Package -->
+                    <td>
+                        {% if dept.highest_package > 0 %}
+                            <strong style="color: #fbbf24;">₹{{ "%.1f"|format(dept.highest_package) }} LPA</strong>
+                        {% else %}
+                            <span style="color: var(--text-muted);">—</span>
+                        {% endif %}
+                    </td>
+
+                    <!-- Total Offers -->
+                    <td style="text-align: center; font-weight: 700; color: #f472b6;">
+                        {{ dept.total_offers }}
+                    </td>
+
+                    <!-- Action -->
+                    <td style="text-align: right; white-space: nowrap;">
+                        <a href="{{ url_for('principal_view_department', dept_code=dept.code) }}" class="action-link">
+                            View Department ➔
+                        </a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+const payload = {{ chart_payload | safe }};
+
+// Render Placed vs Unplaced Donut Chart
+const donutTrace = {
+    labels: ['Placed Students', 'Seeking Placement'],
+    values: [{{ metrics.placed_count }}, {{ metrics.unplaced_count }}],
+    type: 'pie',
+    hole: 0.55,
+    marker: {
+        colors: ['#10b981', '#ef4444']
+    },
+    textinfo: 'percent',
+    textfont: { color: '#ffffff', size: 12 }
+};
+const donutLayout = {
+    paper_bgcolor: 'transparent',
+    plot_bgcolor: 'transparent',
+    margin: { t: 10, b: 10, l: 10, r: 10 },
+    showlegend: false
+};
+Plotly.newPlot('college-donut-chart', [donutTrace], donutLayout, {responsive: true, displayModeBar: false});
+
+// Metric configuration mapping for dynamic bar graph
+const metricConfig = {
+    'placed_students': {
+        data: payload.placed_students,
+        label: 'Number of Placed Students',
+        color: '#10b981',
+        suffix: ''
+    },
+    'placement_pct': {
+        data: payload.placement_pct,
+        label: 'Placement Percentage (%)',
+        color: '#8b5cf6',
+        suffix: '%'
+    },
+    'avg_package': {
+        data: payload.avg_package,
+        label: 'Average Package (LPA)',
+        color: '#38bdf8',
+        suffix: ' LPA'
+    },
+    'highest_package': {
+        data: payload.highest_package,
+        label: 'Highest Package (LPA)',
+        color: '#f59e0b',
+        suffix: ' LPA'
+    },
+    'total_offers': {
+        data: payload.total_offers,
+        label: 'Total Job Offers',
+        color: '#ec4899',
+        suffix: ''
+    },
+    'avg_score': {
+        data: payload.avg_score,
+        label: 'Overall Placement Score (Avg)',
+        color: '#3b82f6',
+        suffix: ' pts'
+    }
+};
+
+function updateComparisonChart(selectedMetric) {
+    const cfg = metricConfig[selectedMetric] || metricConfig['placed_students'];
+    
+    const trace = {
+        x: payload.dept_codes,
+        y: cfg.data,
+        type: 'bar',
+        text: cfg.data.map(v => v + cfg.suffix),
+        textposition: 'auto',
+        marker: {
+            color: cfg.color,
+            line: { color: 'rgba(255,255,255,0.2)', width: 1 }
+        }
+    };
+
+    const layout = {
+        title: {
+            text: cfg.label + ' Across Departments',
+            font: { color: '#ffffff', size: 14 }
+        },
+        paper_bgcolor: 'transparent',
+        plot_bgcolor: 'transparent',
+        font: { color: '#ffffff' },
+        margin: { t: 40, b: 40, l: 40, r: 20 },
+        xaxis: {
+            tickfont: { color: '#94a3b8', size: 12 }
+        },
+        yaxis: {
+            gridcolor: 'rgba(255,255,255,0.06)'
+        }
+    };
+
+    Plotly.newPlot('dept-comparison-chart', [trace], layout, {responsive: true, displayModeBar: false});
+}
+
+// Initial render with Placed Students
+updateComparisonChart('placed_students');
+</script>
+{% endblock %}

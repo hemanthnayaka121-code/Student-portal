@@ -1,0 +1,86 @@
+{% extends 'portal_base.html' %}
+
+{% block title %}Department HODs - MIT Placement Portal{% endblock %}
+{% block breadcrumb %}Department HODs{% endblock %}
+
+{% block portal_content %}
+
+<!-- Header -->
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; flex-wrap: wrap; gap: 1rem;">
+    <div>
+        <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.35rem;">
+            <span style="font-size: 2rem;">🏛️</span>
+            <h2 style="font-size: 1.75rem; font-weight: 700; color: #fff;">Department Heads of Department (HODs)</h2>
+        </div>
+        <p style="color: var(--text-muted); font-size: 0.9rem;">
+            Overview of department leadership, contact credentials, and placement performance across all 10 departments
+        </p>
+    </div>
+
+    <div style="background: rgba(59, 130, 246, 0.1); border: 1px solid rgba(59, 130, 246, 0.3); padding: 0.6rem 1.25rem; border-radius: 8px;">
+        <span style="color: #94a3b8; font-size: 0.82rem;">Total Departments:</span>
+        <strong style="color: #60a5fa; font-size: 1.1rem; margin-left: 0.35rem;">10</strong>
+    </div>
+</div>
+
+<!-- All 10 Department HODs Table -->
+<div class="glass-panel" style="margin-bottom: 2rem;">
+    <div style="overflow-x: auto;">
+        <table class="portal-table">
+            <thead>
+                <tr>
+                    <th>Department</th>
+                    <th>HOD Name & ID</th>
+                    <th>Contact Information</th>
+                    <th>Total Students</th>
+                    <th>Placed</th>
+                    <th>Unplaced</th>
+                    <th>Placement %</th>
+                    <th>Avg Package</th>
+                    <th>Highest Package</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in hod_list %}
+                {% set dept = item.department %}
+                {% set stats = item.stats %}
+                <tr>
+                    <td>
+                        <div style="font-weight: 700; color: #fff;">{{ dept.name }}</div>
+                        <span class="badge-dept" style="font-size: 0.75rem;">{{ dept.code }}</span>
+                    </td>
+                    <td>
+                        <div style="font-weight: 600; color: #e2e8f0;">{{ dept.hod_name }}</div>
+                        <span style="color: #60a5fa; font-size: 0.75rem; font-family: monospace;">ID: {{ dept.hod_id }}</span>
+                    </td>
+                    <td>
+                        <div style="color: #93c5fd; font-size: 0.82rem;">✉️ {{ dept.hod_email }}</div>
+                        <div style="color: #94a3b8; font-size: 0.8rem; margin-top: 2px;">📞 {{ dept.hod_phone }}</div>
+                    </td>
+                    <td><strong style="color: #fff;">{{ stats.total_students }}</strong></td>
+                    <td><strong style="color: #34d399;">{{ stats.placed_count }}</strong></td>
+                    <td><strong style="color: #f87171;">{{ stats.unplaced_count }}</strong></td>
+                    <td>
+                        <div style="font-weight: 700; color: {% if stats.placement_pct >= 80 %}#34d399{% elif stats.placement_pct >= 60 %}#60a5fa{% else %}#fbbf24{% endif %};">
+                            {{ stats.placement_pct }}%
+                        </div>
+                        <div class="score-bar-container">
+                            <div class="score-bar-fill" style="width: {{ stats.placement_pct }}%;"></div>
+                        </div>
+                    </td>
+                    <td><strong style="color: #facc15;">₹{{ stats.avg_package }} LPA</strong></td>
+                    <td><strong style="color: #f43f5e;">₹{{ stats.highest_package }} LPA</strong></td>
+                    <td>
+                        <a href="{{ url_for('portal_department_leaderboard', dept_code=dept.code) }}" class="action-link" style="font-size: 0.8rem; padding: 0.35rem 0.7rem;">
+                            Leaderboard ➔
+                        </a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+{% endblock %}

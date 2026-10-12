@@ -1,0 +1,144 @@
+{% extends 'base.html' %}
+
+{% block title %}Principal View - {{ department.name }}{% endblock %}
+
+{% block content %}
+<!-- Back button -->
+<div style="margin-bottom: 1.5rem;">
+    <a href="{{ url_for('principal_dashboard') }}" class="btn" style="background: rgba(255,255,255,0.08); border: 1px solid var(--glass-border); display: inline-flex; align-items: center; gap: 0.5rem;">
+        ← Back to College Overview
+    </a>
+</div>
+
+<!-- Department Header -->
+<div class="glass-panel" style="margin-bottom: 2rem; background: linear-gradient(135deg, rgba(30, 41, 59, 0.85) 0%, rgba(15, 23, 42, 0.95) 100%); border-left: 5px solid var(--primary);">
+    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+        <div>
+            <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.4rem;">
+                <span class="badge badge-dept">{{ department.code }}</span>
+                <span style="color: var(--text-muted); font-size: 0.85rem;">Principal Department Drilldown</span>
+            </div>
+            <h1 style="font-size: 1.85rem; font-weight: 700; color: #fff; margin: 0 0 0.35rem 0;">{{ department.name }}</h1>
+            <p style="color: var(--text-muted); font-size: 0.9rem; margin: 0;">
+                Comprehensive student roster, ranking, and round metrics for this department.
+            </p>
+        </div>
+    </div>
+</div>
+
+<!-- Department KPI Cards -->
+<div class="stats-grid">
+    <div class="stat-card">
+        <div class="stat-label">Total Students</div>
+        <div class="stat-value" style="color: #60a5fa;">{{ stats.total_students }}</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-label">Placed Students</div>
+        <div class="stat-value" style="color: #34d399;">{{ stats.placed_count }}</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-label">Placement %</div>
+        <div class="stat-value" style="color: #a78bfa;">{{ stats.placement_pct }}%</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-label">Highest Package</div>
+        <div class="stat-value" style="color: #fbbf24;">₹{{ "%.1f"|format(stats.highest_package) }} LPA</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-label">Average Package</div>
+        <div class="stat-value" style="color: #38bdf8;">₹{{ "%.2f"|format(stats.avg_package) }} LPA</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-label">Total Offers</div>
+        <div class="stat-value" style="color: #f472b6;">{{ stats.total_offers }}</div>
+    </div>
+</div>
+
+<!-- Students Leaderboard -->
+<div class="glass-panel" style="margin-bottom: 2rem;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; border-bottom: 1px solid var(--glass-border); padding-bottom: 1rem; flex-wrap: wrap; gap: 1rem;">
+        <h2 style="font-size: 1.35rem; color: #fff; margin: 0;">
+            🎓 {{ department.name }} Student Leaderboard
+        </h2>
+
+        <form method="GET" style="display: flex; gap: 0.5rem;">
+            <input type="text" name="search" class="form-control" placeholder="Search student..." value="{{ search_query }}" style="width: 200px; padding: 0.4rem 0.8rem; font-size: 0.85rem;">
+            <button type="submit" class="btn" style="padding: 0.4rem 0.8rem; font-size: 0.85rem;">Filter</button>
+            {% if search_query %}
+                <a href="{{ url_for('principal_view_department', dept_code=department.code) }}" class="btn" style="background: rgba(255,255,255,0.1); padding: 0.4rem 0.8rem; font-size: 0.85rem;">Reset</a>
+            {% endif %}
+        </form>
+    </div>
+
+    {% if students %}
+    <div style="overflow-x: auto;">
+        <table>
+            <thead>
+                <tr>
+                    <th style="width: 50px; text-align: center;">Rank</th>
+                    <th>Student Name</th>
+                    <th>USN</th>
+                    <th>Placement Score</th>
+                    <th>Category</th>
+                    <th style="text-align: center;">Offers</th>
+                    <th>Highest Package</th>
+                    <th>Average Package</th>
+                    <th style="text-align: right;">Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for student in students %}
+                <tr>
+                    <td style="text-align: center;">
+                        {% if loop.index == 1 %}
+                            <span class="rank-badge rank-1">🥇</span>
+                        {% elif loop.index == 2 %}
+                            <span class="rank-badge rank-2">🥈</span>
+                        {% elif loop.index == 3 %}
+                            <span class="rank-badge rank-3">🥉</span>
+                        {% else %}
+                            <span class="rank-badge rank-other">{{ loop.index }}</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <a href="{{ url_for('principal_view_student', usn=student.usn) }}" style="color: #fff; font-weight: 600; text-decoration: none;">
+                            {{ student.name }}
+                        </a>
+                        <div style="font-size: 0.78rem; color: var(--text-muted);">
+                            Sem {{ student.semester }} | CGPA {{ "%.2f"|format(student.cgpa) }}
+                        </div>
+                    </td>
+                    <td><span style="font-family: monospace; color: #93c5fd;">{{ student.usn }}</span></td>
+                    <td>
+                        <strong>{{ student.placement_score }}</strong>/100
+                        <div class="score-bar-container"><div class="score-bar-fill" style="width: {{ student.placement_score }}%;"></div></div>
+                    </td>
+                    <td>
+                        {% if student.placement_level == 'Excellent' %}
+                            <span class="badge badge-excellent">Excellent</span>
+                        {% elif student.placement_level == 'Very Good' %}
+                            <span class="badge badge-verygood">Very Good</span>
+                        {% elif student.placement_level == 'Good' %}
+                            <span class="badge badge-good">Good</span>
+                        {% else %}
+                            <span class="badge badge-warning">{{ student.placement_level }}</span>
+                        {% endif %}
+                    </td>
+                    <td style="text-align: center; color: #34d399; font-weight: 700;">{{ student.offers_count }}</td>
+                    <td style="color: #fbbf24; font-weight: 600;">₹{{ "%.1f"|format(student.highest_package) }} LPA</td>
+                    <td style="color: #94a3b8;">₹{{ "%.1f"|format(student.average_package) }} LPA</td>
+                    <td style="text-align: right;">
+                        <a href="{{ url_for('principal_view_student', usn=student.usn) }}" class="action-link">
+                            Profile ➔
+                        </a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+        <p style="text-align: center; padding: 2rem; color: var(--text-muted);">No students found in this department.</p>
+    {% endif %}
+</div>
+{% endblock %}

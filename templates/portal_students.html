@@ -1,0 +1,112 @@
+{% extends 'portal_base.html' %}
+
+{% block title %}Student Details Directory - MIT Placement Portal{% endblock %}
+{% block breadcrumb %}Student Details Directory{% endblock %}
+
+{% block portal_content %}
+
+<!-- Header -->
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; flex-wrap: wrap; gap: 1rem; border-bottom: 1px solid #000; padding-bottom: 1rem;">
+    <div>
+        <h2 style="font-size: 1.5rem; font-weight: 700; color: #000; text-transform: uppercase;">Student Details Directory</h2>
+        <p style="color: #666; font-size: 0.88rem; margin: 3px 0 0;">
+            Search and view individual placement profiles across all departments
+        </p>
+    </div>
+
+    <div style="background: #fafafa; border: 1px solid #000; padding: 0.5rem 1rem; border-radius: 4px;">
+        <span style="color: #666; font-size: 0.8rem; text-transform: uppercase;">Total Registered:</span>
+        <strong style="color: #000; font-size: 1rem; margin-left: 0.35rem;">{{ students|length }} Students</strong>
+    </div>
+</div>
+
+<!-- Department Filter Tabs -->
+<div style="display: flex; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 1.5rem;">
+    <a href="{{ url_for('portal_students') }}" class="btn" style="padding: 0.4rem 0.85rem; font-size: 0.8rem; {% if not selected_dept %}background: #000; color: #fff; border: 1px solid #000;{% else %}background: #fff; color: #000; border: 1px solid #000;{% endif %}">
+        All Departments
+    </a>
+    {% for code in ['CSE', 'CE', 'AI', 'CSD', 'CSML', 'ISE', 'ECE', 'IOT', 'CIVIL', 'MECH'] %}
+        <a href="{{ url_for('portal_students', dept_code=code) }}" class="btn" style="padding: 0.4rem 0.85rem; font-size: 0.8rem; {% if selected_dept == code %}background: #000; color: #fff; border: 1px solid #000;{% else %}background: #fff; color: #000; border: 1px solid #000;{% endif %}">
+            {{ code }}
+        </a>
+    {% endfor %}
+</div>
+
+<!-- Filter / Search Form -->
+<div class="card" style="padding: 1rem 1.25rem; margin-bottom: 1.75rem; border: 1px solid #e5e5e5; background: #fafafa;">
+    <form method="GET" action="{{ url_for('portal_students') }}" style="display: flex; gap: 0.75rem;">
+        {% if selected_dept %}
+            <input type="hidden" name="dept_code" value="{{ selected_dept }}">
+        {% endif %}
+        <input type="text" name="search" value="{{ search_query }}" placeholder="Search by Student Name, USN, or Skill (e.g. Python, SQL)..." class="form-control" style="flex: 1; padding: 0.6rem 0.85rem; border: 1px solid #000;">
+        <button type="submit" class="btn" style="padding: 0.6rem 1.25rem; background: #000; color: #fff; border: 1px solid #000;">Search</button>
+        {% if search_query %}
+            <a href="{{ url_for('portal_students', dept_code=selected_dept) if selected_dept else url_for('portal_students') }}" class="btn btn-secondary" style="border: 1px solid #000; color: #000; background: #fff; padding: 0.6rem 1rem;">Clear</a>
+        {% endif %}
+    </form>
+</div>
+
+<!-- Students Directory Table -->
+<div class="card" style="border: 1px solid #000; padding: 1.5rem;">
+    <div style="overflow-x: auto;">
+        <table class="portal-table">
+            <thead>
+                <tr>
+                    <th>Student Name</th>
+                    <th>USN</th>
+                    <th>Department</th>
+                    <th>CGPA</th>
+                    <th>Placement Status</th>
+                    <th>Highest Package</th>
+                    <th>Placement Score</th>
+                    <th style="text-align: right;">Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for st in students %}
+                <tr onclick="window.location.href='{{ url_for('portal_student_details', usn=st.usn) }}'" style="cursor: pointer;">
+                    <td>
+                        <div style="font-weight: 700;">{{ st.name }}</div>
+                        <div style="font-size: 0.78rem; color: #666;">Sem {{ st.semester }}</div>
+                    </td>
+                    <td>
+                        <span style="font-family: monospace; font-weight: 600;">{{ st.usn }}</span>
+                    </td>
+                    <td>
+                        <span class="badge-dept">{{ st.department.code }}</span>
+                    </td>
+                    <td><strong>{{ st.cgpa }}</strong></td>
+                    <td>
+                        <span class="badge" style="border: 1px solid #000; background: #fff; color: #000;">
+                            {{ st.placement_status }}
+                        </span>
+                    </td>
+                    <td>
+                        {% if st.highest_package > 0 %}
+                            <strong>₹{{ st.highest_package }} LPA</strong>
+                        {% else %}
+                            <span style="color: #999;">—</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <div style="font-weight: 700;">{{ st.placement_score }}/100</div>
+                    </td>
+                    <td style="text-align: right;">
+                        <span class="btn" style="font-size: 0.75rem; padding: 0.3rem 0.65rem; background: #000; color: #fff; border: 1px solid #000;">
+                            View Profile
+                        </span>
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="8" style="text-align: center; padding: 2rem; color: #666;">
+                        No students found matching your criteria.
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+{% endblock %}

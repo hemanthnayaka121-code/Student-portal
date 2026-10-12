@@ -1,0 +1,375 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ department.name }} - Placement Leaderboard{% endblock %}
+
+{% block content %}
+<!-- Department Header Banner -->
+<div class="glass-panel" style="margin-bottom: 2rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1.5rem; background: linear-gradient(135deg, rgba(30, 41, 59, 0.85) 0%, rgba(15, 23, 42, 0.95) 100%); border-left: 5px solid var(--primary);">
+    <div>
+        <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.5rem;">
+            <span class="badge badge-dept">{{ department.code }}</span>
+            <span style="color: var(--text-muted); font-size: 0.9rem;">Authenticated Department Portal</span>
+        </div>
+        <h1 style="font-size: 1.85rem; font-weight: 700; color: #fff; margin-bottom: 0.25rem;">{{ department.name }}</h1>
+        <p style="color: var(--text-muted); font-size: 0.95rem;">
+            Official Department Placement Leaderboard & Student Performance Tracking
+        </p>
+    </div>
+    <div style="display: flex; gap: 0.75rem; align-items: center; flex-wrap: wrap;">
+        <span style="background: rgba(255,255,255,0.06); padding: 0.5rem 1rem; border-radius: 8px; font-size: 0.9rem; color: var(--text-muted); border: 1px solid var(--glass-border);">
+            👤 HOD Login: <strong style="color: #fff;">{{ admin.username }}</strong>
+        </span>
+        <button onclick="toggleAddStudentModal()" class="btn" style="background: var(--success); font-size: 0.9rem; padding: 0.6rem 1.2rem;">
+            ➕ Register Student
+        </button>
+    </div>
+</div>
+
+<!-- Department Placement KPIs -->
+<div class="stats-grid">
+    <div class="stat-card">
+        <div class="stat-label">Total Department Students</div>
+        <div class="stat-value" style="color: #60a5fa;">{{ total_students }}</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-label">Placed Students</div>
+        <div class="stat-value" style="color: #34d399;">{{ placed_count }}</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-label">Placement Rate</div>
+        <div class="stat-value" style="color: #a78bfa;">{{ placement_pct }}%</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-label">Highest Package</div>
+        <div class="stat-value" style="color: #fbbf24;">₹{{ "%.1f"|format(highest_package) }} <span style="font-size: 0.9rem; font-weight: normal; color: var(--text-muted);">LPA</span></div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-label">Average Package</div>
+        <div class="stat-value" style="color: #38bdf8;">₹{{ "%.2f"|format(dept_avg_package) }} <span style="font-size: 0.9rem; font-weight: normal; color: var(--text-muted);">LPA</span></div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-label">Total Job Offers</div>
+        <div class="stat-value" style="color: #f472b6;">{{ total_offers }}</div>
+    </div>
+</div>
+
+<!-- Quick Student Search & Direct Jump -->
+<div class="glass-panel" style="margin-bottom: 2rem; padding: 1.25rem 1.75rem;">
+    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+        <div>
+            <h3 style="margin-bottom: 0.25rem; font-size: 1.15rem; color: #fff;">🔍 Search & Select Department Student</h3>
+            <p style="color: var(--text-muted); font-size: 0.85rem; margin: 0;">
+                Selecting a student switches to their dedicated Student Details Dashboard.
+            </p>
+        </div>
+        
+        <form action="{{ url_for('select_student') }}" method="GET" style="display: flex; gap: 0.5rem; flex: 1; max-width: 500px;">
+            <input 
+                type="text" 
+                name="search_usn" 
+                class="form-control" 
+                placeholder="Enter Student USN or Name (e.g. {{ students[0].usn if students else '4MH24IS001' }})" 
+                required 
+                style="padding: 0.6rem 1rem; font-size: 0.95rem;"
+            >
+            <button type="submit" class="btn" style="white-space: nowrap; padding: 0.6rem 1.2rem;">
+                Open Details ➔
+            </button>
+        </form>
+    </div>
+</div>
+
+<!-- Department Leaderboard Section -->
+<div class="glass-panel" style="margin-bottom: 2rem;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 1rem; border-bottom: 1px solid var(--glass-border); padding-bottom: 1rem;">
+        <div>
+            <h2 style="font-size: 1.4rem; color: #fff; margin-bottom: 0.25rem; display: flex; align-items: center; gap: 0.5rem;">
+                <span>🏆</span> {{ department.name }} Placement Leaderboard
+            </h2>
+            <p style="color: var(--text-muted); font-size: 0.85rem; margin: 0;">
+                Ranked by overall placement readiness score, placement tier, and job offers.
+            </p>
+        </div>
+
+        <!-- Filter within leaderboard -->
+        <form method="GET" action="{{ url_for('admin_dashboard') }}" style="display: flex; gap: 0.5rem;">
+            <input 
+                type="text" 
+                name="search" 
+                class="form-control" 
+                placeholder="Filter leaderboard..." 
+                value="{{ search_query }}"
+                style="padding: 0.45rem 0.85rem; font-size: 0.85rem; width: 220px;"
+            >
+            <button type="submit" class="btn" style="padding: 0.45rem 0.85rem; font-size: 0.85rem;">Filter</button>
+            {% if search_query %}
+                <a href="{{ url_for('admin_dashboard') }}" class="btn" style="background: rgba(255,255,255,0.1); padding: 0.45rem 0.85rem; font-size: 0.85rem;">Reset</a>
+            {% endif %}
+        </form>
+    </div>
+
+    {% if students %}
+    <div style="overflow-x: auto;">
+        <table>
+            <thead>
+                <tr>
+                    <th style="width: 60px; text-align: center;">Rank</th>
+                    <th>Student Name</th>
+                    <th>USN / ID</th>
+                    <th>Placement Score</th>
+                    <th>Level / Category</th>
+                    <th style="text-align: center;">Offers</th>
+                    <th>Highest Package</th>
+                    <th>Average Package</th>
+                    <th>Key Skills</th>
+                    <th style="text-align: right;">Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for student in students %}
+                <tr>
+                    <!-- Rank Column -->
+                    <td style="text-align: center;">
+                        {% if loop.index == 1 %}
+                            <span class="rank-badge rank-1" title="Rank 1">🥇</span>
+                        {% elif loop.index == 2 %}
+                            <span class="rank-badge rank-2" title="Rank 2">🥈</span>
+                        {% elif loop.index == 3 %}
+                            <span class="rank-badge rank-3" title="Rank 3">🥉</span>
+                        {% else %}
+                            <span class="rank-badge rank-other">{{ loop.index }}</span>
+                        {% endif %}
+                    </td>
+
+                    <!-- Student Name -->
+                    <td>
+                        <a href="{{ url_for('view_student_details', usn=student.usn) }}" style="color: #fff; font-weight: 600; text-decoration: none; font-size: 0.95rem;">
+                            {{ student.name }}
+                        </a>
+                        <div style="font-size: 0.78rem; color: var(--text-muted);">
+                            Sem {{ student.semester }} | CGPA {{ "%.2f"|format(student.cgpa) }}
+                        </div>
+                    </td>
+
+                    <!-- USN -->
+                    <td>
+                        <span style="font-family: monospace; font-size: 0.9rem; color: #93c5fd; background: rgba(59, 130, 246, 0.1); padding: 0.2rem 0.45rem; border-radius: 4px; border: 1px solid rgba(59, 130, 246, 0.2);">
+                            {{ student.usn }}
+                        </span>
+                    </td>
+
+                    <!-- Placement Score -->
+                    <td>
+                        <div style="display: flex; align-items: baseline; gap: 0.35rem;">
+                            <strong style="font-size: 1.05rem; color: #fff;">{{ student.placement_score }}</strong>
+                            <span style="font-size: 0.75rem; color: var(--text-muted);">/100</span>
+                        </div>
+                        <div class="score-bar-container">
+                            <div class="score-bar-fill" style="width: {{ student.placement_score }}%;"></div>
+                        </div>
+                    </td>
+
+                    <!-- Placement Level / Category -->
+                    <td>
+                        {% if student.placement_level == 'Excellent' %}
+                            <span class="badge badge-excellent">🌟 Excellent</span>
+                        {% elif student.placement_level == 'Very Good' %}
+                            <span class="badge badge-verygood">⚡ Very Good</span>
+                        {% elif student.placement_level == 'Good' %}
+                            <span class="badge badge-good">👍 Good</span>
+                        {% elif student.placement_level == 'Average' %}
+                            <span class="badge badge-warning">⚠️ Average</span>
+                        {% else %}
+                            <span class="badge badge-danger">❗ Needs Improvement</span>
+                        {% endif %}
+                    </td>
+
+                    <!-- Offers Count -->
+                    <td style="text-align: center;">
+                        {% if student.offers_count > 0 %}
+                            <span style="display: inline-block; background: rgba(16, 185, 129, 0.15); color: #34d399; font-weight: 700; padding: 0.2rem 0.6rem; border-radius: 999px; border: 1px solid rgba(16, 185, 129, 0.3);">
+                                {{ student.offers_count }}
+                            </span>
+                        {% else %}
+                            <span style="color: var(--text-muted); font-size: 0.85rem;">0</span>
+                        {% endif %}
+                    </td>
+
+                    <!-- Highest Package -->
+                    <td>
+                        {% if student.highest_package > 0 %}
+                            <strong style="color: #fbbf24;">₹{{ "%.1f"|format(student.highest_package) }} LPA</strong>
+                        {% else %}
+                            <span style="color: var(--text-muted); font-size: 0.85rem;">—</span>
+                        {% endif %}
+                    </td>
+
+                    <!-- Average Package -->
+                    <td>
+                        {% if student.average_package > 0 %}
+                            <span style="color: #94a3b8;">₹{{ "%.1f"|format(student.average_package) }} LPA</span>
+                        {% else %}
+                            <span style="color: var(--text-muted); font-size: 0.85rem;">—</span>
+                        {% endif %}
+                    </td>
+
+                    <!-- Skills -->
+                    <td>
+                        <div class="skill-tags">
+                            {% for skill in student.skills.split(',')[:3] %}
+                                <span class="skill-pill">{{ skill.strip() }}</span>
+                            {% endfor %}
+                            {% if student.skills.split(',')|length > 3 %}
+                                <span class="skill-pill" style="opacity: 0.6;">+{{ student.skills.split(',')|length - 3 }}</span>
+                            {% endif %}
+                        </div>
+                    </td>
+
+                    <!-- Action -->
+                    <td style="text-align: right; white-space: nowrap;">
+                        <a href="{{ url_for('view_student_details', usn=student.usn) }}" class="action-link" title="Open student details dashboard">
+                            View Details ➔
+                        </a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div style="text-align: center; padding: 3rem 1rem;">
+        <span style="font-size: 2.5rem; display: block; margin-bottom: 0.75rem;">👥</span>
+        <h3 style="color: #fff; margin-bottom: 0.5rem;">No students found in {{ department.name }}</h3>
+        <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 1.5rem;">
+            {% if search_query %}
+                No student matched your filter "{{ search_query }}". Try clearing the filter.
+            {% else %}
+                No students are currently enrolled under this department. Register new students using the button above.
+            {% endif %}
+        </p>
+        {% if search_query %}
+            <a href="{{ url_for('admin_dashboard') }}" class="btn">Clear Filter</a>
+        {% endif %}
+    </div>
+    {% endif %}
+</div>
+
+<!-- Modal / Collapsible Section: Register Student (Locked to current department) -->
+<div id="add-student-modal" style="display: none; margin-bottom: 2rem;">
+    <div class="glass-panel" style="border: 1px solid rgba(16, 185, 129, 0.4); background: rgba(15, 23, 42, 0.95);">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; border-bottom: 1px solid var(--glass-border); padding-bottom: 1rem;">
+            <div>
+                <h3 style="color: var(--success); margin: 0; font-size: 1.3rem;">➕ Register New Student to {{ department.name }}</h3>
+                <p style="color: var(--text-muted); font-size: 0.85rem; margin: 0.25rem 0 0 0;">
+                    Student will automatically be assigned to <strong>{{ department.name }} ({{ department.code }})</strong>.
+                </p>
+            </div>
+            <button onclick="toggleAddStudentModal()" class="btn" style="background: rgba(255,255,255,0.1); padding: 0.4rem 0.8rem; font-size: 0.85rem;">✕ Close</button>
+        </div>
+
+        <form action="{{ url_for('add_student') }}" method="POST">
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1.25rem; margin-bottom: 1.5rem;">
+                <div class="form-group" style="margin-bottom: 0;">
+                    <label>USN / Student ID *</label>
+                    <input type="text" name="usn" class="form-control" required placeholder="e.g. 4MH24{{ department.code[:2] }}010">
+                </div>
+                <div class="form-group" style="margin-bottom: 0;">
+                    <label>Full Student Name *</label>
+                    <input type="text" name="name" class="form-control" required placeholder="e.g. Samantha Roy">
+                </div>
+                <div class="form-group" style="margin-bottom: 0;">
+                    <label>Mobile Number *</label>
+                    <input type="text" name="mobile" class="form-control" required placeholder="10-digit mobile number">
+                </div>
+                <div class="form-group" style="margin-bottom: 0;">
+                    <label>Email Address</label>
+                    <input type="email" name="email" class="form-control" placeholder="student@mitm.ac.in">
+                </div>
+                <div class="form-group" style="margin-bottom: 0;">
+                    <label>Semester</label>
+                    <input type="number" name="semester" class="form-control" value="8" min="1" max="8">
+                </div>
+                <div class="form-group" style="margin-bottom: 0;">
+                    <label>CGPA</label>
+                    <input type="number" step="0.01" name="cgpa" class="form-control" value="8.2" min="0" max="10">
+                </div>
+                <div class="form-group" style="margin-bottom: 0;">
+                    <label>Attendance %</label>
+                    <input type="number" step="0.1" name="attendance" class="form-control" value="85" min="0" max="100">
+                </div>
+                <div class="form-group" style="margin-bottom: 0;">
+                    <label>Placement Status</label>
+                    <select name="placement_status" class="form-control">
+                        <option value="Eligible">Eligible</option>
+                        <option value="Placed">Placed</option>
+                        <option value="In Progress">In Progress</option>
+                    </select>
+                </div>
+                <div class="form-group" style="margin-bottom: 0;">
+                    <label>Number of Offers</label>
+                    <input type="number" name="offers_count" class="form-control" value="0" min="0">
+                </div>
+                <div class="form-group" style="margin-bottom: 0;">
+                    <label>Highest Package (LPA)</label>
+                    <input type="number" step="0.1" name="highest_package" class="form-control" value="0.0">
+                </div>
+                <div class="form-group" style="margin-bottom: 0;">
+                    <label>Average Package (LPA)</label>
+                    <input type="number" step="0.1" name="average_package" class="form-control" value="0.0">
+                </div>
+                <div class="form-group" style="margin-bottom: 0;">
+                    <label>Key Skills (comma separated)</label>
+                    <input type="text" name="skills" class="form-control" placeholder="Python, Java, DSA, SQL">
+                </div>
+            </div>
+
+            <div style="background: rgba(255,255,255,0.03); border: 1px solid var(--glass-border); border-radius: 8px; padding: 1.25rem; margin-bottom: 1.5rem;">
+                <h4 style="color: #93c5fd; margin-bottom: 1rem; font-size: 0.95rem;">Placement Readiness Scores</h4>
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1rem;">
+                    <div class="form-group" style="margin-bottom: 0;">
+                        <label>Aptitude Score (100)</label>
+                        <input type="number" step="0.1" name="aptitude" class="form-control" value="75">
+                    </div>
+                    <div class="form-group" style="margin-bottom: 0;">
+                        <label>Coding Score (100)</label>
+                        <input type="number" step="0.1" name="coding_score" class="form-control" value="75">
+                    </div>
+                    <div class="form-group" style="margin-bottom: 0;">
+                        <label>Tech Interview (100)</label>
+                        <input type="number" step="0.1" name="tech_score" class="form-control" value="75">
+                    </div>
+                    <div class="form-group" style="margin-bottom: 0;">
+                        <label>HR Score (100)</label>
+                        <input type="number" step="0.1" name="hr_score" class="form-control" value="80">
+                    </div>
+                </div>
+                <div style="display: flex; gap: 2rem; margin-top: 1rem;">
+                    <label style="display: flex; align-items: center; gap: 0.5rem; color: #fff; cursor: pointer;">
+                        <input type="checkbox" name="gd" checked style="accent-color: var(--success); width: 18px; height: 18px;"> Group Discussion (Pass)
+                    </label>
+                    <label style="display: flex; align-items: center; gap: 0.5rem; color: #fff; cursor: pointer;">
+                        <input type="checkbox" name="hr" checked style="accent-color: var(--success); width: 18px; height: 18px;"> HR Round (Pass)
+                    </label>
+                </div>
+            </div>
+
+            <div style="display: flex; justify-content: flex-end; gap: 1rem;">
+                <button type="button" onclick="toggleAddStudentModal()" class="btn" style="background: rgba(255,255,255,0.1);">Cancel</button>
+                <button type="submit" class="btn" style="background: var(--success); padding: 0.75rem 2rem;">Save & Register Student</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+function toggleAddStudentModal() {
+    const modal = document.getElementById('add-student-modal');
+    if (modal.style.display === 'none' || modal.style.display === '') {
+        modal.style.display = 'block';
+        modal.scrollIntoView({ behavior: 'smooth' });
+    } else {
+        modal.style.display = 'none';
+    }
+}
+</script>
+{% endblock %}

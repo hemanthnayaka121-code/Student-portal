@@ -1,0 +1,418 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ student.name }} ({{ student.usn }}) - Student Details{% endblock %}
+
+{% block content %}
+<!-- Navigation Bar: Back to Department Leaderboard & Student Switcher -->
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; flex-wrap: wrap; gap: 1rem;">
+    <div>
+        <a href="{{ url_for('admin_dashboard') }}" class="btn" style="background: rgba(255,255,255,0.08); border: 1px solid var(--glass-border); display: inline-flex; align-items: center; gap: 0.5rem;">
+            ← Back to {{ department.name }} Leaderboard
+        </a>
+    </div>
+
+    <!-- Quick Switcher to another student in THIS department -->
+    <div style="display: flex; align-items: center; gap: 0.75rem;">
+        <span style="color: var(--text-muted); font-size: 0.85rem;">Switch Student:</span>
+        <select onchange="if(this.value) window.location.href=this.value;" class="form-control" style="width: auto; min-width: 200px; padding: 0.45rem 0.85rem; font-size: 0.85rem;">
+            {% for peer in dept_peers %}
+                <option value="{{ url_for('view_student_details', usn=peer.usn) }}" {% if peer.usn == student.usn %}selected{% endif %}>
+                    {{ peer.name }} ({{ peer.usn }})
+                </option>
+            {% endfor %}
+        </select>
+    </div>
+</div>
+
+<!-- Header Student Profile Card -->
+<div class="glass-panel" style="margin-bottom: 2rem; background: linear-gradient(135deg, rgba(30, 41, 59, 0.9) 0%, rgba(15, 23, 42, 0.95) 100%); border-left: 5px solid var(--primary);">
+    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1.5rem;">
+        <div style="display: flex; gap: 1.5rem; align-items: center;">
+            <img src="https://ui-avatars.com/api/?name={{ student.name }}&background=3b82f6&color=fff&size=100&bold=true" alt="{{ student.name }}" style="border-radius: 50%; border: 3px solid rgba(59, 130, 246, 0.5); width: 88px; height: 88px; box-shadow: 0 4px 15px rgba(0,0,0,0.3);">
+            <div>
+                <div style="display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap; margin-bottom: 0.35rem;">
+                    <h1 style="font-size: 1.85rem; font-weight: 700; color: #fff; margin: 0;">{{ student.name }}</h1>
+                    <span style="font-family: monospace; font-size: 0.95rem; color: #93c5fd; background: rgba(59, 130, 246, 0.15); padding: 0.2rem 0.6rem; border-radius: 4px; border: 1px solid rgba(59, 130, 246, 0.3);">
+                        {{ student.usn }}
+                    </span>
+                    <span class="badge badge-dept">{{ department.name }} ({{ department.code }})</span>
+                </div>
+                <p style="color: var(--text-muted); font-size: 0.9rem; margin: 0; line-height: 1.6;">
+                    Semester: <strong style="color: #fff;">{{ student.semester }}th Sem</strong> &nbsp;|&nbsp; 
+                    Email: <strong style="color: #fff;">{{ student.email or 'N/A' }}</strong> &nbsp;|&nbsp; 
+                    Contact: <strong style="color: #fff;">{{ student.mobile_number }}</strong>
+                </p>
+            </div>
+        </div>
+
+        <!-- Overall Score Badge -->
+        <div style="text-align: right; background: rgba(255,255,255,0.04); border: 1px solid var(--glass-border); padding: 1rem 1.5rem; border-radius: 12px; min-width: 170px;">
+            <div style="color: var(--text-muted); font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.05em;">Placement Score</div>
+            <div style="font-size: 2.2rem; font-weight: 800; color: #60a5fa; line-height: 1.1; margin-top: 0.2rem;">
+                {{ student.placement_score }} <span style="font-size: 1rem; color: var(--text-muted); font-weight: normal;">/ 100</span>
+            </div>
+            <div style="margin-top: 0.35rem;">
+                {% if student.placement_level == 'Excellent' %}
+                    <span class="badge badge-excellent">🌟 Excellent</span>
+                {% elif student.placement_level == 'Very Good' %}
+                    <span class="badge badge-verygood">⚡ Very Good</span>
+                {% elif student.placement_level == 'Good' %}
+                    <span class="badge badge-good">👍 Good</span>
+                {% elif student.placement_level == 'Average' %}
+                    <span class="badge badge-warning">⚠️ Average</span>
+                {% else %}
+                    <span class="badge badge-danger">❗ Needs Improvement</span>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Two-Column Grid: Academic Performance & Placement Performance -->
+<div class="grid" style="grid-template-columns: repeat(auto-fit, minmax(360px, 1fr)); gap: 1.5rem; margin-bottom: 2rem;">
+    <!-- 1. Academic Performance -->
+    <div class="glass-panel">
+        <h3 style="color: #38bdf8; margin-bottom: 1.25rem; font-size: 1.2rem; display: flex; align-items: center; gap: 0.5rem; border-bottom: 1px solid var(--glass-border); padding-bottom: 0.75rem;">
+            <span>🎓</span> Academic Performance
+        </h3>
+        
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1.25rem;">
+            <div style="background: rgba(255,255,255,0.03); padding: 1rem; border-radius: 8px; border: 1px solid var(--glass-border);">
+                <div style="font-size: 0.8rem; color: var(--text-muted); text-transform: uppercase;">Cumulative CGPA</div>
+                <div style="font-size: 1.6rem; font-weight: 700; color: #fff; margin-top: 0.25rem;">{{ "%.2f"|format(student.cgpa) }} <span style="font-size: 0.85rem; color: var(--text-muted);">/ 10</span></div>
+            </div>
+            <div style="background: rgba(255,255,255,0.03); padding: 1rem; border-radius: 8px; border: 1px solid var(--glass-border);">
+                <div style="font-size: 0.8rem; color: var(--text-muted); text-transform: uppercase;">Overall Attendance</div>
+                <div style="font-size: 1.6rem; font-weight: 700; color: {% if student.attendance >= 85 %}#34d399{% elif student.attendance >= 75 %}#fbbf24{% else %}#f87171{% endif %}; margin-top: 0.25rem;">
+                    {{ "%.1f"|format(student.attendance) }}%
+                </div>
+            </div>
+        </div>
+
+        <div style="background: rgba(255,255,255,0.03); padding: 1rem; border-radius: 8px; border: 1px solid var(--glass-border); margin-bottom: 1rem;">
+            <div style="font-size: 0.8rem; color: var(--text-muted); text-transform: uppercase;">Academic Performance Score</div>
+            <div style="font-size: 1.35rem; font-weight: 700; color: #fff; margin-top: 0.25rem;">
+                {{ "%.1f"|format(student.academic_score) }} <span style="font-size: 0.8rem; color: var(--text-muted);">/ 100</span>
+            </div>
+            <div class="score-bar-container" style="width: 100%; margin-top: 0.5rem;">
+                <div class="score-bar-fill" style="width: {{ student.academic_score }}%;"></div>
+            </div>
+        </div>
+
+        <p style="font-size: 0.85rem; color: var(--text-muted); margin: 0;">
+            Current Academic Standing: <strong style="color: #fff;">8th Semester Regular Student</strong>. Meets minimum threshold for Tier-1 placements.
+        </p>
+    </div>
+
+    <!-- 2. Placement Performance -->
+    <div class="glass-panel">
+        <h3 style="color: #34d399; margin-bottom: 1.25rem; font-size: 1.2rem; display: flex; align-items: center; gap: 0.5rem; border-bottom: 1px solid var(--glass-border); padding-bottom: 0.75rem;">
+            <span>💼</span> Placement Performance
+        </h3>
+
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 0.85rem; margin-bottom: 1.25rem;">
+            <div style="background: rgba(255,255,255,0.03); padding: 0.85rem; border-radius: 8px; border: 1px solid var(--glass-border); text-align: center;">
+                <div style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase;">Status</div>
+                <div style="font-size: 1.15rem; font-weight: 700; color: {% if student.placement_status == 'Placed' %}#34d399{% else %}#fbbf24{% endif %}; margin-top: 0.25rem;">
+                    {{ student.placement_status }}
+                </div>
+            </div>
+
+            <div style="background: rgba(255,255,255,0.03); padding: 0.85rem; border-radius: 8px; border: 1px solid var(--glass-border); text-align: center;">
+                <div style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase;">Attended</div>
+                <div style="font-size: 1.35rem; font-weight: 700; color: #fff; margin-top: 0.25rem;">
+                    {{ student.companies_attended }}
+                </div>
+            </div>
+
+            <div style="background: rgba(255,255,255,0.03); padding: 0.85rem; border-radius: 8px; border: 1px solid var(--glass-border); text-align: center;">
+                <div style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase;">Selected</div>
+                <div style="font-size: 1.35rem; font-weight: 700; color: #fff; margin-top: 0.25rem;">
+                    {{ student.companies_selected }}
+                </div>
+            </div>
+
+            <div style="background: rgba(255,255,255,0.03); padding: 0.85rem; border-radius: 8px; border: 1px solid var(--glass-border); text-align: center;">
+                <div style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase;">Total Offers</div>
+                <div style="font-size: 1.35rem; font-weight: 700; color: #34d399; margin-top: 0.25rem;">
+                    {{ student.offers_count }}
+                </div>
+            </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+            <div style="background: rgba(255,255,255,0.03); padding: 1rem; border-radius: 8px; border: 1px solid var(--glass-border);">
+                <div style="font-size: 0.8rem; color: var(--text-muted); text-transform: uppercase;">Highest Package</div>
+                <div style="font-size: 1.5rem; font-weight: 700; color: #fbbf24; margin-top: 0.25rem;">
+                    ₹{{ "%.1f"|format(student.highest_package) }} <span style="font-size: 0.8rem; color: var(--text-muted);">LPA</span>
+                </div>
+            </div>
+            <div style="background: rgba(255,255,255,0.03); padding: 1rem; border-radius: 8px; border: 1px solid var(--glass-border);">
+                <div style="font-size: 0.8rem; color: var(--text-muted); text-transform: uppercase;">Average Package</div>
+                <div style="font-size: 1.5rem; font-weight: 700; color: #38bdf8; margin-top: 0.25rem;">
+                    ₹{{ "%.1f"|format(student.average_package) }} <span style="font-size: 0.8rem; color: var(--text-muted);">LPA</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Skills, Projects & Certifications Card -->
+<div class="glass-panel" style="margin-bottom: 2rem;">
+    <h3 style="color: #a78bfa; margin-bottom: 1.25rem; font-size: 1.2rem; display: flex; align-items: center; gap: 0.5rem; border-bottom: 1px solid var(--glass-border); padding-bottom: 0.75rem;">
+        <span>💻</span> Technical Profile, Skills & Projects
+    </h3>
+
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.5rem;">
+        <div>
+            <h4 style="font-size: 0.95rem; color: #fff; margin-bottom: 0.6rem;">Programming Languages</h4>
+            <div class="skill-tags" style="margin-bottom: 1.25rem;">
+                {% for lang in student.programming_languages.split(',') %}
+                    <span class="skill-pill" style="background: rgba(59, 130, 246, 0.15); border-color: rgba(59, 130, 246, 0.3); color: #93c5fd; font-weight: 500;">
+                        {{ lang.strip() }}
+                    </span>
+                {% endfor %}
+            </div>
+
+            <h4 style="font-size: 0.95rem; color: #fff; margin-bottom: 0.6rem;">Technical & Domain Skills</h4>
+            <div class="skill-tags">
+                {% for skill in student.technical_skills.split(',') %}
+                    <span class="skill-pill" style="background: rgba(16, 185, 129, 0.15); border-color: rgba(16, 185, 129, 0.3); color: #6ee7b7; font-weight: 500;">
+                        {{ skill.strip() }}
+                    </span>
+                {% endfor %}
+            </div>
+        </div>
+
+        <div>
+            <h4 style="font-size: 0.95rem; color: #fff; margin-bottom: 0.6rem;">Certifications</h4>
+            <div style="background: rgba(255,255,255,0.03); border: 1px solid var(--glass-border); border-radius: 8px; padding: 0.85rem; margin-bottom: 1.25rem; font-size: 0.9rem; color: #cbd5e1;">
+                📜 {{ student.certifications }}
+            </div>
+
+            <h4 style="font-size: 0.95rem; color: #fff; margin-bottom: 0.6rem;">Featured Projects</h4>
+            <div style="background: rgba(255,255,255,0.03); border: 1px solid var(--glass-border); border-radius: 8px; padding: 0.85rem; font-size: 0.9rem; color: #cbd5e1;">
+                🚀 {{ student.projects }}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Placement Readiness & Round Performance Breakdown -->
+<div class="glass-panel" style="margin-bottom: 2rem;">
+    <h3 style="color: #fbbf24; margin-bottom: 1.25rem; font-size: 1.2rem; display: flex; align-items: center; gap: 0.5rem; border-bottom: 1px solid var(--glass-border); padding-bottom: 0.75rem;">
+        <span>🎯</span> Placement Readiness & Round-by-Round Breakdown
+    </h3>
+
+    {% if perf %}
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 1.5rem; align-items: center;">
+        <!-- Scores Table -->
+        <div>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Assessment Round</th>
+                        <th>Score</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>Round 1: Aptitude</strong></td>
+                        <td>{{ perf.aptitude_score }} / 100</td>
+                        <td>
+                            {% if perf.aptitude_score >= 50 %}
+                                <span class="badge badge-pass">Passed</span>
+                            {% else %}
+                                <span class="badge badge-fail">Needs Attention</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    <tr>
+                        <td><strong>Round 2: Group Discussion (GD)</strong></td>
+                        <td>{{ '100' if perf.gd_status else '40' }}</td>
+                        <td>
+                            <span class="badge {% if perf.gd_status %}badge-pass{% else %}badge-fail{% endif %}">
+                                {{ 'Qualified' if perf.gd_status else 'Did Not Clear' }}
+                            </span>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td><strong>Round 3: HR Round</strong></td>
+                        <td>{{ perf.hr_score if perf.hr_score > 0 else ('100' if perf.hr_status else '40') }} / 100</td>
+                        <td>
+                            <span class="badge {% if perf.hr_status %}badge-pass{% else %}badge-fail{% endif %}">
+                                {{ 'Cleared' if perf.hr_status else 'Pending / Did Not Clear' }}
+                            </span>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td><strong>Round 4: Coding Test (C / Java / DSA)</strong></td>
+                        <td>{{ perf.coding_c_score }} / {{ perf.coding_java_score }} / {{ perf.coding_dsa_score }}</td>
+                        <td>
+                            {% if perf.coding_overall_score >= 60 %}
+                                <span class="badge badge-pass">Proficient ({{ perf.coding_overall_score }})</span>
+                            {% else %}
+                                <span class="badge badge-fail">Average ({{ perf.coding_overall_score }})</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    <tr>
+                        <td><strong>Technical Interview</strong></td>
+                        <td>{{ perf.technical_interview_score }} / 100</td>
+                        <td>
+                            {% if perf.technical_interview_score >= 60 %}
+                                <span class="badge badge-pass">Cleared</span>
+                            {% else %}
+                                <span class="badge badge-fail">Needs Focus</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    <tr style="background: rgba(255,255,255,0.05); font-weight: 700;">
+                        <td>Composite Readiness Score</td>
+                        <td colspan="2" style="color: #60a5fa; font-size: 1.1rem;">
+                            {{ perf.overall_aggregate }} / 100
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Visual Chart -->
+        <div>
+            <div id="readiness-bar-chart" style="width: 100%; height: 280px; background: rgba(0,0,0,0.2); border-radius: 8px;"></div>
+        </div>
+    </div>
+    {% else %}
+        <p style="color: var(--text-muted);">No interview round evaluation recorded for this student yet.</p>
+    {% endif %}
+</div>
+
+<!-- Update Student Performance & Metrics Form -->
+<div class="glass-panel" style="margin-bottom: 2rem;">
+    <h3 style="color: var(--primary); margin-bottom: 1rem; font-size: 1.2rem; display: flex; align-items: center; gap: 0.5rem; border-bottom: 1px solid var(--glass-border); padding-bottom: 0.75rem;">
+        <span>✏️</span> Department HOD Evaluation & Performance Update
+    </h3>
+    <p style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 1.5rem;">
+        Update placement offers and round-by-round assessment scores for <strong>{{ student.name }} ({{ student.usn }})</strong>.
+    </p>
+
+    <form action="{{ url_for('update_performance') }}" method="POST">
+        <input type="hidden" name="usn" value="{{ student.usn }}">
+
+        <!-- Round Scores Grid -->
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1.25rem; margin-bottom: 1.5rem;">
+            <div class="form-group" style="margin-bottom: 0;">
+                <label>Round 1: Aptitude Score (0-100)</label>
+                <input type="number" step="0.1" name="aptitude" class="form-control" value="{{ perf.aptitude_score if perf else 0 }}" min="0" max="100">
+            </div>
+            <div class="form-group" style="margin-bottom: 0;">
+                <label>Coding Score - C (0-100)</label>
+                <input type="number" step="0.1" name="coding_c_score" class="form-control" value="{{ perf.coding_c_score if perf else 0 }}" min="0" max="100">
+            </div>
+            <div class="form-group" style="margin-bottom: 0;">
+                <label>Coding Score - Java (0-100)</label>
+                <input type="number" step="0.1" name="coding_java_score" class="form-control" value="{{ perf.coding_java_score if perf else 0 }}" min="0" max="100">
+            </div>
+            <div class="form-group" style="margin-bottom: 0;">
+                <label>Coding Score - DSA (0-100)</label>
+                <input type="number" step="0.1" name="coding_dsa_score" class="form-control" value="{{ perf.coding_dsa_score if perf else 0 }}" min="0" max="100">
+            </div>
+            <div class="form-group" style="margin-bottom: 0;">
+                <label>Tech Interview Score (0-100)</label>
+                <input type="number" step="0.1" name="technical_interview_score" class="form-control" value="{{ perf.technical_interview_score if perf else 0 }}" min="0" max="100">
+            </div>
+            <div class="form-group" style="margin-bottom: 0;">
+                <label>HR Score (0-100)</label>
+                <input type="number" step="0.1" name="hr_score" class="form-control" value="{{ perf.hr_score if perf else 0 }}" min="0" max="100">
+            </div>
+        </div>
+
+        <!-- Placement Details Grid -->
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1.25rem; margin-bottom: 1.5rem;">
+            <div class="form-group" style="margin-bottom: 0;">
+                <label>Placement Status</label>
+                <select name="placement_status" class="form-control">
+                    <option value="Eligible" {% if student.placement_status == 'Eligible' %}selected{% endif %}>Eligible</option>
+                    <option value="Placed" {% if student.placement_status == 'Placed' %}selected{% endif %}>Placed</option>
+                    <option value="In Progress" {% if student.placement_status == 'In Progress' %}selected{% endif %}>In Progress</option>
+                </select>
+            </div>
+            <div class="form-group" style="margin-bottom: 0;">
+                <label>Number of Job Offers</label>
+                <input type="number" name="offers_count" class="form-control" value="{{ student.offers_count }}" min="0">
+            </div>
+            <div class="form-group" style="margin-bottom: 0;">
+                <label>Highest Package (LPA)</label>
+                <input type="number" step="0.1" name="highest_package" class="form-control" value="{{ student.highest_package }}" min="0">
+            </div>
+            <div class="form-group" style="margin-bottom: 0;">
+                <label>Average Package (LPA)</label>
+                <input type="number" step="0.1" name="average_package" class="form-control" value="{{ student.average_package }}" min="0">
+            </div>
+        </div>
+
+        <!-- Pass/Fail Checkboxes -->
+        <div style="display: flex; gap: 2rem; margin-bottom: 1.5rem; flex-wrap: wrap;">
+            <label style="display: flex; align-items: center; gap: 0.5rem; color: #fff; cursor: pointer; background: rgba(0,0,0,0.25); padding: 0.6rem 1.2rem; border-radius: 8px; border: 1px solid var(--glass-border);">
+                <input type="checkbox" name="gd" {% if perf and perf.gd_status %}checked{% endif %} style="width: 18px; height: 18px; accent-color: var(--success);">
+                Round 2: Group Discussion (GD Cleared)
+            </label>
+            <label style="display: flex; align-items: center; gap: 0.5rem; color: #fff; cursor: pointer; background: rgba(0,0,0,0.25); padding: 0.6rem 1.2rem; border-radius: 8px; border: 1px solid var(--glass-border);">
+                <input type="checkbox" name="hr" {% if perf and perf.hr_status %}checked{% endif %} style="width: 18px; height: 18px; accent-color: var(--success);">
+                Round 3: HR Interview (HR Cleared)
+            </label>
+        </div>
+
+        <button type="submit" class="btn" style="background: var(--primary); font-size: 1rem; padding: 0.75rem 2rem;">
+            💾 Save Student Evaluation Records
+        </button>
+    </form>
+</div>
+
+<!-- Remedial Solution Hub (if weaknesses found) -->
+{% if weaknesses %}
+<div class="glass-panel" style="border: 1px solid rgba(239, 68, 68, 0.4);">
+    <h3 style="color: var(--danger); margin-bottom: 1rem; font-size: 1.2rem; display: flex; align-items: center; gap: 0.5rem;">
+        <span>⚠️</span> Remedial Action Plan & Improvement Hub
+    </h3>
+    <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 1.5rem;">
+        Based on {{ student.name }}'s performance, weaknesses were identified in: 
+        <strong style="color: #f87171;">{{ weaknesses | join(', ') }}</strong>.
+    </p>
+
+    <div class="grid">
+        {% for res in resources %}
+        <div class="glass-panel resource-card">
+            <h3>{{ res.topic }} Improvement</h3>
+            <p><strong>Faculty Mentor:</strong><br> {{ res.faculty_contact }}</p>
+            <p><strong>Recommended Course:</strong><br> {{ res.course_recommendation }}</p>
+            <div style="margin-top: 1rem;">
+                <a href="{{ res.video_url }}" target="_blank" class="btn" style="padding: 0.45rem 0.9rem; font-size: 0.85rem;">Watch Video Lecture</a>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
+
+<script>
+const chartData = {{ readiness_chart | safe }};
+const trace = {
+    x: chartData.labels,
+    y: chartData.values,
+    type: 'bar',
+    marker: {
+        color: ['#38bdf8', '#818cf8', '#a78bfa', '#c084fc', '#f472b6', '#34d399']
+    }
+};
+const layout = {
+    paper_bgcolor: 'transparent',
+    plot_bgcolor: 'transparent',
+    font: { color: '#ffffff', size: 11 },
+    margin: { t: 25, b: 40, l: 35, r: 20 },
+    yaxis: { range: [0, 100] }
+};
+Plotly.newPlot('readiness-bar-chart', [trace], layout, {responsive: true, displayModeBar: false});
+</script>
+{% endblock %}

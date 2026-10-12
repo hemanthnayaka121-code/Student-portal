@@ -1,0 +1,18 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="flex-center" style="min-height: 75vh;">
+    <div class="card" style="width: 100%; max-width: 420px; border: 1px solid #000; padding: 2rem;">
+        <img src="{{ url_for('static', filename='images/mit_logo.png') }}" alt="MIT Mysore Logo" style="width: 70px; height: 70px; object-fit: contain; margin: 0 auto 1rem; display: block;">
+        <h2 style="margin-bottom: 0.35rem; text-align: center; font-size: 1.3rem; font-weight: 700; color: #000; text-transform: uppercase;">Student Login</h2>
+        <p style="text-align: center; color: #666; margin-bottom: 1.5rem; font-size: 0.85rem;">Login via Registered Mobile Number</p>
+        <form method="POST">
+            <div class="form-group" style="margin-bottom: 1.25rem;">
+                <label for="mobile" style="color: #000; font-weight: 600; font-size: 0.85rem; display: block; margin-bottom: 0.35rem;">Registered Mobile Number</label>
+                <input type="text" id="mobile" name="mobile" class="form-control" required placeholder="e.g., 9876543210" style="border: 1px solid #000;">
+            </div>
+            <button type="submit" class="btn" style="width: 100%; background: #000; color: #fff; border: 1px solid #000; padding: 0.75rem;">Login</button>
+        </form>
+    </div>
+</div>
+{% endblock %}
