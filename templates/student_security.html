@@ -1,0 +1,90 @@
+{% extends 'student_base.html' %}
+
+{% block title %}Account Security — Student Portal{% endblock %}
+{% block breadcrumb %}Account Security{% endblock %}
+
+{% block content %}
+<div class="card" style="margin-bottom: 1.5rem; border: 1px solid #000; padding: 1.5rem;">
+    <h1 style="font-size: 1.5rem; font-weight: 700; color: #000; margin-bottom: 0.25rem;">
+        Student Account Security & Firebase Authentication
+    </h1>
+    <p style="font-size: 0.85rem; color: #555;">
+        Security configuration, linked authentication providers, session parameters, and data integrity safeguards.
+    </p>
+</div>
+
+<!-- ACCOUNT LINK STATUS CARD -->
+<div class="card" style="border: 1px solid var(--border-mid); margin-bottom: 1.5rem;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; border-bottom: 1px solid var(--border-light); padding-bottom: 0.75rem;">
+        <h3 style="font-size: 1.15rem; font-weight: 700; color: #000;">
+            Linked Authentication Identity
+        </h3>
+        <span class="badge badge-pass">Verified Identity</span>
+    </div>
+
+    <div class="table-responsive">
+    <table class="portal-table" style="margin-top: 0;">
+        <tbody>
+            <tr>
+                <th style="width: 35%;">Linked Student USN</th>
+                <td><strong>{{ student.usn }}</strong> (Permanent Record)</td>
+            </tr>
+            <tr>
+                <th>Firebase Provider</th>
+                <td>
+                    <span class="badge" style="background: #000; color: #fff;">
+                        {{ account_link.auth_provider if account_link else 'Firebase Verified' }}
+                    </span>
+                </td>
+            </tr>
+            <tr>
+                <th>Registered Email</th>
+                <td>{{ student.email }}</td>
+            </tr>
+            <tr>
+                <th>Registered Mobile Number</th>
+                <td>+91 {{ student.mobile_number }}</td>
+            </tr>
+            <tr>
+                <th>Account Linked Date</th>
+                <td>{{ account_link.linked_at.strftime('%d %B %Y, %I:%M %p') if account_link else 'Active' }}</td>
+            </tr>
+            <tr>
+                <th>Last Login Timestamp</th>
+                <td>{{ account_link.last_login_at.strftime('%d %B %Y, %I:%M %p') if account_link else 'Current Session' }}</td>
+            </tr>
+        </tbody>
+    </table>
+    </div>
+</div>
+
+<!-- DATA ISOLATION & INTEGRITY CONTROLS -->
+<div class="card" style="border: 1px solid var(--border-light); margin-bottom: 1.5rem;">
+    <h3 style="font-size: 1.15rem; font-weight: 700; color: #000; margin-bottom: 1rem;">
+        Backend Security & Data Isolation Architecture
+    </h3>
+
+    <div style="display: flex; flex-direction: column; gap: 0.85rem; font-size: 0.85rem; color: #333; line-height: 1.5;">
+        <div style="border-left: 4px solid #000; padding-left: 0.85rem; background: var(--bg-subtle); padding: 0.75rem;">
+            <strong>Derived Identity Enforcement:</strong> All student dashboard queries derive student USN strictly from verified server-side session authentication tokens. Client-supplied USN tampering in URL or API payloads is strictly prohibited.
+        </div>
+        <div style="border-left: 4px solid #000; padding-left: 0.85rem; background: var(--bg-subtle); padding: 0.75rem;">
+            <strong>Zero Direct Password Storage:</strong> Passwords and OTPs are managed cryptographically by Firebase Authentication and are never stored in the application's local database.
+        </div>
+        <div style="border-left: 4px solid #000; padding-left: 0.85rem; background: var(--bg-subtle); padding: 0.75rem;">
+            <strong>Module 1 Isolation:</strong> Official placement marks and HOD statuses are strictly read-only for students. Practice quiz scores and mock interview results are stored in separate training tables and will never overwrite coordinator records.
+        </div>
+    </div>
+</div>
+
+<!-- ACTIVE SESSION & LOGOUT -->
+<div class="card" style="border: 1px solid var(--border-light); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+    <div>
+        <h4 style="font-size: 1rem; font-weight: 700; color: #000; margin-bottom: 0.25rem;">Active Student Session</h4>
+        <p style="font-size: 0.8rem; color: #666; margin: 0;">Session lifetime: 45 minutes of inactivity &bull; HTTP-Only cookie security</p>
+    </div>
+    <a href="{{ url_for('student_logout') }}" class="btn" style="padding: 0.65rem 1.5rem;">
+        Sign Out of All Devices &rarr;
+    </a>
+</div>
+{% endblock %}

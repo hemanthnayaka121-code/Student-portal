@@ -1,0 +1,127 @@
+{% extends 'student_base.html' %}
+
+{% block title %}Practice Quizzes — Student Portal{% endblock %}
+{% block breadcrumb %}Practice Quizzes{% endblock %}
+
+{% block content %}
+<div class="card" style="margin-bottom: 1.5rem; border: 1px solid #000; padding: 1.5rem;">
+    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+        <div>
+            <h1 style="font-size: 1.5rem; font-weight: 700; color: #000; margin-bottom: 0.25rem;">
+                Interactive Practice Quiz Engine
+            </h1>
+            <p style="font-size: 0.85rem; color: #555;">
+                Test concepts across Aptitude, Coding, Technical Core, and HR. Immediate feedback with detailed explanations.
+            </p>
+        </div>
+        <div>
+            <span class="badge" style="background: #000; color: #fff;">
+                Total Attempts: {{ attempts|length }}
+            </span>
+        </div>
+    </div>
+</div>
+
+<!-- START NEW QUIZ LAUNCHER -->
+<div class="card" style="border: 2px solid #000; padding: 1.75rem; margin-bottom: 2rem;">
+    <h3 style="font-size: 1.15rem; font-weight: 700; color: #000; margin-bottom: 1rem;">Configure New Practice Quiz</h3>
+    
+    <form method="POST" action="{{ url_for('student_quiz_start') }}" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr)); gap: 1.25rem; align-items: flex-end;">
+        <div class="form-group" style="margin-bottom: 0;">
+            <label for="domain_select">Assessment Domain</label>
+            <select id="domain_select" name="domain" class="form-control" required>
+                <option value="Aptitude" {% if prefill_domain == 'Aptitude' %}selected{% endif %}>Aptitude & Logical</option>
+                <option value="Coding" {% if prefill_domain == 'Coding' %}selected{% endif %}>Coding & DSA</option>
+                <option value="Technical Interview" {% if prefill_domain == 'Technical Interview' %}selected{% endif %}>Technical Core (OOP, OS, DBMS)</option>
+                <option value="HR Interview" {% if prefill_domain == 'HR Interview' %}selected{% endif %}>HR & Situational</option>
+            </select>
+        </div>
+
+        <div class="form-group" style="margin-bottom: 0;">
+            <label for="difficulty_select">Difficulty Level</label>
+            <select id="difficulty_select" name="difficulty" class="form-control" required>
+                <option value="easy">Easy (Fundamentals & Syntax)</option>
+                <option value="medium" selected>Medium (Standard Campus Level)</option>
+                <option value="hard">Hard (Advanced / Product Level)</option>
+            </select>
+        </div>
+
+        <div class="form-group" style="margin-bottom: 0;">
+            <label for="count_select">Number of Questions</label>
+            <select id="count_select" name="count" class="form-control" required>
+                <option value="5" selected>5 Questions (Sprint ~ 5 mins)</option>
+                <option value="10">10 Questions (Standard ~ 10 mins)</option>
+            </select>
+        </div>
+
+        <div class="form-group" style="margin-bottom: 0;">
+            <label for="timed_select">Timer Option</label>
+            <select id="timed_select" name="is_timed" class="form-control">
+                <option value="1" selected>Timed (1 min / question)</option>
+                <option value="0">Untimed (Practice Mode)</option>
+            </select>
+        </div>
+
+        <div>
+            <button type="submit" class="btn" style="width: 100%; padding: 0.7rem; font-size: 0.9rem;">
+                Launch Practice Quiz &rarr;
+            </button>
+        </div>
+    </form>
+</div>
+
+<!-- ATTEMPT HISTORY -->
+<div class="card" style="border: 1px solid var(--border-light);">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+        <h3 style="font-size: 1.15rem; font-weight: 700; color: #000;">Quiz Attempt History & Performance</h3>
+        <span style="font-size: 0.8rem; color: #666;">Training marks are stored separately from official coordinator records</span>
+    </div>
+
+    {% if attempts %}
+    <div class="table-responsive">
+    <table class="portal-table">
+        <thead>
+            <tr>
+                <th>Domain</th>
+                <th>Topic / Difficulty</th>
+                <th>Score</th>
+                <th>Accuracy</th>
+                <th>Time Spent</th>
+                <th>Attempt Date</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for a in attempts %}
+            <tr>
+                <td><strong>{{ a.domain }}</strong></td>
+                <td>
+                    {{ a.topic }}
+                    <span class="badge" style="font-size: 0.7rem; margin-left: 0.35rem;">{{ a.difficulty }}</span>
+                </td>
+                <td>
+                    <span class="badge {% if a.score_pct >= 70 %}badge-pass{% else %}badge-fail{% endif %}">
+                        {{ "%.0f"|format(a.score_pct) }}%
+                    </span>
+                </td>
+                <td style="font-size: 0.85rem;">
+                    {{ a.correct_answers }} / {{ a.total_questions }} correct
+                </td>
+                <td style="font-size: 0.82rem; color: #555;">
+                    {{ a.time_spent_seconds }}s
+                </td>
+                <td style="font-size: 0.8rem; color: #666;">
+                    {{ a.attempted_at.strftime('%d %b %Y, %I:%M %p') }}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    </div>
+    {% else %}
+    <div style="text-align: center; padding: 2.5rem 1rem; color: #777;">
+        <p style="font-size: 0.9rem;">You haven't attempted any quizzes yet.</p>
+        <p style="font-size: 0.82rem; margin-top: 0.35rem;">Select your parameters above and click "Launch Practice Quiz" to start testing your skills.</p>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

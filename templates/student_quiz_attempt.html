@@ -1,0 +1,195 @@
+{% extends 'student_base.html' %}
+
+{% block title %}Attempting Quiz — {{ domain }} — Student Portal{% endblock %}
+{% block breadcrumb %}Quiz Attempt: {{ domain }}{% endblock %}
+
+{% block content %}
+<div class="card" style="margin-bottom: 1.5rem; border: 1px solid #000; padding: 1.5rem;">
+    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+        <div>
+            <span class="badge" style="background: #000; color: #fff; margin-bottom: 0.25rem; display: inline-block;">
+                {{ domain }} &bull; {{ difficulty|capitalize }} Level
+            </span>
+            <h1 style="font-size: 1.4rem; font-weight: 700; color: #000; margin: 0.2rem 0;">
+                Practice Diagnostic Quiz ({{ questions|length }} Questions)
+            </h1>
+        </div>
+
+        {% if is_timed %}
+        <div style="text-align: right; border: 1px solid #000; padding: 0.5rem 1rem; border-radius: 4px; background: #FAFAFA;">
+            <div style="font-size: 0.72rem; text-transform: uppercase; font-weight: 700; color: #666;">Time Remaining</div>
+            <div id="countdown-timer" style="font-size: 1.5rem; font-weight: 800; color: #000; font-family: monospace;">
+                05:00
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<form id="quiz-submission-form" method="POST" action="{{ url_for('student_quiz_submit') }}">
+    <input type="hidden" name="domain" value="{{ domain }}">
+    <input type="hidden" name="topic" value="{{ topic }}">
+    <input type="hidden" name="difficulty" value="{{ difficulty }}">
+    <input type="hidden" name="time_spent_seconds" id="time_spent_seconds" value="0">
+    <input type="hidden" name="total_questions" value="{{ questions|length }}">
+
+    {% for q in questions %}
+    <div class="card" style="border: 1px solid var(--border-mid); margin-bottom: 1.5rem; padding: 1.5rem;">
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.75rem;">
+            <span class="badge" style="background: #000; color: #fff; font-size: 0.75rem;">Question {{ loop.index }} of {{ questions|length }}</span>
+            <span style="font-size: 0.75rem; color: #666; text-transform: uppercase;">Topic: {{ q.topic }}</span>
+        </div>
+
+        <div style="font-size: 1.05rem; font-weight: 600; color: #000; line-height: 1.45; margin-bottom: 0.85rem;">
+            {{ q.question_text }}
+        </div>
+
+        {% if q.code_snippet %}
+        <div class="code-box">
+            <pre style="margin: 0; font-family: inherit;"><code>{{ q.code_snippet }}</code></pre>
+        </div>
+        {% endif %}
+
+        <!-- Options A, B, C, D -->
+        <div style="display: flex; flex-direction: column; gap: 0.6rem; margin-top: 1rem;">
+            <label class="quiz-option-card" id="opt-label-{{ q.id }}-A">
+                <input type="radio" name="ans_{{ q.id }}" value="A" style="display: none;" onchange="selectOption('{{ q.id }}', 'A')">
+                <span class="quiz-opt-letter">A</span>
+                <span style="font-size: 0.92rem; color: inherit; line-height: 1.4;">{{ q.option_a }}</span>
+            </label>
+
+            <label class="quiz-option-card" id="opt-label-{{ q.id }}-B">
+                <input type="radio" name="ans_{{ q.id }}" value="B" style="display: none;" onchange="selectOption('{{ q.id }}', 'B')">
+                <span class="quiz-opt-letter">B</span>
+                <span style="font-size: 0.92rem; color: inherit; line-height: 1.4;">{{ q.option_b }}</span>
+            </label>
+
+            <label class="quiz-option-card" id="opt-label-{{ q.id }}-C">
+                <input type="radio" name="ans_{{ q.id }}" value="C" style="display: none;" onchange="selectOption('{{ q.id }}', 'C')">
+                <span class="quiz-opt-letter">C</span>
+                <span style="font-size: 0.92rem; color: inherit; line-height: 1.4;">{{ q.option_c }}</span>
+            </label>
+
+            <label class="quiz-option-card" id="opt-label-{{ q.id }}-D">
+                <input type="radio" name="ans_{{ q.id }}" value="D" style="display: none;" onchange="selectOption('{{ q.id }}', 'D')">
+                <span class="quiz-opt-letter">D</span>
+                <span style="font-size: 0.92rem; color: inherit; line-height: 1.4;">{{ q.option_d }}</span>
+            </label>
+        </div>
+    </div>
+    {% endfor %}
+
+    <!-- Submit Section -->
+    <div class="card" style="border: 1px solid var(--border-light); padding: 1.5rem; text-align: center; margin-bottom: 2rem;">
+        <p style="font-size: 0.85rem; color: #555; margin-bottom: 1rem;">
+            Review your answers above before final submission. Instant evaluation and correct answer explanations will be displayed immediately.
+        </p>
+        <button type="submit" id="quiz-submit-btn" class="btn" style="padding: 0.75rem 2.5rem; font-size: 1rem; width: 100%; max-width: 360px;">
+            Submit Quiz for Evaluation &rarr;
+        </button>
+    </div>
+</form>
+
+<script>
+var quizStorageKey = 'mit_quiz_progress_{{ domain|replace(" ", "_") }}_{{ difficulty }}';
+var startTime = Date.now();
+var totalSeconds = {{ questions|length }} * 60; // 1 min per question
+var timerInterval = null;
+var isSubmitting = false;
+
+{% if is_timed %}
+function updateTimer() {
+    var elapsed = Math.floor((Date.now() - startTime) / 1000);
+    var remaining = Math.max(0, totalSeconds - elapsed);
+    document.getElementById('time_spent_seconds').value = elapsed;
+
+    var mins = Math.floor(remaining / 60);
+    var secs = remaining % 60;
+    var timerEl = document.getElementById('countdown-timer');
+    if (timerEl) {
+        timerEl.innerText = (mins < 10 ? '0' : '') + mins + ':' + (secs < 10 ? '0' : '') + secs;
+    }
+
+    if (remaining <= 0) {
+        clearInterval(timerInterval);
+        alert("Time is up! Submitting your answers automatically.");
+        submitQuizNow();
+    }
+}
+timerInterval = setInterval(updateTimer, 1000);
+{% else %}
+setInterval(function() {
+    var elapsed = Math.floor((Date.now() - startTime) / 1000);
+    document.getElementById('time_spent_seconds').value = elapsed;
+}, 1000);
+{% endif %}
+
+function selectOption(qId, letter) {
+    ['A', 'B', 'C', 'D'].forEach(function(l) {
+        var el = document.getElementById('opt-label-' + qId + '-' + l);
+        if (el) {
+            el.classList.remove('selected');
+        }
+    });
+    var activeEl = document.getElementById('opt-label-' + qId + '-' + letter);
+    if (activeEl) {
+        activeEl.classList.add('selected');
+    }
+
+    // Save answer progress to localStorage (survives network interruptions / mobile refresh)
+    try {
+        var saved = JSON.parse(localStorage.getItem(quizStorageKey) || '{}');
+        saved[qId] = letter;
+        localStorage.setItem(quizStorageKey, JSON.stringify(saved));
+    } catch(e) {}
+}
+
+// Restore saved progress on load
+window.addEventListener('DOMContentLoaded', function() {
+    try {
+        var saved = JSON.parse(localStorage.getItem(quizStorageKey) || '{}');
+        Object.keys(saved).forEach(function(qId) {
+            var letter = saved[qId];
+            var radio = document.querySelector('input[name="ans_' + qId + '"][value="' + letter + '"]');
+            if (radio) {
+                radio.checked = true;
+                selectOption(qId, letter);
+            }
+        });
+    } catch(e) {}
+});
+
+function handleQuizSubmit(e) {
+    if (isSubmitting) {
+        e.preventDefault();
+        return false;
+    }
+    isSubmitting = true;
+    var btn = document.getElementById('quiz-submit-btn');
+    if (btn) {
+        btn.disabled = true;
+        btn.innerText = "Evaluating Answers...";
+    }
+    try {
+        localStorage.removeItem(quizStorageKey);
+    } catch(e) {}
+    return true;
+}
+
+function submitQuizNow() {
+    if (isSubmitting) return;
+    isSubmitting = true;
+    var btn = document.getElementById('quiz-submit-btn');
+    if (btn) {
+        btn.disabled = true;
+        btn.innerText = "Evaluating Answers...";
+    }
+    try {
+        localStorage.removeItem(quizStorageKey);
+    } catch(e) {}
+    document.getElementById('quiz-submission-form').submit();
+}
+
+document.getElementById('quiz-submission-form').addEventListener('submit', handleQuizSubmit);
+</script>
+{% endblock %}

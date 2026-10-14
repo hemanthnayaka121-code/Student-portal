@@ -1,0 +1,143 @@
+{% extends 'student_base.html' %}
+
+{% block title %}My Profile — Student Portal{% endblock %}
+{% block breadcrumb %}My Profile{% endblock %}
+
+{% block content %}
+<div class="card" style="margin-bottom: 1.5rem; border: 1px solid #000; padding: 1.5rem;">
+    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+        <div>
+            <h1 style="font-size: 1.5rem; font-weight: 700; color: #000; margin-bottom: 0.25rem;">
+                Student Academic & Placement Profile
+            </h1>
+            <p style="font-size: 0.85rem; color: #555;">
+                Official institutional student dossier &bull; Read-only data maintained by College Administration.
+            </p>
+        </div>
+        <div>
+            {% if student.placement_approval_status == 'APPROVED' %}
+                <span class="badge badge-pass" style="font-size: 0.85rem; padding: 0.35rem 0.85rem;">
+                    HOD Approved for Placement
+                </span>
+            {% elif student.placement_approval_status == 'PENDING' %}
+                <span class="badge badge-warning" style="font-size: 0.85rem; padding: 0.35rem 0.85rem;">
+                    Approval Pending
+                </span>
+            {% else %}
+                <span class="badge badge-fail" style="font-size: 0.85rem; padding: 0.35rem 0.85rem;">
+                    Approval Rejected
+                </span>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr)); gap: 1.5rem; margin-bottom: 2rem;">
+    
+    <!-- 1. ACADEMIC DOSSIER -->
+    <div class="card" style="border: 1px solid var(--border-mid); margin-bottom: 0;">
+        <h3 style="font-size: 1.1rem; font-weight: 700; color: #000; margin-bottom: 1rem; border-bottom: 1px solid var(--border-light); padding-bottom: 0.5rem;">
+            Academic Credentials
+        </h3>
+
+        <div class="table-responsive">
+        <table class="portal-table" style="margin-top: 0;">
+            <tbody>
+                <tr>
+                    <th style="width: 40%;">Full Name</th>
+                    <td><strong>{{ student.name }}</strong></td>
+                </tr>
+                <tr>
+                    <th>USN</th>
+                    <td><strong>{{ student.usn }}</strong></td>
+                </tr>
+                <tr>
+                    <th>Department</th>
+                    <td>{{ student.department.name }} ({{ student.department.code }})</td>
+                </tr>
+                <tr>
+                    <th>Current Semester</th>
+                    <td>Semester {{ student.semester }}</td>
+                </tr>
+                <tr>
+                    <th>Cumulative GPA</th>
+                    <td><strong>{{ "%.2f"|format(student.cgpa) }}</strong> / 10.0</td>
+                </tr>
+                <tr>
+                    <th>Class Attendance</th>
+                    <td>{{ student.attendance }}%</td>
+                </tr>
+                <tr>
+                    <th>Registered Email</th>
+                    <td>{{ student.email }}</td>
+                </tr>
+                <tr>
+                    <th>Registered Phone</th>
+                    <td>+91 {{ student.mobile_number }}</td>
+                </tr>
+            </tbody>
+        </table>
+        </div>
+    </div>
+
+    <!-- 2. SKILLS, CERTIFICATIONS & RESUME -->
+    <div class="card" style="border: 1px solid var(--border-mid); margin-bottom: 0;">
+        <h3 style="font-size: 1.1rem; font-weight: 700; color: #000; margin-bottom: 1rem; border-bottom: 1px solid var(--border-light); padding-bottom: 0.5rem;">
+            Skills & Portfolio
+        </h3>
+
+        <div style="margin-bottom: 1rem;">
+            <div style="font-size: 0.75rem; text-transform: uppercase; font-weight: 700; color: #555; margin-bottom: 0.35rem;">Core Technical Skills:</div>
+            <div class="skill-tags">
+                {% for sk in student.skills.split(',') %}
+                <span class="skill-pill" style="font-weight: 600;">{{ sk.strip() }}</span>
+                {% endfor %}
+            </div>
+        </div>
+
+        <div style="margin-bottom: 1rem;">
+            <div style="font-size: 0.75rem; text-transform: uppercase; font-weight: 700; color: #555; margin-bottom: 0.35rem;">Programming Languages:</div>
+            <div style="font-size: 0.88rem; color: #111;">{{ student.programming_languages }}</div>
+        </div>
+
+        <div style="margin-bottom: 1rem;">
+            <div style="font-size: 0.75rem; text-transform: uppercase; font-weight: 700; color: #555; margin-bottom: 0.35rem;">Projects & Capstones:</div>
+            <div style="font-size: 0.88rem; color: #111; line-height: 1.4;">{{ student.projects }}</div>
+        </div>
+
+        <div style="margin-bottom: 1rem;">
+            <div style="font-size: 0.75rem; text-transform: uppercase; font-weight: 700; color: #555; margin-bottom: 0.35rem;">Professional Certifications:</div>
+            <div style="font-size: 0.85rem; color: #444;">{{ student.certifications }}</div>
+        </div>
+
+        <div style="border-top: 1px solid var(--border-light); padding-top: 0.75rem;">
+            <div style="font-size: 0.75rem; text-transform: uppercase; font-weight: 700; color: #555; margin-bottom: 0.35rem;">Placement Resume:</div>
+            <div style="display: flex; align-items: center; justify-content: space-between;">
+                <span style="font-size: 0.85rem; font-weight: 600;">{{ student.resume }}</span>
+                <span class="badge badge-pass" style="font-size: 0.72rem;">Verified Upload</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- PLACEMENT & HOD STATUS FOOTNOTE -->
+<div class="card" style="border: 1px solid var(--border-light); background: var(--bg-subtle);">
+    <h3 style="font-size: 1rem; font-weight: 700; color: #000; margin-bottom: 0.5rem;">
+        HOD Approval & Placement Coordinator Verification
+    </h3>
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr)); gap: 1rem; font-size: 0.82rem; color: #444;">
+        <div>
+            <strong>Approval Status:</strong> {{ student.placement_approval_status }}
+        </div>
+        <div>
+            <strong>Verified By:</strong> {{ student.approved_by or "Department HOD" }}
+        </div>
+        <div>
+            <strong>Department Coordinator:</strong> {{ student.department.coordinators[0].name if student.department.coordinators else "Assigned Coordinator" }}
+        </div>
+        <div>
+            <strong>Coordinator Contact:</strong> {{ student.department.coordinators[0].email if student.department.coordinators else "coord@mitmysore.in" }}
+        </div>
+    </div>
+</div>
+{% endblock %}

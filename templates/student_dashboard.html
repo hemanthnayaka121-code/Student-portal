@@ -1,105 +1,350 @@
-{% extends 'base.html' %}
+{% extends 'student_base.html' %}
+
+{% block title %}Dashboard — Student Placement Portal{% endblock %}
+{% block breadcrumb %}Student Dashboard{% endblock %}
 
 {% block content %}
-<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
-    <div>
-        <h1>Welcome, {{ student.name }}</h1>
-        <p style="color: var(--text-muted);">USN: {{ student.usn }} | Department: {{ student.department.name }}</p>
-    </div>
-    <div style="text-align: right;">
-        <p style="font-size: 0.9rem; color: var(--text-muted);">Overall Aggregate</p>
-        {% if perf %}
-            <h2 style="color: var(--primary); font-size: 2.5rem;">{{ "%.2f"|format(perf.overall_aggregate) }}</h2>
-        {% else %}
-            <h2>N/A</h2>
-        {% endif %}
+<!-- STUDENT OVERVIEW HEADER -->
+<div class="card" style="margin-bottom: 1.5rem; border: 1px solid #000; padding: 1.5rem;">
+    <div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-start; gap: 1rem;">
+        <div style="flex: 1; min-width: min(100%, 260px); word-break: break-word;">
+            <div style="font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.05em; color: #555; font-weight: 700;">
+                MIT Mysore &bull; {{ student.department.name }} ({{ student.department.code }})
+            </div>
+            <h1 style="font-size: 1.65rem; font-weight: 700; margin: 0.25rem 0 0.5rem; color: #000; word-break: break-word;">
+                Welcome, {{ student.name }}
+            </h1>
+            <div style="display: flex; flex-wrap: wrap; gap: 0.75rem 1rem; font-size: 0.85rem; color: #444; word-break: break-word;">
+                <span><strong>USN:</strong> {{ student.usn }}</span>
+                <span>&bull;</span>
+                <span><strong>Semester:</strong> {{ student.semester }}</span>
+                <span>&bull;</span>
+                <span><strong>CGPA:</strong> {{ "%.2f"|format(student.cgpa) }}</span>
+                <span>&bull;</span>
+                <span><strong>Email:</strong> {{ masked_email }}</span>
+                <span>&bull;</span>
+                <span><strong>Mobile:</strong> {{ masked_mobile }}</span>
+            </div>
+        </div>
+
+        <div style="text-align: right; min-width: 140px; align-self: flex-start;">
+            <div style="font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; color: #555; font-weight: 700;">
+                Placement Readiness
+            </div>
+            <div style="font-size: 2.25rem; font-weight: 800; color: #000; line-height: 1.1;">
+                {{ "%.1f"|format(analysis.overall_readiness_score) }}<span style="font-size: 1.2rem; font-weight: 600;">%</span>
+            </div>
+            <span class="badge" style="background: #000; color: #fff; margin-top: 0.25rem;">
+                {{ analysis.readiness_tier }}
+            </span>
+        </div>
     </div>
 </div>
 
-<div class="glass-panel" style="margin-bottom: 2rem;">
-    <h2>Your Performance Metrics</h2>
-    {% if perf %}
-    <table>
-        <thead>
-            <tr>
-                <th>Round</th>
-                <th>Score / Status</th>
-                <th>Assessment</th>
-            </tr>
-        </thead>
-        <tbody>
-            <tr>
-                <td>Aptitude</td>
-                <td>{{ perf.aptitude_score }}</td>
-                <td>
-                    {% if perf.aptitude_score >= 50 %}
-                        <span class="badge badge-pass">Strong</span>
-                    {% else %}
-                        <span class="badge badge-fail">Needs Improvement</span>
-                    {% endif %}
-                </td>
-            </tr>
-            <tr>
-                <td>Group Discussion</td>
-                <td>{{ 'Pass' if perf.gd_status else 'Fail' }}</td>
-                <td>
-                    <span class="badge {% if perf.gd_status %}badge-pass{% else %}badge-fail{% endif %}">
-                        {{ 'Satisfactory' if perf.gd_status else 'Focus Area' }}
-                    </span>
-                </td>
-            </tr>
-            <tr>
-                <td>HR Round</td>
-                <td>{{ 'Pass' if perf.hr_status else 'Fail' }}</td>
-                <td>
-                    <span class="badge {% if perf.hr_status %}badge-pass{% else %}badge-fail{% endif %}">
-                        {{ 'Satisfactory' if perf.hr_status else 'Focus Area' }}
-                    </span>
-                </td>
-            </tr>
-            <tr>
-                <td>Coding (C/Java/DSA)</td>
-                <td>{{ perf.coding_c_score }} / {{ perf.coding_java_score }} / {{ perf.coding_dsa_score }}</td>
-                <td>
-                    {% if perf.coding_c_score >= 50 and perf.coding_java_score >= 50 and perf.coding_dsa_score >= 50 %}
-                        <span class="badge badge-pass">Strong</span>
-                    {% else %}
-                        <span class="badge badge-fail">Needs Improvement</span>
-                    {% endif %}
-                </td>
-            </tr>
-        </tbody>
-    </table>
-    {% else %}
-        <p style="color: var(--text-muted);">No performance records available yet.</p>
-    {% endif %}
+<!-- TOP METRIC CARDS GRID -->
+<div class="stat-cards-grid">
+    <!-- Training Progress -->
+    <div class="metric-card">
+        <div class="metric-label">Training Progress</div>
+        <div class="metric-val">{{ "%.0f"|format(analysis.training_progress_pct) }}%</div>
+        <div class="progress-bar-bg">
+            <div class="progress-bar-fill" style="width: {{ analysis.training_progress_pct }}%;"></div>
+        </div>
+        <div style="font-size: 0.75rem; color: #666;">{{ analysis.quizzes_attempted_count }} Quizzes &bull; {{ analysis.completed_interviews_count }} Interviews</div>
+    </div>
+
+    <!-- Strongest Domain -->
+    <div class="metric-card">
+        <div class="metric-label">Strongest Domain</div>
+        <div class="metric-val" style="font-size: 1.35rem; margin-top: 0.2rem;">{{ analysis.strongest_domain.domain }}</div>
+        <div style="margin-top: 0.5rem;">
+            <span class="badge badge-pass">
+                {% if analysis.strongest_domain.effective_score is not none %}
+                    {{ "%.1f"|format(analysis.strongest_domain.effective_score) }}% Score
+                {% else %}
+                    Not Assessed
+                {% endif %}
+            </span>
+        </div>
+        <div style="font-size: 0.75rem; color: #666; margin-top: 0.35rem;">Benchmark: &ge; 70%</div>
+    </div>
+
+    <!-- Weakest Domain -->
+    <div class="metric-card">
+        <div class="metric-label">Focus / Weakest Domain</div>
+        <div class="metric-val" style="font-size: 1.35rem; margin-top: 0.2rem;">{{ analysis.weakest_domain.domain }}</div>
+        <div style="margin-top: 0.5rem;">
+            <span class="badge {% if analysis.weakest_domain.status == 'Weakness' %}badge-fail{% else %}badge-pass{% endif %}">
+                {% if analysis.weakest_domain.effective_score is not none %}
+                    {{ "%.1f"|format(analysis.weakest_domain.effective_score) }}% Score
+                {% else %}
+                    Not Assessed
+                {% endif %}
+            </span>
+        </div>
+        <div style="font-size: 0.75rem; color: #666; margin-top: 0.35rem;">Target: {{ analysis.weakest_domain.recommended_topic }}</div>
+    </div>
+
+    <!-- Official Drives Attended -->
+    <div class="metric-card">
+        <div class="metric-label">Placement Drives</div>
+        <div class="metric-val">{{ student.companies_attended }}</div>
+        <div style="margin-top: 0.5rem;">
+            <span class="badge" style="border: 1px solid #000;">
+                {{ student.placement_status }}
+            </span>
+        </div>
+        <div style="font-size: 0.75rem; color: #666; margin-top: 0.35rem;">Offers: {{ student.offers_count }} | Max: ₹{{ student.highest_package }} LPA</div>
+    </div>
 </div>
 
-{% if weaknesses %}
-<div class="glass-panel" style="border-color: rgba(239, 68, 68, 0.3);">
-    <h2 style="color: var(--danger); margin-bottom: 1rem;">Action Plan & Solution Hub</h2>
-    <p style="margin-bottom: 1.5rem;">Based on your recent performance, we identified areas for improvement. Here are curated resources to help you upskill:</p>
-    
-    <div class="grid">
-        {% for res in resources %}
-        <div class="glass-panel resource-card">
-            <h3>{{ res.topic }}</h3>
-            <p><strong>Faculty Mentor:</strong><br> {{ res.faculty_contact }}</p>
-            <p><strong>Recommended Course:</strong><br> {{ res.course_recommendation }}</p>
-            <div style="margin-top: 1rem;">
-                <a href="{{ res.video_url }}" target="_blank" class="btn" style="padding: 0.5rem 1rem; font-size: 0.9rem;">Watch Tutorial Video</a>
+<!-- RECOMMENDED NEXT ACTIVITY ACTION BANNER -->
+<div class="clean-banner" style="background: #FAFAFA; border: 1px solid #000; border-left: 6px solid #000; margin-bottom: 2rem;">
+    <div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 1rem;">
+        <div style="flex: 1; min-width: 280px;">
+            <div style="font-size: 0.75rem; text-transform: uppercase; font-weight: 700; color: #555; letter-spacing: 0.05em;">
+                AI Recommended Next Learning Activity
+            </div>
+            <h3 style="font-size: 1.15rem; font-weight: 700; margin: 0.25rem 0; color: #000;">
+                {{ analysis.next_activity.title }} ({{ analysis.next_activity.domain }})
+            </h3>
+            <p style="font-size: 0.85rem; color: #444; line-height: 1.4;">
+                {{ analysis.next_activity.description }}
+            </p>
+        </div>
+        <div style="display: flex; flex-wrap: wrap; gap: 0.5rem;">
+            <a href="{{ url_for('student_youtube', query=analysis.next_activity.query, domain=analysis.next_activity.domain) }}" class="btn">
+                Watch YouTube Lesson &rarr;
+            </a>
+            <a href="{{ url_for('student_quizzes', domain=analysis.next_activity.domain) }}" class="btn btn-secondary">
+                Attempt Quiz
+            </a>
+        </div>
+    </div>
+</div>
+
+<!-- PERFORMANCE CARDS: 4 OFFICIAL DOMAINS -->
+<div style="margin-bottom: 2rem;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+        <h2 style="font-size: 1.25rem; font-weight: 700; color: #000;">Recorded Official Marks & Benchmark Evaluation</h2>
+        <a href="{{ url_for('student_performance') }}" style="font-size: 0.85rem; font-weight: 600; color: #000;">View Full Performance &rarr;</a>
+    </div>
+
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr)); gap: 1rem;">
+        {% for d in analysis.domains %}
+        <div class="card" style="margin-bottom: 0; border: 1px solid var(--border-mid); padding: 1.25rem;">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.75rem;">
+                <div>
+                    <h3 style="font-size: 1.05rem; font-weight: 700; color: #000;">{{ d.domain }}</h3>
+                    <span style="font-size: 0.75rem; color: #666;">Max Possible: 100 Marks</span>
+                </div>
+                <span class="badge {{ d.badge_class }}">{{ d.status }}</span>
+            </div>
+
+            <div style="margin: 0.75rem 0;">
+                {% if d.official_score is not none %}
+                    <div style="font-size: 1.85rem; font-weight: 800; color: #000; line-height: 1;">
+                        {{ "%.1f"|format(d.official_score) }} <span style="font-size: 0.95rem; font-weight: 500; color: #666;">/ 100</span>
+                    </div>
+                    <div style="font-size: 0.75rem; color: #444; margin-top: 0.25rem;">
+                        Status: Official Recorded Placement Mark
+                    </div>
+                {% elif d.quiz_score is not none %}
+                    <div style="font-size: 1.85rem; font-weight: 800; color: #000; line-height: 1;">
+                        {{ "%.1f"|format(d.quiz_score) }}% <span style="font-size: 0.85rem; font-weight: 500; color: #666;">(Quiz Avg)</span>
+                    </div>
+                    <div style="font-size: 0.75rem; color: #444; margin-top: 0.25rem;">
+                        Official Assessment Pending &bull; Quiz Baseline Available
+                    </div>
+                {% else %}
+                    <div style="font-size: 1.4rem; font-weight: 700; color: #666; line-height: 1;">
+                        Not Assessed
+                    </div>
+                    <div style="font-size: 0.75rem; color: #777; margin-top: 0.25rem;">
+                        No official exam or diagnostic score recorded yet.
+                    </div>
+                {% endif %}
+            </div>
+
+            <!-- Progress vs Benchmark -->
+            <div style="margin-top: 0.75rem;">
+                <div style="display: flex; justify-content: space-between; font-size: 0.75rem; color: #666; margin-bottom: 0.2rem;">
+                    <span>Benchmark: 70%</span>
+                    <span>{{ "%.0f"|format(d.effective_score or 0) }}%</span>
+                </div>
+                <div class="progress-bar-bg" style="margin: 0;">
+                    <div class="progress-bar-fill" style="width: {{ d.effective_score or 0 }}%;"></div>
+                </div>
+            </div>
+
+            <div style="margin-top: 1rem; border-top: 1px solid var(--border-light); padding-top: 0.75rem; font-size: 0.8rem; color: #444; line-height: 1.35;">
+                {{ d.reason }}
             </div>
         </div>
         {% endfor %}
     </div>
 </div>
-{% else %}
-    {% if perf %}
-    <div class="glass-panel" style="border-color: rgba(16, 185, 129, 0.3); text-align: center;">
-        <h2 style="color: var(--success); margin-bottom: 0.5rem;">Outstanding Performance!</h2>
-        <p>You are currently passing all rounds effectively. Keep practicing advanced coding problems and interview scenarios.</p>
+
+<!-- RECENT ACTIVITY & MOCK INTERVIEW RESULTS -->
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr)); gap: 1.5rem; margin-bottom: 2rem;">
+    <!-- Recent Practice Quizzes -->
+    <div class="card" style="margin-bottom: 0; border: 1px solid var(--border-light);">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; border-bottom: 1px solid var(--border-light); padding-bottom: 0.75rem;">
+            <h3 style="font-size: 1.05rem; font-weight: 700; color: #000;">Recent Practice Quizzes</h3>
+            <a href="{{ url_for('student_quizzes') }}" style="font-size: 0.82rem; font-weight: 600;">Take Quiz &rarr;</a>
+        </div>
+        {% if analysis.recent_quizzes %}
+        <div class="table-responsive">
+        <table class="portal-table" style="margin-top: 0;">
+            <thead>
+                <tr>
+                    <th>Domain / Topic</th>
+                    <th>Score</th>
+                    <th>Date</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for q in analysis.recent_quizzes %}
+                <tr>
+                    <td>
+                        <strong>{{ q.domain }}</strong>
+                        <div style="font-size: 0.75rem; color: #666;">{{ q.topic }}</div>
+                    </td>
+                    <td>
+                        <span class="badge {% if q.score_pct >= 70 %}badge-pass{% else %}badge-fail{% endif %}">
+                            {{ "%.0f"|format(q.score_pct) }}% ({{ q.correct_answers }}/{{ q.total_questions }})
+                        </span>
+                    </td>
+                    <td style="font-size: 0.78rem; color: #666;">
+                        {{ q.attempted_at.strftime('%d %b %Y') }}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        </div>
+        {% else %}
+        <div style="text-align: center; padding: 2rem 1rem; color: #777; font-size: 0.85rem;">
+            No quiz attempts yet. Start practicing with diagnostic placement quizzes to test your proficiency.
+            <div style="margin-top: 0.75rem;">
+                <a href="{{ url_for('student_quizzes') }}" class="btn" style="font-size: 0.82rem; padding: 0.45rem 1rem;">Start Practice Quiz</a>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Recent AI Mock Interviews -->
+    <div class="card" style="margin-bottom: 0; border: 1px solid var(--border-light);">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; border-bottom: 1px solid var(--border-light); padding-bottom: 0.75rem;">
+            <h3 style="font-size: 1.05rem; font-weight: 700; color: #000;">Recent AI Mock Interviews</h3>
+            <a href="{{ url_for('student_mock_interview') }}" style="font-size: 0.82rem; font-weight: 600;">Start Interview &rarr;</a>
+        </div>
+        {% if analysis.recent_interviews %}
+        <div class="table-responsive">
+        <table class="portal-table" style="margin-top: 0;">
+            <thead>
+                <tr>
+                    <th>Interview Session</th>
+                    <th>Practice Score</th>
+                    <th>Report</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for m in analysis.recent_interviews %}
+                <tr>
+                    <td>
+                        <strong>{{ m.interview_type }}</strong>
+                        <div style="font-size: 0.75rem; color: #666;">Difficulty: {{ m.difficulty }} &bull; {{ m.question_count }} Qs</div>
+                    </td>
+                    <td>
+                        {% if m.status == 'COMPLETED' and m.overall_score is not none %}
+                            <span class="badge {% if m.overall_score >= 70 %}badge-pass{% else %}badge-fail{% endif %}">
+                                {{ "%.1f"|format(m.overall_score) }}%
+                            </span>
+                        {% else %}
+                            <span class="badge badge-warning">In Progress</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if m.status == 'COMPLETED' %}
+                            <a href="{{ url_for('student_interview_view', session_id=m.id) }}" class="btn btn-secondary" style="font-size: 0.75rem; padding: 0.25rem 0.6rem;">
+                                View Report
+                            </a>
+                        {% else %}
+                            <a href="{{ url_for('student_mock_interview_session', session_id=m.id) }}" class="btn" style="font-size: 0.75rem; padding: 0.25rem 0.6rem;">
+                                Resume
+                            </a>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        </div>
+        {% else %}
+        <div style="text-align: center; padding: 2rem 1rem; color: #777; font-size: 0.85rem;">
+            No mock interviews attempted yet. Practice answering interview questions with text or voice microphone input.
+            <div style="margin-top: 0.75rem;">
+                <a href="{{ url_for('student_mock_interview') }}" class="btn" style="font-size: 0.82rem; padding: 0.45rem 1rem;">Launch AI Mock Interview</a>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- OFFICIAL PLACEMENT ACTIVITY RECORD (READ-ONLY) -->
+<div class="card" style="border: 1px solid var(--border-light);">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+        <div>
+            <h3 style="font-size: 1.15rem; font-weight: 700; color: #000;">Official Placement Drive History (Module 1 Records)</h3>
+            <p style="font-size: 0.8rem; color: #666;">Maintained by Placement Coordinator &bull; Strictly Read-Only for Students</p>
+        </div>
+        <a href="{{ url_for('student_history') }}" style="font-size: 0.85rem; font-weight: 600;">View Placement History &rarr;</a>
+    </div>
+
+    {% if student.activities %}
+    <div class="table-responsive">
+    <table class="portal-table">
+        <thead>
+            <tr>
+                <th>Company</th>
+                <th>Role</th>
+                <th>Drive Date</th>
+                <th>Package (LPA)</th>
+                <th>Round Marks (Apt / Code / Tech / HR)</th>
+                <th>Status</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for act in student.activities %}
+            <tr>
+                <td><strong>{{ act.company_name }}</strong></td>
+                <td>{{ act.job_role }}</td>
+                <td style="font-size: 0.8rem; color: #555;">{{ act.drive_date }}</td>
+                <td>
+                    {% if act.package > 0 %}
+                        <strong>₹{{ act.package }} LPA</strong>
+                    {% else %}
+                        &mdash;
+                    {% endif %}
+                </td>
+                <td style="font-size: 0.82rem;">
+                    {{ act.aptitude_score }} / {{ act.coding_score }} / {{ act.technical_score }} / {{ act.hr_score }}
+                </td>
+                <td>
+                    <span class="badge {% if act.status == 'Selected' %}badge-pass{% else %}badge-fail{% endif %}">
+                        {{ act.status }}
+                    </span>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    </div>
+    {% else %}
+    <div style="padding: 1.5rem; text-align: center; color: #666; font-size: 0.85rem;">
+        No official placement drive records logged yet by your Placement Coordinator.
     </div>
     {% endif %}
-{% endif %}
-
+</div>
 {% endblock %}

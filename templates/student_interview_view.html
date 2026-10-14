@@ -1,0 +1,133 @@
+{% extends 'student_base.html' %}
+
+{% block title %}Interview Report #{{ session_obj.id }} — Student Portal{% endblock %}
+{% block breadcrumb %}Mock Interview Report #{{ session_obj.id }}{% endblock %}
+
+{% block content %}
+<!-- REPORT HEADER -->
+<div class="card" style="margin-bottom: 1.5rem; border: 2px solid #000; padding: 2rem; background: #FFFFFF;">
+    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+        <div>
+            <div style="display: flex; gap: 0.5rem; margin-bottom: 0.35rem;">
+                <span class="badge" style="background: #000; color: #fff;">{{ session_obj.interview_type }}</span>
+                <span class="badge" style="border: 1px solid #000;">Difficulty: {{ session_obj.difficulty }}</span>
+                <span class="badge" style="border: 1px solid var(--border-mid);">{{ session_obj.question_count }} Questions</span>
+            </div>
+            <h1 style="font-size: 1.6rem; font-weight: 700; color: #000; margin: 0.25rem 0;">
+                Comprehensive Mock Interview Report
+            </h1>
+            <p style="font-size: 0.85rem; color: #555; margin: 0;">
+                Completed on {{ session_obj.completed_at.strftime('%d %B %Y, %I:%M %p') if session_obj.completed_at else session_obj.started_at.strftime('%d %B %Y') }}
+            </p>
+        </div>
+
+        <div style="text-align: right; min-width: 160px;">
+            <div style="font-size: 0.75rem; text-transform: uppercase; color: #666; font-weight: 700;">Overall Practice Score</div>
+            <div style="font-size: 2.75rem; font-weight: 800; color: #000; line-height: 1;">
+                {{ "%.1f"|format(session_obj.overall_score or 0) }}%
+            </div>
+            <span class="badge {% if session_obj.overall_score and session_obj.overall_score >= 70 %}badge-pass{% else %}badge-fail{% endif %}" style="margin-top: 0.25rem;">
+                {{ 'Placement Benchmark Cleared' if session_obj.overall_score and session_obj.overall_score >= 70 else 'Benchmark Gap' }}
+            </span>
+        </div>
+    </div>
+</div>
+
+<!-- EXECUTIVE EVALUATION SUMMARY -->
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr)); gap: 1.25rem; margin-bottom: 2rem;">
+    <!-- Strengths -->
+    <div class="card" style="border: 1px solid var(--border-mid); margin-bottom: 0;">
+        <h3 style="font-size: 1rem; font-weight: 700; color: #000; margin-bottom: 0.75rem; text-transform: uppercase; letter-spacing: 0.04em;">
+            &check; Strengths Demonstrated
+        </h3>
+        <ul style="margin-left: 1.25rem; font-size: 0.85rem; color: #333; line-height: 1.5;">
+            {% for s in report.strengths %}
+            <li>{{ s }}</li>
+            {% endfor %}
+        </ul>
+    </div>
+
+    <!-- Weaknesses & Missed Concepts -->
+    <div class="card" style="border: 1px solid var(--border-mid); margin-bottom: 0;">
+        <h3 style="font-size: 1rem; font-weight: 700; color: #000; margin-bottom: 0.75rem; text-transform: uppercase; letter-spacing: 0.04em;">
+            &cross; Areas Needing Polish
+        </h3>
+        <ul style="margin-left: 1.25rem; font-size: 0.85rem; color: #444; line-height: 1.5;">
+            {% for w in report.weaknesses %}
+            <li>{{ w }}</li>
+            {% endfor %}
+        </ul>
+    </div>
+
+    <!-- Communication Feedback -->
+    <div class="card" style="border: 1px solid var(--border-mid); margin-bottom: 0;">
+        <h3 style="font-size: 1rem; font-weight: 700; color: #000; margin-bottom: 0.75rem; text-transform: uppercase; letter-spacing: 0.04em;">
+            &bull; Communication & Delivery
+        </h3>
+        <p style="font-size: 0.85rem; color: #333; line-height: 1.5;">
+            {{ report.communication_feedback }}
+        </p>
+        <div style="margin-top: 0.75rem; font-size: 0.8rem; color: #666;">
+            <strong>Next Recommended Difficulty:</strong> {{ report.next_recommended_difficulty }}
+        </div>
+    </div>
+</div>
+
+<!-- QUESTION-BY-QUESTION TRANSCRIPTS AND RUBRIC EVALUATION -->
+<div class="card" style="border: 1px solid var(--border-light); margin-bottom: 2rem;">
+    <h3 style="font-size: 1.2rem; font-weight: 700; color: #000; margin-bottom: 1.25rem;">
+        Detailed Transcripts & Evaluation per Question
+    </h3>
+
+    {% for q in report.questions_detail %}
+    <div style="border-bottom: 1px solid var(--border-light); padding-bottom: 1.5rem; margin-bottom: 1.5rem;">
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.5rem;">
+            <strong style="font-size: 1.05rem; color: #000;">
+                Question {{ q.question_number }}: {{ q.question_text }}
+            </strong>
+            <span class="badge {% if q.score >= 70 %}badge-pass{% else %}badge-fail{% endif %}" style="font-size: 0.8rem; flex-shrink: 0; margin-left: 1rem;">
+                Score: {{ "%.0f"|format(q.score) }}%
+            </span>
+        </div>
+
+        <!-- Candidate Transcript -->
+        <div style="background: #FAFAFA; border: 1px solid var(--border-mid); border-left: 4px solid #000; padding: 0.85rem 1rem; border-radius: 4px; margin: 0.75rem 0;">
+            <div style="font-size: 0.75rem; text-transform: uppercase; color: #666; font-weight: 700; margin-bottom: 0.25rem;">
+                Candidate Answer Transcript {% if q.audio_mode %}(Dictated via Voice){% else %}(Text Mode){% endif %}:
+            </div>
+            <div style="font-size: 0.9rem; color: #111; line-height: 1.45; word-break: break-word; overflow-wrap: anywhere;">
+                {{ q.student_answer }}
+            </div>
+        </div>
+
+        <!-- Expected Points -->
+        <div style="background: #FFFFFF; border: 1px dashed var(--border-mid); padding: 0.75rem 1rem; border-radius: 4px; margin-bottom: 0.75rem; font-size: 0.82rem; color: #444;">
+            <strong style="color: #000;">Key Evaluation Concepts / Model Answer Points:</strong><br>
+            {{ q.expected_points }}
+        </div>
+
+        <!-- Feedback & Follow-up -->
+        <div style="font-size: 0.85rem; color: #333; line-height: 1.45;">
+            <strong>AI Feedback:</strong> {{ q.feedback }}
+        </div>
+        {% if q.follow_up %}
+        <div style="font-size: 0.8rem; color: #666; margin-top: 0.35rem;">
+            <strong>Recommended Follow-up to Explore:</strong> "{{ q.follow_up }}"
+        </div>
+        {% endif %}
+    </div>
+    {% endfor %}
+</div>
+
+<!-- ACTIONS & NEXT STEPS -->
+<div class="clean-banner" style="background: #FAFAFA; border: 1px solid #000; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+    <div>
+        <h4 style="font-size: 1.05rem; font-weight: 700; color: #000; margin-bottom: 0.2rem;">Ready for Next Round of Practice?</h4>
+        <p style="font-size: 0.82rem; color: #555;">{{ report.recommendation_text }}</p>
+    </div>
+    <div style="display: flex; gap: 0.5rem;">
+        <a href="{{ url_for('student_quizzes') }}" class="btn btn-secondary">Take Practice Quiz</a>
+        <a href="{{ url_for('student_mock_interview') }}" class="btn">New Mock Interview &rarr;</a>
+    </div>
+</div>
+{% endblock %}

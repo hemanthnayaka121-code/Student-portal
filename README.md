@@ -1,42 +1,49 @@
-# College Placement Tracking and Training Dashboard
+# MIT Mysore — Student Placement Portal & AI Training Application
 
-An enterprise-grade, role-based College Placement & Training Management System built with Python Flask and SQLite / SQLAlchemy. Designed for educational institutions to monitor student readiness, manage placement drives, provide targeted remedial learning resources, and deliver actionable analytics across departments.
+A comprehensive, mobile-first Student Placement Performance & AI Training Platform built with Python Flask, SQLite/SQLAlchemy, and modern responsive web architecture. Features intelligent diagnostic benchmarking, real-time speech-powered AI mock interviews, interactive diagnostic quizzes, curated YouTube lesson integrations, and Firebase authentication.
 
 ---
 
 ## 🌟 Key Features
 
-### 1. Multi-Tier Role-Based Access Control (RBAC)
-- **Placement Admin / Placement Officers**: Oversee college-wide placement drives, manage student records, coordinate company visits, review audit logs, and analyze institution-wide placement trends.
-- **Placement Coordinators**: Track branch-specific candidates, monitor interview readiness, filter eligible students, and organize departmental drives.
-- **Heads of Department (HODs)**: Monitor departmental student progress, batch statistics, identify low-performing students, and assign targeted interventions.
-- **Principal / Management**: High-level institutional dashboard, inter-departmental leaderboards, and comparative placement conversion analytics.
-- **Students**: Personal dashboard displaying assessment scores (Aptitude, GD, HR, Coding/DSA), eligibility status, and tailored remedial learning recommendations.
+### 1. Student Placement Performance & Diagnostic Engine (Module 2)
+- **12 Dedicated Student Portal Sections**: Dashboard, Placement Performance, Strengths & Weaknesses Analysis, Recommended Learning, YouTube Lessons, Practice Quizzes, AI Mock Interview, Interview Reports, Placement History, Profile, Account Security, and Logout.
+- **Diagnostic Benchmarking**: Compares recorded aptitude, coding (C, Java, DSA), technical interview, and HR round marks against college hiring benchmarks ($\ge 70\%$).
+- **Weakness Detection & Action Plans**: Identifies weakest concepts and automatically prescribes targeted remedial masterclasses.
 
-### 2. Comprehensive Performance Tracking
-- **Aptitude Assessments**: Quantitative, logical, and verbal metrics.
-- **Soft Skills**: Group Discussion (GD) and HR interview clearance tracking.
-- **Technical Competencies**: Dedicated scoring across C, Java, and Data Structures & Algorithms (DSA).
-- **Automated Weakness Detection**: Automatically identifies areas below benchmark thresholds and pairs students with remedial resources.
+### 2. Conversational AI Mock Interviews
+- **Voice & Text Dual-Mode**: Real-time Web Speech Recognition and Speech Synthesis.
+- **Hands-Free Silence Detection**: Speak answers naturally; a 2-second pause triggers automated evaluation without clicking buttons.
+- **Code Mode**: Expandable monospace editor with syntax-ready layout for coding and DSA rounds.
+- **Comprehensive Rubric Reports**: Scores technical accuracy, completeness, structured communication, strengths, and weaknesses.
 
-### 3. Training & Remedial Support
-- Curated resource library for Aptitude, DSA, GD, and HR preparation.
-- Direct recommendations mapped to student-specific weak areas.
+### 3. Interactive Practice Quiz Bank
+- 4 assessment tracks: Aptitude, Coding & DSA, Technical Core (OOP, DBMS, OS), and HR Situational.
+- Timed and untimed modes with immediate feedback, detailed explanations, and `localStorage` answer preservation during network interruptions.
 
-### 4. Enterprise Security & Audit
-- Secure password hashing using Werkzeug.
-- In-memory rate limiting against brute-force login attempts.
-- Security response headers (`Cache-Control`, `X-Content-Type-Options`, `X-Frame-Options`).
-- Centralized audit trail for administrative actions.
+### 4. Curated YouTube Video Masterclasses
+- Integrated YouTube learning catalog with domain-specific placement lessons, thumbnail previews, embedded 16:9 responsive playback, and progress completion tracking.
+
+### 5. Mobile-First Responsive Design
+- Optimized for smartphones starting at 320px width up to high-resolution desktop monitors.
+- 56px sticky top header with 12-section off-canvas drawer, sticky 5-item bottom quick-nav bar, 44px+ touch targets, and iOS 16px auto-zoom prevention.
+
+### 6. Institutional Role-Based Access Control (RBAC)
+- **Placement Admin / Placement Officers**: Institution-wide placement control and analytics.
+- **Placement Coordinators**: Record official student marks, packages, and drive attendance.
+- **Heads of Department (HODs)**: Verify and approve student placement eligibility.
+- **Strict Data Isolation**: Practice quizzes and AI mock interview scores are stored in dedicated training tables and strictly isolated from official coordinator records.
 
 ---
 
 ## 🛠️ Tech Stack
 
-- **Backend**: Python 3, Flask
-- **ORM & Database**: Flask-SQLAlchemy, SQLite
-- **Frontend**: Jinja2 Templates, HTML5, CSS3, JavaScript
-- **Security**: Werkzeug Security Helpers, Session Management
+- **Backend**: Python 3.10+, Flask
+- **Database**: SQLite / PostgreSQL via Flask-SQLAlchemy
+- **Frontend**: Mobile-first responsive HTML5, CSS3, JavaScript (Vanilla ES6)
+- **Authentication**: Firebase Authentication + Server-side session verification
+- **AI & Speech**: Web Speech API, Text-to-Speech (TTS), Automated NLP evaluation heuristics
+- **Visuals & Charts**: Plotly.js responsive graphs
 
 ---
 
@@ -44,8 +51,8 @@ An enterprise-grade, role-based College Placement & Training Management System b
 
 ### 1. Clone the Repository
 ```bash
-git clone https://github.com/hemanthnayaka121-code/college-placement-tracking-and-training-dashboard.git
-cd college-placement-tracking-and-training-dashboard
+git clone https://github.com/hemanthnayaka121-code/Student-portal-and-training-application.git
+cd Student-portal-and-training-application
 ```
 
 ### 2. Set Up a Virtual Environment (Recommended)

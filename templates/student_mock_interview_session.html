@@ -1,0 +1,485 @@
+{% extends 'student_base.html' %}
+
+{% block title %}Live Placement Interview — Question {{ current_q.question_number }} — Student Portal{% endblock %}
+{% block breadcrumb %}Live Interview Session #{{ session_obj.id }}{% endblock %}
+
+{% block content %}
+<!-- INTERVIEW SESSION HEADER -->
+<div class="card" style="margin-bottom: 1.5rem; border: 1px solid #000; padding: 1.25rem 1.5rem;">
+    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+        <div>
+            <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.25rem;">
+                <span class="badge" style="background: #000; color: #fff;">{{ session_obj.interview_type }} Interview</span>
+                <span class="badge" style="border: 1px solid #000;">Difficulty: {{ session_obj.difficulty }}</span>
+                {% if session_obj.programming_language %}
+                <span class="badge" style="border: 1px solid var(--border-mid);">Language: {{ session_obj.programming_language }}</span>
+                {% endif %}
+            </div>
+            <h1 style="font-size: 1.35rem; font-weight: 700; color: #000; margin: 0;">
+                Question {{ current_q.question_number }} of {{ session_obj.question_count }}
+            </h1>
+        </div>
+
+        <div style="text-align: right; min-width: 140px;">
+            <div style="font-size: 0.75rem; text-transform: uppercase; color: #666; font-weight: 700;">Progress</div>
+            <div style="font-size: 1.15rem; font-weight: 800; color: #000;">
+                {{ current_q.question_number }} / {{ session_obj.question_count }}
+            </div>
+            <div class="progress-bar-bg" style="width: 140px; margin: 0.25rem 0 0 auto;">
+                <div class="progress-bar-fill" style="width: {{ (current_q.question_number / session_obj.question_count) * 100 }}%;"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- LIVE NATURAL CONVERSATION STATUS BAR -->
+<div id="live-conversation-bar" style="background: #000; color: #fff; padding: 0.85rem 1.25rem; border-radius: 6px; margin-bottom: 1.5rem; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.75rem;">
+    <div style="display: flex; align-items: center; gap: 0.75rem;">
+        <span id="pulse-indicator" style="width: 12px; height: 12px; border-radius: 50%; background: #28a745; display: inline-block; box-shadow: 0 0 10px #28a745;"></span>
+        <span id="conversation-status-text" style="font-size: 0.88rem; font-weight: 600; letter-spacing: 0.01em;">
+            Initializing interview dialogue...
+        </span>
+    </div>
+
+    <div style="display: flex; align-items: center; gap: 0.5rem;">
+        <button type="button" onclick="speakCurrentQuestion()" class="btn btn-secondary" style="font-size: 0.75rem; padding: 0.35rem 0.7rem; border-color: #666; color: #fff;">
+            &orarr; Repeat Question
+        </button>
+        <button type="button" id="mute-tts-btn" onclick="toggleMute()" class="btn btn-secondary" style="font-size: 0.75rem; padding: 0.35rem 0.7rem; border-color: #666; color: #fff;">
+            Mute Audio
+        </button>
+    </div>
+</div>
+
+<!-- CONVERSATION CONTAINER: INTERVIEWER & CANDIDATE -->
+<div style="display: flex; flex-direction: column; gap: 1.5rem; margin-bottom: 2rem;">
+
+    <!-- 1. INTERVIEWER (SIR / MAM) DIALOGUE CARD -->
+    <div class="interview-dialogue-card interview-dialogue-ai" style="border: 2px solid #000; padding: 1.5rem; background: #fff; border-radius: 8px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
+            <div style="display: flex; align-items: center; gap: 0.6rem;">
+                <div style="width: 32px; height: 32px; border-radius: 50%; background: #000; color: #fff; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 0.85rem;">
+                    AI
+                </div>
+                <div>
+                    <strong style="font-size: 0.92rem; color: #000;">Interviewer (Placement Cell)</strong>
+                    <div style="font-size: 0.72rem; color: #666;">Asking Question {{ current_q.question_number }}</div>
+                </div>
+            </div>
+            <span class="badge" style="background: var(--bg-subtle); color: #000; border: 1px solid var(--border-mid); font-size: 0.75rem;">
+                Round {{ current_q.question_number }}
+            </span>
+        </div>
+
+        <div id="interviewer-question-text" style="font-size: 1.25rem; font-weight: 600; color: #000; line-height: 1.5; margin: 0.75rem 0 0.5rem 0;">
+            {{ current_q.question_text }}
+        </div>
+
+        <div style="font-size: 0.82rem; color: #666; font-style: italic; margin-top: 0.5rem;">
+            Answer in your normal conversational words just like talking to a real interviewer.
+        </div>
+    </div>
+
+    <!-- 2. CANDIDATE (STUDENT) SPOKEN RESPONSE CARD -->
+    <div class="interview-dialogue-card interview-dialogue-student" style="border: 2px solid #000; padding: 1.5rem; background: #FAFAFA; border-radius: 8px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
+            <div style="display: flex; align-items: center; gap: 0.6rem;">
+                <div style="width: 32px; height: 32px; border-radius: 50%; background: #555; color: #fff; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 0.85rem;">
+                    You
+                </div>
+                <div>
+                    <strong style="font-size: 0.92rem; color: #000;">Candidate Response</strong>
+                    <div id="speech-live-status" style="font-size: 0.72rem; color: #28a745; font-weight: 600;">
+                        Ready to speak
+                    </div>
+                </div>
+            </div>
+
+            <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem;">
+                <button type="button" id="code-editor-toggle" onclick="toggleCodeEditor()" class="btn btn-secondary" style="font-size: 0.75rem; padding: 0.3rem 0.65rem;">
+                    Code Mode
+                </button>
+                <button type="button" id="manual-mode-toggle" onclick="toggleManualMode()" class="btn btn-secondary" style="font-size: 0.75rem; padding: 0.3rem 0.65rem;">
+                    Type Answer
+                </button>
+            </div>
+        </div>
+
+        <!-- Silent Auto-Processing Progress Indicator -->
+        <div id="silence-countdown-bar" style="display: none; background: #e8f5e9; border: 1px solid #4caf50; padding: 0.5rem 0.85rem; border-radius: 4px; margin-bottom: 0.85rem; font-size: 0.82rem; color: #1b5e20;">
+            <strong>Answer finished:</strong> Submitting automatically in a moment...
+        </div>
+
+        <!-- Hidden / Live Form -->
+        <form id="answer-form" method="POST" action="{{ url_for('student_mock_interview_answer') }}">
+            <input type="hidden" name="session_id" value="{{ session_obj.id }}">
+            <input type="hidden" name="question_number" value="{{ current_q.question_number }}">
+            <input type="hidden" name="audio_mode" id="audio_mode_input" value="1">
+
+            <div class="form-group" style="margin-bottom: 0.85rem;">
+                <textarea id="student_answer_text" name="student_answer" class="transcript-review-box" placeholder="Your spoken words will appear here as you talk... Speak naturally." style="min-height: 120px; font-size: 1.05rem; line-height: 1.5; padding: 1rem; border: 1px solid #000; width: 100%; box-sizing: border-box; background: #fff; font-family: inherit;" required></textarea>
+            </div>
+
+            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem;">
+                <div style="font-size: 0.78rem; color: #777;">
+                    Hands-free dialogue: Pause for 2 seconds after speaking, and your response submits automatically.
+                </div>
+                <div>
+                    <button type="submit" id="submit-answer-btn" class="btn" style="padding: 0.55rem 1.4rem; font-size: 0.85rem;">
+                        Submit Answer Immediately &rarr;
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+
+</div>
+
+<!-- PREVIOUS QUESTIONS IN THIS SESSION (CHRONOLOGICAL) -->
+{% if previous_qnas %}
+<div class="card" style="border: 1px solid var(--border-light); margin-top: 2rem; padding: 1.25rem;">
+    <h3 style="font-size: 1.1rem; font-weight: 700; color: #000; margin-bottom: 1rem;">
+        Evaluated Responses in this Session
+    </h3>
+
+    {% for prev in previous_qnas %}
+    <div style="border-bottom: 1px solid var(--border-light); padding-bottom: 1rem; margin-bottom: 1rem;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.35rem;">
+            <strong style="font-size: 0.9rem; color: #000;">Q{{ prev.question_number }}: {{ prev.question_text }}</strong>
+            <span class="badge {% if prev.score and prev.score >= 70 %}badge-pass{% else %}badge-fail{% endif %}">
+                Score: {{ prev.score or 0 }}%
+            </span>
+        </div>
+        <div style="font-size: 0.88rem; color: #333; background: #fff; border: 1px solid var(--border-light); padding: 0.6rem 0.85rem; border-left: 3px solid #000; margin: 0.35rem 0;">
+            <strong>Your Answer:</strong> {{ prev.student_answer }}
+        </div>
+        {% if prev.feedback %}
+        <div style="font-size: 0.82rem; color: #444; margin-top: 0.35rem;">
+            <strong>Interviewer Feedback:</strong> {{ prev.feedback }}
+        </div>
+        {% endif %}
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+
+<style>
+@keyframes pulseGlow {
+    0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(40, 167, 69, 0.7); }
+    70% { transform: scale(1.1); box-shadow: 0 0 0 8px rgba(40, 167, 69, 0); }
+    100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(40, 167, 69, 0); }
+}
+.pulse-listening {
+    animation: pulseGlow 1.8s infinite;
+    background: #28a745 !important;
+}
+.pulse-speaking {
+    background: #ffc107 !important;
+    box-shadow: 0 0 10px #ffc107 !important;
+}
+</style>
+
+<script>
+// --- NATURAL CONVERSATIONAL AI INTERVIEW ENGINE ---
+let isMuted = false;
+let isManualMode = false;
+let isInterviewerSpeaking = false;
+let recognition = null;
+let silenceTimer = null;
+let hasSpokenWords = false;
+let autoSubmitTriggered = false;
+
+const questionText = document.getElementById('interviewer-question-text').innerText.trim();
+const statusText = document.getElementById('conversation-status-text');
+const pulseIndicator = document.getElementById('pulse-indicator');
+const speechStatus = document.getElementById('speech-live-status');
+const answerBox = document.getElementById('student_answer_text');
+const countdownBar = document.getElementById('silence-countdown-bar');
+const form = document.getElementById('answer-form');
+
+// Initialize Web Speech Recognition
+const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+
+function setupSpeechRecognition() {
+    if (!SpeechRecognition) {
+        statusText.innerText = "Speech recognition not supported in this browser. Please type your response below.";
+        pulseIndicator.style.background = "#6c757d";
+        isManualMode = true;
+        return;
+    }
+
+    recognition = new SpeechRecognition();
+    recognition.continuous = true;
+    recognition.interimResults = true;
+    recognition.lang = 'en-US';
+
+    recognition.onstart = function() {
+        if (!isInterviewerSpeaking) {
+            pulseIndicator.className = "pulse-listening";
+            statusText.innerText = "Interviewer is listening... Speak your answer naturally.";
+            speechStatus.innerText = "Microphone Active (Listening...)";
+            speechStatus.style.color = "#28a745";
+        }
+    };
+
+    recognition.onresult = function(event) {
+        let finalTranscript = '';
+        let interimTranscript = '';
+
+        for (let i = 0; i < event.results.length; ++i) {
+            if (event.results[i].isFinal) {
+                finalTranscript += event.results[i][0].transcript + ' ';
+            } else {
+                interimTranscript += event.results[i][0].transcript;
+            }
+        }
+
+        const combined = (finalTranscript + interimTranscript).trim();
+        if (combined.length > 0) {
+            answerBox.value = combined;
+            hasSpokenWords = true;
+            speechStatus.innerText = "Capturing your answer live...";
+
+            // Reset silence detection timer
+            resetSilenceTimer();
+        }
+    };
+
+    recognition.onerror = function(event) {
+        console.warn("Speech recognition notice:", event.error);
+        if (event.error === 'not-allowed') {
+            statusText.innerText = "Microphone access blocked. Click 'Type Answer' or allow microphone permissions.";
+            pulseIndicator.style.background = "#dc3545";
+            isManualMode = true;
+        }
+    };
+
+    recognition.onend = function() {
+        // If recognition stopped but student has not finished and we aren't submitting, restart
+        if (!autoSubmitTriggered && !isManualMode && !isInterviewerSpeaking) {
+            try {
+                recognition.start();
+            } catch (e) {}
+        }
+    };
+}
+
+// Silence Detection: When the student pauses for ~2 seconds after talking, automatically submit
+function resetSilenceTimer() {
+    if (isManualMode || autoSubmitTriggered) return;
+    
+    if (silenceTimer) {
+        clearTimeout(silenceTimer);
+    }
+
+    // Only start countdown if student has provided substantive speech (> 2 words)
+    const words = answerBox.value.trim().split(/\s+/).filter(w => w.length > 0);
+    if (words.length >= 2) {
+        countdownBar.style.display = 'block';
+        countdownBar.innerHTML = '<strong>Answer captured:</strong> Submitting automatically in 2 seconds...';
+
+        silenceTimer = setTimeout(function() {
+            triggerAutoSubmit();
+        }, 2200);
+    }
+}
+
+function triggerAutoSubmit() {
+    if (autoSubmitTriggered) return;
+    
+    const text = answerBox.value.trim();
+    if (!text) return;
+
+    autoSubmitTriggered = true;
+    if (recognition) {
+        try { recognition.stop(); } catch (e) {}
+    }
+    if ('speechSynthesis' in window) {
+        window.speechSynthesis.cancel();
+    }
+
+    pulseIndicator.style.background = "#007bff";
+    statusText.innerText = "Answer received! Evaluating response and proceeding...";
+    speechStatus.innerText = "Processing answer...";
+    countdownBar.innerHTML = "<strong>Evaluating:</strong> Analyzing your answer now...";
+    countdownBar.style.display = 'block';
+
+    form.submit();
+}
+
+// Text-to-Speech: Interviewer speaks question naturally
+function speakCurrentQuestion() {
+    if (isMuted || !('speechSynthesis' in window)) {
+        startListeningToCandidate();
+        return;
+    }
+
+    window.speechSynthesis.cancel();
+    isInterviewerSpeaking = true;
+
+    if (recognition) {
+        try { recognition.stop(); } catch (e) {}
+    }
+
+    pulseIndicator.className = "pulse-speaking";
+    statusText.innerText = "Interviewer asking question... (Listen carefully)";
+    speechStatus.innerText = "Listening paused while interviewer speaks";
+    speechStatus.style.color = "#666";
+
+    // Natural transitional prefix for rounds after Q1
+    let spokenText = questionText;
+    {% if current_q.question_number > 1 %}
+    spokenText = "Great. Here is your next question. " + spokenText;
+    {% endif %}
+
+    const utterance = new SpeechSynthesisUtterance(spokenText);
+    utterance.rate = 0.95; // Natural, clear conversational pacing
+    utterance.pitch = 1.0;
+
+    // Pick a natural English voice if available
+    const voices = window.speechSynthesis.getVoices();
+    const naturalVoice = voices.find(v => v.lang.startsWith('en') && (v.name.includes('Natural') || v.name.includes('Google') || v.name.includes('Samantha') || v.name.includes('David')));
+    if (naturalVoice) {
+        utterance.voice = naturalVoice;
+    }
+
+    utterance.onend = function() {
+        isInterviewerSpeaking = false;
+        startListeningToCandidate();
+    };
+
+    utterance.onerror = function() {
+        isInterviewerSpeaking = false;
+        startListeningToCandidate();
+    };
+
+    window.speechSynthesis.speak(utterance);
+}
+
+function startListeningToCandidate() {
+    if (isManualMode) return;
+
+    pulseIndicator.className = "pulse-listening";
+    statusText.innerText = "Your turn! Speak your answer naturally. It will process when you finish.";
+    speechStatus.innerText = "Microphone Active (Listening...)";
+    speechStatus.style.color = "#28a745";
+
+    if (recognition) {
+        try {
+            recognition.start();
+        } catch (e) {
+            // Already active
+        }
+    }
+}
+
+function toggleMute() {
+    isMuted = !isMuted;
+    const btn = document.getElementById('mute-tts-btn');
+    if (isMuted) {
+        if ('speechSynthesis' in window) {
+            window.speechSynthesis.cancel();
+        }
+        btn.innerText = "Unmute Audio";
+        isInterviewerSpeaking = false;
+        startListeningToCandidate();
+    } else {
+        btn.innerText = "Mute Audio";
+    }
+}
+
+function toggleManualMode() {
+    isManualMode = !isManualMode;
+    const btn = document.getElementById('manual-mode-toggle');
+    if (isManualMode) {
+        if (recognition) {
+            try { recognition.stop(); } catch (e) {}
+        }
+        if (silenceTimer) {
+            clearTimeout(silenceTimer);
+        }
+        countdownBar.style.display = 'none';
+        btn.innerText = "Switch to Voice Mode";
+        speechStatus.innerText = "Typing Mode (Type and click Submit)";
+        speechStatus.style.color = "#000";
+        statusText.innerText = "Manual mode: Type your answer below and click Submit.";
+        pulseIndicator.className = "";
+        pulseIndicator.style.background = "#000";
+        document.getElementById('audio_mode_input').value = "0";
+        answerBox.focus();
+    } else {
+        btn.innerText = "Type Answer";
+        document.getElementById('audio_mode_input').value = "1";
+        startListeningToCandidate();
+    }
+}
+
+// Toggle larger monospace code editor for technical and coding interview questions
+let isCodeEditor = false;
+function toggleCodeEditor() {
+    isCodeEditor = !isCodeEditor;
+    const btn = document.getElementById('code-editor-toggle');
+    const box = document.getElementById('student_answer_text');
+    if (isCodeEditor) {
+        box.style.fontFamily = "Consolas, 'Courier New', monospace";
+        box.style.minHeight = "240px";
+        box.style.fontSize = "0.95rem";
+        box.placeholder = "// Write or paste your code solution here...\ndef solve():\n    pass";
+        btn.innerText = "Text Mode";
+        if (!isManualMode) {
+            toggleManualMode();
+        }
+    } else {
+        box.style.fontFamily = "inherit";
+        box.style.minHeight = "120px";
+        box.style.fontSize = "1.05rem";
+        box.placeholder = "Your spoken words will appear here as you talk... Speak naturally.";
+        btn.innerText = "Code Mode";
+    }
+}
+
+// Form submission guard against duplicate submissions and sound cleanup
+form.addEventListener('submit', function(e) {
+    if (autoSubmitTriggered) {
+        // already submitted
+    } else {
+        autoSubmitTriggered = true;
+    }
+    const btn = document.getElementById('submit-answer-btn');
+    if (btn) {
+        btn.disabled = true;
+        btn.innerText = "Evaluating Response...";
+    }
+    if (recognition) {
+        try { recognition.stop(); } catch(e) {}
+    }
+    if ('speechSynthesis' in window) {
+        window.speechSynthesis.cancel();
+    }
+});
+
+// Clean up speech synthesis on navigating away to prevent overlapping audio
+window.addEventListener('beforeunload', function() {
+    if ('speechSynthesis' in window) {
+        window.speechSynthesis.cancel();
+    }
+});
+
+// Keyboard shortcut: Ctrl + Enter
+answerBox.addEventListener('keydown', function(e) {
+    if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+        form.submit();
+    }
+});
+
+// Auto-start conversational interview on page load
+window.addEventListener('DOMContentLoaded', function() {
+    setupSpeechRecognition();
+
+    // Browser audio policy allows speech synthesis upon user interaction or directly
+    setTimeout(function() {
+        speakCurrentQuestion();
+    }, 400);
+});
+</script>
+{% endblock %}

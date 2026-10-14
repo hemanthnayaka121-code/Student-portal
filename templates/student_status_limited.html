@@ -1,0 +1,89 @@
+{% extends 'base.html' %}
+
+{% block title %}Account Status — MIT Placement Portal{% endblock %}
+
+{% block content %}
+<div class="flex-center" style="min-height: 75vh; padding: 1.5rem 0.5rem;">
+    <div class="card student-auth-card" style="width: 100%; max-width: 600px; border: 2px solid #000; background: #FFFFFF;">
+        
+        <div style="text-align: center; margin-bottom: 2rem;">
+            <img src="{{ url_for('static', filename='images/mit_logo.png') }}" alt="MIT Mysore Logo" style="width: 64px; height: 64px; object-fit: contain; margin: 0 auto 1rem; display: block;">
+            <h2 style="font-size: 1.35rem; font-weight: 700; color: #000; margin-bottom: 0.35rem;">PLACEMENT ACCOUNT STATUS</h2>
+            <p style="color: #666; font-size: 0.85rem;">Student: <strong>{{ student.name }}</strong> ({{ student.usn }})</p>
+            <p style="color: #666; font-size: 0.82rem;">Department: {{ student.department.name }} ({{ student.department.code }})</p>
+        </div>
+
+        {% if student.placement_approval_status in ['PENDING', 'PENDING_HOD_APPROVAL'] %}
+            <!-- Pending HOD Approval Banner -->
+            <div style="border: 2px dashed #000; background: #FAFAFA; padding: 1.5rem; border-radius: 6px; margin-bottom: 1.75rem; text-align: center;">
+                <span class="badge" style="background: #000; color: #fff; font-size: 0.85rem; padding: 0.35rem 0.85rem; margin-bottom: 0.75rem; display: inline-block;">
+                    Status: Awaiting Department HOD Approval
+                </span>
+                <h3 style="font-size: 1.1rem; font-weight: 700; margin: 0.5rem 0; color: #000;">Approval Pending in {{ student.department.code }} Queue</h3>
+                <p style="font-size: 0.88rem; color: #444; line-height: 1.5;">
+                    Your placement profile has been registered by the Placement Coordinator and is currently awaiting verification and approval from your Head of Department (<strong>{{ student.department.hod_name }}</strong>).
+                </p>
+                <div style="margin-top: 1rem; font-size: 0.82rem; color: #666;">
+                    Placement training modules, practice quizzes, and AI mock interviews will unlock automatically as soon as your HOD approval is recorded.
+                </div>
+            </div>
+        {% elif student.placement_approval_status == 'REJECTED' %}
+            <!-- Rejected by HOD Banner -->
+            <div style="border: 2px solid #000; background: #F8F8F8; padding: 1.5rem; border-radius: 6px; margin-bottom: 1.75rem;">
+                <div style="text-align: center; margin-bottom: 1rem;">
+                    <span class="badge badge-fail" style="font-size: 0.85rem; padding: 0.35rem 0.85rem; display: inline-block;">
+                        Status: Placement Approval Not Granted
+                    </span>
+                    <h3 style="font-size: 1.1rem; font-weight: 700; margin: 0.5rem 0; color: #000;">Department Placement Approval Rejected</h3>
+                </div>
+                <div style="background: #FFFFFF; border: 1px solid var(--border-mid); padding: 1rem; border-radius: 4px; margin-bottom: 1rem;">
+                    <div style="font-size: 0.75rem; text-transform: uppercase; color: #666; font-weight: 700; margin-bottom: 0.35rem;">Recorded Rejection Reason:</div>
+                    <div style="font-size: 0.92rem; color: #000; font-weight: 500;">
+                        "{{ student.rejection_reason or 'Student does not meet current department placement eligibility criteria.' }}"
+                    </div>
+                </div>
+                <p style="font-size: 0.85rem; color: #555; line-height: 1.5;">
+                    Per college policy, placement preparation and mock interview modules are restricted until eligibility requirements are resolved with your Head of Department.
+                </p>
+            </div>
+        {% endif %}
+
+        <!-- Student Summary Info Table -->
+        <table class="portal-table" style="margin-bottom: 1.75rem;">
+            <tbody>
+                <tr>
+                    <th style="width: 40%;">USN</th>
+                    <td><strong>{{ student.usn }}</strong></td>
+                </tr>
+                <tr>
+                    <th>Department</th>
+                    <td>{{ student.department.name }}</td>
+                </tr>
+                <tr>
+                    <th>Semester & CGPA</th>
+                    <td>Sem {{ student.semester }} | {{ student.cgpa }} CGPA</td>
+                </tr>
+                <tr>
+                    <th>Registered Email</th>
+                    <td>{{ student.email }}</td>
+                </tr>
+                <tr>
+                    <th>HOD Contact</th>
+                    <td>{{ student.department.hod_name }} ({{ student.department.hod_email }})</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <!-- Actions -->
+        <div style="display: flex; gap: 1rem; justify-content: center;">
+            <a href="{{ url_for('student_logout') }}" class="btn" style="padding: 0.65rem 1.5rem;">
+                Sign Out
+            </a>
+            <a href="{{ url_for('student_login') }}" class="btn btn-secondary" style="padding: 0.65rem 1.5rem;">
+                Refresh Status
+            </a>
+        </div>
+
+    </div>
+</div>
+{% endblock %}

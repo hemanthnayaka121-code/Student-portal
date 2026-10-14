@@ -1,0 +1,138 @@
+{% extends 'student_base.html' %}
+
+{% block title %}YouTube Lessons — Student Portal{% endblock %}
+{% block breadcrumb %}YouTube Lessons{% endblock %}
+
+{% block content %}
+<div class="card" style="margin-bottom: 1.5rem; border: 1px solid #000; padding: 1.5rem;">
+    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+        <div>
+            <h1 style="font-size: 1.5rem; font-weight: 700; color: #000; margin-bottom: 0.25rem;">
+                Personalized YouTube Video Lessons
+            </h1>
+            <p style="font-size: 0.85rem; color: #555;">
+                Official YouTube Data API v3 &bull; Curated placement masterclasses based on your weakest concepts.
+            </p>
+        </div>
+        <div>
+            <span class="badge" style="background: #000; color: #fff;">
+                Lessons Completed: {{ completed_count }}
+            </span>
+        </div>
+    </div>
+</div>
+
+<!-- DOMAIN FILTER & SEARCH BAR -->
+<div class="card" style="margin-bottom: 1.5rem; border: 1px solid var(--border-light); padding: 1.25rem;">
+    <form method="GET" action="{{ url_for('student_youtube') }}" style="display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: center;">
+        <div style="flex: 1; min-width: min(100%, 200px);">
+            <input type="text" name="query" value="{{ active_query }}" placeholder="Search placement topics (e.g. Arrays and Strings, DBMS SQL)..." class="form-control">
+        </div>
+        <div style="flex: 1; min-width: min(100%, 160px);">
+            <select name="domain" class="form-control" onchange="this.form.submit()">
+                <option value="Coding" {% if active_domain == 'Coding' %}selected{% endif %}>Coding & DSA</option>
+                <option value="Aptitude" {% if active_domain == 'Aptitude' %}selected{% endif %}>Aptitude & Logical</option>
+                <option value="Technical Interview" {% if active_domain == 'Technical Interview' %}selected{% endif %}>Technical Interview</option>
+                <option value="HR Interview" {% if active_domain == 'HR Interview' %}selected{% endif %}>HR Interview</option>
+            </select>
+        </div>
+        <button type="submit" class="btn" style="padding: 0.65rem 1.25rem;">
+            Search Videos
+        </button>
+    </form>
+</div>
+
+<!-- EMBEDDED PLAYER MODAL / PLAYER CONTAINER -->
+<div id="player-container" class="card" style="display: none; border: 2px solid #000; background: #000; color: #fff; padding: 1rem; margin-bottom: 1.75rem;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
+        <h3 id="player-title" style="font-size: 1rem; color: #fff; margin: 0;">Now Playing</h3>
+        <button type="button" onclick="closePlayer()" class="btn btn-secondary" style="font-size: 0.75rem; padding: 0.25rem 0.6rem;">Close Player &times;</button>
+    </div>
+    <div style="position: relative; padding-bottom: 56.25%; height: 0; overflow: hidden; max-width: 100%;">
+        <iframe id="youtube-iframe" style="position: absolute; top:0; left: 0; width: 100%; height: 100%; border: 0;" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+    </div>
+</div>
+
+<!-- VIDEOS GRID -->
+<div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 280px), 1fr)); gap: 1.5rem; margin-bottom: 2rem;">
+    {% for vid in videos %}
+    <div class="card" style="margin-bottom: 0; border: 1px solid var(--border-mid); display: flex; flex-direction: column; justify-content: space-between;">
+        <div>
+            <!-- Video Thumbnail -->
+            <div style="position: relative; width: 100%; height: 180px; overflow: hidden; background: #111; border-radius: 4px; margin-bottom: 0.85rem; cursor: pointer;" onclick="openPlayer('{{ vid.video_id }}', '{{ vid.title|escape }}')">
+                <img src="{{ vid.thumbnail_url }}" alt="{{ vid.title }}" loading="lazy" onerror="this.onerror=null; this.src='https://img.youtube.com/vi/{{ vid.video_id }}/0.jpg';" style="width: 100%; height: 100%; object-fit: cover;">
+                <div style="position: absolute; inset: 0; background: rgba(0,0,0,0.25); display: flex; align-items: center; justify-content: center; transition: background 0.2s;" onmouseover="this.style.background='rgba(0,0,0,0.1)'" onmouseout="this.style.background='rgba(0,0,0,0.25)'">
+                    <div style="width: 52px; height: 52px; border-radius: 50%; background: #000; border: 2px solid #fff; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 12px rgba(0,0,0,0.5);">
+                        <svg width="22" height="22" viewBox="0 0 24 24" fill="#fff"><path d="M8 5v14l11-7z"/></svg>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Video Info -->
+            <span class="badge" style="font-size: 0.7rem; margin-bottom: 0.35rem; display: inline-block;">{{ vid.domain }}</span>
+            <h3 style="font-size: 0.95rem; font-weight: 700; color: #000; line-height: 1.35; margin-bottom: 0.35rem;">
+                {{ vid.title }}
+            </h3>
+            <div style="font-size: 0.78rem; color: #666; margin-bottom: 0.75rem;">
+                Channel: <strong>{{ vid.channel_title }}</strong>
+            </div>
+        </div>
+
+        <div style="border-top: 1px solid var(--border-light); padding-top: 0.75rem; display: flex; flex-wrap: wrap; gap: 0.4rem; justify-content: space-between; align-items: center;">
+            <div style="display: flex; gap: 0.4rem;">
+                <button type="button" onclick="openPlayer('{{ vid.video_id }}', '{{ vid.title|escape }}')" class="btn" style="font-size: 0.75rem; padding: 0.35rem 0.65rem;">
+                    Watch in Portal
+                </button>
+                <a href="{{ vid.video_url }}" target="_blank" rel="noopener noreferrer" class="btn btn-secondary" style="font-size: 0.75rem; padding: 0.35rem 0.65rem;">
+                    Open on YouTube &nearr;
+                </a>
+            </div>
+
+            <!-- Mark Complete Form -->
+            <form method="POST" action="{{ url_for('student_mark_lesson_complete') }}">
+                <input type="hidden" name="video_id" value="{{ vid.video_id }}">
+                <input type="hidden" name="title" value="{{ vid.title }}">
+                <input type="hidden" name="channel_title" value="{{ vid.channel_title }}">
+                <input type="hidden" name="thumbnail_url" value="{{ vid.thumbnail_url }}">
+                <input type="hidden" name="topic" value="{{ vid.topic }}">
+                <input type="hidden" name="domain" value="{{ vid.domain }}">
+                <button type="submit" class="action-link" style="background: #333; font-size: 0.72rem; padding: 0.3rem 0.5rem; border: none; cursor: pointer;">
+                    Mark Complete &check;
+                </button>
+            </form>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<!-- PRACTICE QUIZ CTA AFTER WATCHING -->
+<div class="clean-banner" style="background: #FAFAFA; border: 1px solid #000; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+    <div>
+        <h4 style="font-size: 1rem; font-weight: 700; color: #000;">Finished Watching? Reinforce with a Diagnostic Quiz!</h4>
+        <p style="font-size: 0.82rem; color: #555; margin-top: 0.2rem;">Test your retention on this concept with 5 curated questions.</p>
+    </div>
+    <a href="{{ url_for('student_quizzes', domain=active_domain) }}" class="btn">
+        Start {{ active_domain }} Quiz &rarr;
+    </a>
+</div>
+
+<script>
+function openPlayer(videoId, title) {
+    var container = document.getElementById('player-container');
+    var iframe = document.getElementById('youtube-iframe');
+    var titleEl = document.getElementById('player-title');
+
+    titleEl.innerText = title;
+    iframe.src = "https://www.youtube-nocookie.com/embed/" + videoId + "?autoplay=1";
+    container.style.display = 'block';
+    container.scrollIntoView({ behavior: 'smooth' });
+}
+
+function closePlayer() {
+    var container = document.getElementById('player-container');
+    var iframe = document.getElementById('youtube-iframe');
+    iframe.src = "";
+    container.style.display = 'none';
+}
+</script>
+{% endblock %}

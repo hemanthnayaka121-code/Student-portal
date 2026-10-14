@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, viewport-fit=cover">
+    <meta name="theme-color" content="#000000">
+    <title>{% block title %}Student Placement Portal{% endblock %} — MIT Mysore</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+    {% block extra_head %}{% endblock %}
+</head>
+<body class="student-portal-body">
+
+    <!-- MOBILE BACKDROP OVERLAY -->
+    <div class="portal-sidebar-overlay" id="portalSidebarOverlay" onclick="closeStudentNav()"></div>
+
+    <!-- MOBILE TOP HEADER (VISIBLE ON SMARTPHONES & TABLETS < 992px) -->
+    <header class="student-mobile-header" id="studentMobileHeader">
+        <button type="button" class="mobile-nav-toggle-btn" id="mobileNavToggle" onclick="toggleStudentNav()" aria-label="Open Navigation Menu" aria-expanded="false">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#000" stroke-width="2.2" stroke-linecap="round"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+        </button>
+
+        <a href="{{ url_for('student_dashboard') }}" class="mobile-brand-link">
+            <img src="{{ url_for('static', filename='images/mit_logo.png') }}" alt="MIT Logo" class="mobile-brand-logo">
+            <div class="mobile-brand-text">
+                <span class="mobile-brand-title">MIT MYSORE</span>
+                <span class="mobile-brand-sub">Student Portal</span>
+            </div>
+        </a>
+
+        <div class="mobile-header-right">
+            {% if student and student.placement_approval_status == 'APPROVED' %}
+                <span class="mobile-status-dot" title="HOD Approved"></span>
+            {% endif %}
+            <a href="{{ url_for('student_profile') }}" class="mobile-avatar-badge" title="My Profile">
+                {{ student.name[0] if student and student.name else 'S' }}
+            </a>
+        </div>
+    </header>
+
+    <div class="portal-layout student-layout-root">
+        
+        <!-- STUDENT SIDEBAR / OFF-CANVAS MOBILE DRAWER (12 SECTIONS) -->
+        <aside class="portal-sidebar student-sidebar" id="portalSidebar">
+            <!-- Brand & Mobile Close Bar -->
+            <div class="portal-brand student-brand-row">
+                <img src="{{ url_for('static', filename='images/mit_logo.png') }}" alt="MIT Mysore Logo" class="portal-brand-logo-img">
+                <div style="flex: 1; min-width: 0;">
+                    <div class="portal-brand-title">MIT MYSORE</div>
+                    <div class="portal-brand-subtitle">Student AI Portal</div>
+                </div>
+                <!-- Close Button (Mobile only) -->
+                <button type="button" class="mobile-drawer-close-btn" onclick="closeStudentNav()" aria-label="Close Navigation">
+                    &times;
+                </button>
+            </div>
+
+            <!-- 12 Navigation Items -->
+            <nav class="portal-nav" style="flex: 1; overflow-y: auto; padding-bottom: 1rem;">
+                <div class="portal-nav-heading">Student Portal Navigation</div>
+
+                <!-- 1. Student Dashboard -->
+                <a href="{{ url_for('student_dashboard') }}" class="portal-nav-link {% if active_section == 'dashboard' %}active{% endif %}" onclick="closeStudentNav()">
+                    <span class="nav-icon-box">1</span>
+                    <span>Student Dashboard</span>
+                </a>
+
+                <!-- 2. My Placement Performance -->
+                <a href="{{ url_for('student_performance') }}" class="portal-nav-link {% if active_section == 'performance' %}active{% endif %}" onclick="closeStudentNav()">
+                    <span class="nav-icon-box">2</span>
+                    <span>My Placement Performance</span>
+                </a>
+
+                <!-- 3. Strengths and Weaknesses -->
+                <a href="{{ url_for('student_analysis') }}" class="portal-nav-link {% if active_section == 'analysis' %}active{% endif %}" onclick="closeStudentNav()">
+                    <span class="nav-icon-box">3</span>
+                    <span>Strengths & Weaknesses</span>
+                </a>
+
+                <!-- 4. Recommended Learning -->
+                <a href="{{ url_for('student_recommendations') }}" class="portal-nav-link {% if active_section == 'recommendations' %}active{% endif %}" onclick="closeStudentNav()">
+                    <span class="nav-icon-box">4</span>
+                    <span>Recommended Learning</span>
+                </a>
+
+                <!-- 5. YouTube Lessons -->
+                <a href="{{ url_for('student_youtube') }}" class="portal-nav-link {% if active_section == 'youtube' %}active{% endif %}" onclick="closeStudentNav()">
+                    <span class="nav-icon-box">5</span>
+                    <span>YouTube Lessons</span>
+                </a>
+
+                <!-- 6. Practice Quizzes -->
+                <a href="{{ url_for('student_quizzes') }}" class="portal-nav-link {% if active_section == 'quizzes' %}active{% endif %}" onclick="closeStudentNav()">
+                    <span class="nav-icon-box">6</span>
+                    <span>Practice Quizzes</span>
+                </a>
+
+                <!-- 7. AI Mock Interview -->
+                <a href="{{ url_for('student_mock_interview') }}" class="portal-nav-link {% if active_section == 'mock_interview' %}active{% endif %}" onclick="closeStudentNav()">
+                    <span class="nav-icon-box">7</span>
+                    <span>AI Mock Interview</span>
+                </a>
+
+                <!-- 8. Interview Reports -->
+                <a href="{{ url_for('student_interview_reports') }}" class="portal-nav-link {% if active_section == 'interview_reports' %}active{% endif %}" onclick="closeStudentNav()">
+                    <span class="nav-icon-box">8</span>
+                    <span>Interview Reports</span>
+                </a>
+
+                <!-- 9. My Placement History -->
+                <a href="{{ url_for('student_history') }}" class="portal-nav-link {% if active_section == 'history' %}active{% endif %}" onclick="closeStudentNav()">
+                    <span class="nav-icon-box">9</span>
+                    <span>My Placement History</span>
+                </a>
+
+                <!-- 10. My Profile -->
+                <a href="{{ url_for('student_profile') }}" class="portal-nav-link {% if active_section == 'profile' %}active{% endif %}" onclick="closeStudentNav()">
+                    <span class="nav-icon-box">10</span>
+                    <span>My Profile</span>
+                </a>
+
+                <!-- 11. Account Security -->
+                <a href="{{ url_for('student_security') }}" class="portal-nav-link {% if active_section == 'security' %}active{% endif %}" onclick="closeStudentNav()">
+                    <span class="nav-icon-box">11</span>
+                    <span>Account Security</span>
+                </a>
+
+                <!-- 12. Logout -->
+                <a href="{{ url_for('student_logout') }}" class="portal-nav-link student-nav-logout" style="border-top: 1px dashed var(--border-light); margin-top: 0.5rem;">
+                    <span class="nav-icon-box">12</span>
+                    <span>Logout</span>
+                </a>
+            </nav>
+
+            <!-- Student Footer Profile Card -->
+            <div class="portal-sidebar-footer">
+                <div class="portal-user-card">
+                    <div class="portal-user-name" style="overflow-wrap: break-word;">{{ student.name if student else session.get('student_name', 'Student') }}</div>
+                    <div class="portal-user-role" style="overflow-wrap: break-word;">USN: {{ student.usn if student else session.get('student_usn') }}</div>
+                    {% if student and student.department %}
+                    <div style="font-size: 0.72rem; color: #666; margin-top: 0.15rem;">Dept: {{ student.department.code }}</div>
+                    {% endif %}
+                </div>
+                <a href="{{ url_for('student_logout') }}" class="btn btn-secondary" style="width: 100%; font-size: 0.82rem; padding: 0.45rem; min-height: 40px;">
+                    Sign Out
+                </a>
+            </div>
+        </aside>
+
+        <!-- MAIN VIEW AREA -->
+        <div class="portal-main student-main-view">
+            <!-- Desktop Topbar (Hidden or streamlined on mobile) -->
+            <header class="portal-topbar student-desktop-topbar">
+                <div class="portal-breadcrumb">
+                    <a href="{{ url_for('student_dashboard') }}">Student Portal</a>
+                    <span>/</span>
+                    <span style="font-weight: 600; color: #000;">{% block breadcrumb %}Dashboard{% endblock %}</span>
+                </div>
+
+                <div class="portal-topbar-actions" style="display: flex; align-items: center; gap: 0.5rem;">
+                    <span class="badge" style="background: #000; color: #fff;">
+                        Student Portal (Module 2)
+                    </span>
+                    {% if student %}
+                        {% if student.placement_approval_status == 'APPROVED' %}
+                            <span class="badge badge-pass">HOD Approved</span>
+                        {% elif student.placement_approval_status == 'PENDING' %}
+                            <span class="badge badge-warning">Awaiting Approval</span>
+                        {% else %}
+                            <span class="badge badge-fail">HOD Rejected</span>
+                        {% endif %}
+                    {% endif %}
+                </div>
+            </header>
+
+            <!-- Container for View Content -->
+            <main class="portal-container student-portal-container">
+                <!-- Flashed Messages -->
+                {% with messages = get_flashed_messages(with_categories=true) %}
+                    {% if messages %}
+                        <div class="flash-messages">
+                            {% for category, message in messages %}
+                                <div class="flash-{{ category }}">{{ message }}</div>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                {% endwith %}
+
+                {% block content %}{% endblock %}
+            </main>
+        </div>
+
+    </div>
+
+    <!-- MOBILE STICKY BOTTOM NAVIGATION BAR (SMARTPHONES < 992px) -->
+    <nav class="student-mobile-bottom-nav" id="studentBottomNav" aria-label="Mobile Quick Navigation">
+        <!-- 1. Dashboard -->
+        <a href="{{ url_for('student_dashboard') }}" class="bottom-nav-item {% if active_section == 'dashboard' %}active{% endif %}">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+            <span>Home</span>
+        </a>
+
+        <!-- 2. Performance -->
+        <a href="{{ url_for('student_performance') }}" class="bottom-nav-item {% if active_section == 'performance' or active_section == 'analysis' %}active{% endif %}">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+            <span>Scores</span>
+        </a>
+
+        <!-- 3. Quizzes -->
+        <a href="{{ url_for('student_quizzes') }}" class="bottom-nav-item {% if active_section == 'quizzes' %}active{% endif %}">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+            <span>Quizzes</span>
+        </a>
+
+        <!-- 4. AI Mock -->
+        <a href="{{ url_for('student_mock_interview') }}" class="bottom-nav-item {% if active_section == 'mock_interview' or active_section == 'interview_reports' %}active{% endif %}">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
+            <span>Mock AI</span>
+        </a>
+
+        <!-- 5. All 12 Sections / Menu -->
+        <button type="button" class="bottom-nav-item" onclick="toggleStudentNav()" aria-label="Open Full Menu">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg>
+            <span>Menu</span>
+        </button>
+    </nav>
+
+    <!-- MOBILE NAVIGATION LOGIC SCRIPT -->
+    <script>
+    function toggleStudentNav() {
+        var sidebar = document.getElementById('portalSidebar');
+        var overlay = document.getElementById('portalSidebarOverlay');
+        var toggleBtn = document.getElementById('mobileNavToggle');
+        if (sidebar && overlay) {
+            var isOpen = sidebar.classList.contains('mobile-open');
+            if (isOpen) {
+                closeStudentNav();
+            } else {
+                sidebar.classList.add('mobile-open');
+                overlay.classList.add('active');
+                document.body.classList.add('mobile-nav-lock');
+                if (toggleBtn) toggleBtn.setAttribute('aria-expanded', 'true');
+            }
+        }
+    }
+
+    function closeStudentNav() {
+        var sidebar = document.getElementById('portalSidebar');
+        var overlay = document.getElementById('portalSidebarOverlay');
+        var toggleBtn = document.getElementById('mobileNavToggle');
+        if (sidebar && overlay) {
+            sidebar.classList.remove('mobile-open');
+            overlay.classList.remove('active');
+            document.body.classList.remove('mobile-nav-lock');
+            if (toggleBtn) toggleBtn.setAttribute('aria-expanded', 'false');
+        }
+    }
+
+    // Close on Escape key
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+            closeStudentNav();
+        }
+    });
+
+    // Auto resize Plotly graphs on orientation or screen resize
+    window.addEventListener('resize', function() {
+        if (window.Plotly) {
+            var plots = document.querySelectorAll('.js-plotly-plot');
+            plots.forEach(function(plot) {
+                try {
+                    Plotly.Plots.resize(plot);
+                } catch(e) {}
+            });
+        }
+    });
+    </script>
+
+    {% block scripts %}{% endblock %}
+</body>
+</html>

@@ -1,0 +1,81 @@
+{% extends 'student_base.html' %}
+
+{% block title %}Recommended Learning — Student Portal{% endblock %}
+{% block breadcrumb %}Recommended Learning{% endblock %}
+
+{% block content %}
+<div class="card" style="margin-bottom: 1.5rem; border: 1px solid #000; padding: 1.5rem;">
+    <h1 style="font-size: 1.5rem; font-weight: 700; color: #000; margin-bottom: 0.25rem;">
+        Personalized Learning Recommendations
+    </h1>
+    <p style="font-size: 0.85rem; color: #555;">
+        Targeted placement preparation curriculum generated based on your diagnostic evaluations and recorded marks.
+    </p>
+</div>
+
+<!-- PRIORITY 1 RECOMMENDATION -->
+<div class="clean-banner" style="background: #FAFAFA; border: 2px solid #000; padding: 1.5rem; margin-bottom: 2rem;">
+    <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 1rem;">
+        <div>
+            <span class="badge" style="background: #000; color: #fff; margin-bottom: 0.5rem; display: inline-block;">
+                PRIORITY 1 &bull; {{ analysis.weakest_domain.domain }}
+            </span>
+            <h2 style="font-size: 1.3rem; font-weight: 700; color: #000; margin: 0.25rem 0;">
+                Focus Area: {{ analysis.weakest_domain.recommended_topic }}
+            </h2>
+            <p style="font-size: 0.88rem; color: #444; max-width: 700px; line-height: 1.5; margin-top: 0.5rem;">
+                {{ analysis.weakest_domain.reason }} Step 1: Watch the curated educational lesson. Step 2: Attempt the 5-question diagnostic quiz. Step 3: Test under interview conditions in the AI Mock Interview system.
+            </p>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 0.5rem; width: 100%; max-width: 220px;">
+            <a href="{{ url_for('student_youtube', query=analysis.weakest_domain.recommended_query, domain=analysis.weakest_domain.domain) }}" class="btn">
+                Launch Video Lesson &rarr;
+            </a>
+            <a href="{{ url_for('student_quizzes', domain=analysis.weakest_domain.domain) }}" class="btn btn-secondary">
+                Attempt Quiz
+            </a>
+        </div>
+    </div>
+</div>
+
+<!-- STEP-BY-STEP LEARNING MODULES -->
+<div class="card" style="border: 1px solid var(--border-light); margin-bottom: 2rem;">
+    <h3 style="font-size: 1.15rem; font-weight: 700; color: #000; margin-bottom: 1.25rem;">
+        Placement Mastery Path
+    </h3>
+
+    <div style="display: flex; flex-direction: column; gap: 1.25rem;">
+        {% for d in analysis.domains %}
+        <div style="display: flex; gap: 1.25rem; align-items: flex-start; padding-bottom: 1.25rem; border-bottom: 1px solid var(--border-light);">
+            <div style="width: 36px; height: 36px; border-radius: 50%; background: #000; color: #fff; display: flex; align-items: center; justify-content: center; font-weight: 700; flex-shrink: 0;">
+                {{ loop.index }}
+            </div>
+            <div style="flex: 1;">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <h4 style="font-size: 1.05rem; font-weight: 700; color: #000;">
+                        {{ d.domain }}
+                    </h4>
+                    <span class="badge {{ d.badge_class }}">{{ d.status }}</span>
+                </div>
+                <p style="font-size: 0.85rem; color: #555; margin: 0.35rem 0 0.75rem;">
+                    {{ d.action_plan }}
+                </p>
+                <div style="display: flex; flex-wrap: wrap; gap: 0.4rem; margin-bottom: 0.75rem;">
+                    {% for st in d.subtopics %}
+                    <span class="skill-pill">{{ st }}</span>
+                    {% endfor %}
+                </div>
+                <div style="display: flex; flex-wrap: wrap; gap: 0.5rem;">
+                    <a href="{{ url_for('student_youtube', query=d.recommended_query, domain=d.domain) }}" class="action-link" style="font-size: 0.78rem;">
+                        View YouTube Lessons
+                    </a>
+                    <a href="{{ url_for('student_quizzes', domain=d.domain) }}" class="action-link" style="font-size: 0.78rem; background: #333;">
+                        Take Diagnostic Quiz
+                    </a>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,115 @@
+{% extends 'student_base.html' %}
+
+{% block title %}Quiz Results — {{ attempt.domain }} — Student Portal{% endblock %}
+{% block breadcrumb %}Quiz Results{% endblock %}
+
+{% block content %}
+<!-- SUMMARY SCORE CARD -->
+<div class="card" style="margin-bottom: 2rem; border: 2px solid #000; padding: 2rem; text-align: center; background: #FFFFFF;">
+    <span class="badge" style="background: #000; color: #fff; font-size: 0.85rem; padding: 0.35rem 0.85rem; margin-bottom: 0.75rem; display: inline-block;">
+        {{ attempt.domain }} &bull; {{ attempt.topic }}
+    </span>
+    
+    <div style="font-size: 3.25rem; font-weight: 800; color: #000; line-height: 1; margin: 0.5rem 0;">
+        {{ "%.0f"|format(attempt.score_pct) }}<span style="font-size: 1.5rem; font-weight: 600;">%</span>
+    </div>
+
+    <div style="font-size: 1.1rem; font-weight: 600; color: #333; margin-bottom: 0.5rem;">
+        You answered {{ attempt.correct_answers }} out of {{ attempt.total_questions }} questions correctly.
+    </div>
+
+    <div style="font-size: 0.85rem; color: #666; margin-bottom: 1.25rem;">
+        Difficulty: {{ attempt.difficulty|capitalize }} &bull; Time Spent: {{ attempt.time_spent_seconds }} seconds &bull; Attempt Date: {{ attempt.attempted_at.strftime('%d %b %Y, %I:%M %p') }}
+    </div>
+
+    <div>
+        {% if attempt.score_pct >= 70 %}
+            <span class="badge badge-pass" style="font-size: 0.95rem; padding: 0.45rem 1.25rem;">
+                Passed Benchmark (&ge; 70%) &mdash; Well Done!
+            </span>
+        {% else %}
+            <span class="badge badge-fail" style="font-size: 0.95rem; padding: 0.45rem 1.25rem;">
+                Below Benchmark (&lt; 70%) &mdash; Review Action Plan Below
+            </span>
+        {% endif %}
+    </div>
+
+    <div style="display: flex; justify-content: center; gap: 0.75rem; margin-top: 1.5rem;">
+        <a href="{{ url_for('student_quizzes', domain=attempt.domain) }}" class="btn">
+            Take Another Quiz &rarr;
+        </a>
+        <a href="{{ url_for('student_youtube', query=attempt.topic, domain=attempt.domain) }}" class="btn btn-secondary">
+            Watch Related Lessons
+        </a>
+    </div>
+</div>
+
+<!-- DETAILED QUESTION BY QUESTION EXPLANATIONS -->
+<h3 style="font-size: 1.25rem; font-weight: 700; color: #000; margin-bottom: 1rem;">
+    Detailed Question Review & Explanations
+</h3>
+
+{% for item in questions_feedback %}
+<div class="card" style="border: 1px solid var(--border-mid); margin-bottom: 1.5rem; padding: 1.5rem; border-left: 5px solid {% if item.is_correct %}#000000{% else %}#888888{% endif %};">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
+        <span class="badge" style="background: #000; color: #fff;">Question {{ loop.index }}</span>
+        {% if item.is_correct %}
+            <span class="badge badge-pass" style="font-size: 0.8rem;">&check; Correct</span>
+        {% else %}
+            <span class="badge badge-fail" style="font-size: 0.8rem;">&cross; Incorrect</span>
+        {% endif %}
+    </div>
+
+    <div style="font-size: 1.05rem; font-weight: 600; color: #000; line-height: 1.45; margin-bottom: 0.85rem;">
+        {{ item.question_text }}
+    </div>
+
+    {% if item.code_snippet %}
+    <div class="code-box">
+        <pre style="margin: 0; font-family: inherit;"><code>{{ item.code_snippet }}</code></pre>
+    </div>
+    {% endif %}
+
+    <!-- Student selection vs Correct Option -->
+    <div style="background: var(--bg-subtle); border: 1px solid var(--border-mid); border-radius: 4px; padding: 0.85rem 1rem; margin-bottom: 1rem; font-size: 0.88rem;">
+        <div style="margin-bottom: 0.35rem;">
+            Your Selection: <strong>Option {{ item.selected_option or "None (Not Answered)" }}</strong>
+            {% if item.selected_option_text %} &mdash; {{ item.selected_option_text }}{% endif %}
+        </div>
+        <div>
+            Correct Answer: <strong>Option {{ item.correct_option }}</strong> &mdash; {{ item.correct_option_text }}
+        </div>
+    </div>
+
+    <!-- Explanation -->
+    <div style="border-top: 1px solid var(--border-light); padding-top: 0.85rem;">
+        <div style="font-size: 0.75rem; text-transform: uppercase; font-weight: 700; color: #555; margin-bottom: 0.25rem;">
+            Conceptual Explanation:
+        </div>
+        <p style="font-size: 0.88rem; color: #222; line-height: 1.5; margin: 0;">
+            {{ item.explanation }}
+        </p>
+    </div>
+</div>
+{% endfor %}
+
+<!-- REMEDIAL RECOMMENDATION IF SCORE < 70 -->
+{% if attempt.score_pct < 70 %}
+<div class="clean-banner" style="background: #FAFAFA; border: 1px solid #000; border-left: 6px solid #000; margin-top: 2rem;">
+    <h4 style="font-size: 1.05rem; font-weight: 700; color: #000; margin-bottom: 0.35rem;">
+        Recommended Action for {{ attempt.domain }}
+    </h4>
+    <p style="font-size: 0.85rem; color: #444; line-height: 1.4; margin-bottom: 1rem;">
+        Your quiz score on <strong>{{ attempt.topic }}</strong> indicates that reviewing key concepts is advisable before your next assessment. Watch the recommended video lesson and retry the quiz to reinforce mastery.
+    </p>
+    <div style="display: flex; gap: 0.5rem;">
+        <a href="{{ url_for('student_youtube', query=attempt.topic, domain=attempt.domain) }}" class="btn">
+            Watch Recommended Video Lesson &rarr;
+        </a>
+        <a href="{{ url_for('student_quizzes', domain=attempt.domain) }}" class="btn btn-secondary">
+            Practice Again
+        </a>
+    </div>
+</div>
+{% endif %}
+{% endblock %}

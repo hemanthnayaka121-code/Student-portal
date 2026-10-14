@@ -1,0 +1,126 @@
+{% extends 'student_base.html' %}
+
+{% block title %}Strengths & Weaknesses — Student Portal{% endblock %}
+{% block breadcrumb %}Strengths & Weaknesses Analysis{% endblock %}
+
+{% block content %}
+<div class="card" style="margin-bottom: 1.5rem; border: 1px solid #000; padding: 1.5rem;">
+    <h1 style="font-size: 1.5rem; font-weight: 700; color: #000; margin-bottom: 0.25rem;">
+        Intelligent Placement Performance & Gap Analysis
+    </h1>
+    <p style="font-size: 0.85rem; color: #555;">
+        Automated diagnostic engine comparing student assessment history against campus hiring benchmarks.
+    </p>
+</div>
+
+<!-- STRENGTHS & WEAKNESSES SUMMARY -->
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr)); gap: 1.5rem; margin-bottom: 2rem;">
+    
+    <!-- STRENGTHS CARD -->
+    <div class="card" style="border: 1px solid #000; margin-bottom: 0;">
+        <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 1rem; border-bottom: 1px solid var(--border-light); padding-bottom: 0.75rem;">
+            <span class="badge badge-pass" style="font-size: 0.85rem;">STRENGTHS IDENTIFIED</span>
+        </div>
+        <p style="font-size: 0.85rem; color: #444; margin-bottom: 1rem;">
+            Domains where your recorded performance is at or above the 70% benchmark:
+        </p>
+        
+        {% set strength_count = 0 %}
+        {% for d in analysis.domains %}
+            {% if d.status == 'Strength' %}
+                {% set strength_count = strength_count + 1 %}
+                <div style="background: #FAFAFA; border: 1px solid var(--border-light); border-left: 4px solid #000; padding: 0.85rem 1rem; margin-bottom: 0.75rem; border-radius: 4px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <strong style="color: #000;">{{ d.domain }}</strong>
+                        <span style="font-weight: 700;">{{ "%.1f"|format(d.effective_score) }}%</span>
+                    </div>
+                    <div style="font-size: 0.8rem; color: #555; margin-top: 0.25rem;">{{ d.reason }}</div>
+                    <div style="font-size: 0.75rem; color: #000; font-weight: 600; margin-top: 0.35rem;">Key Mastery: {{ d.subtopics[-1] }}</div>
+                </div>
+            {% endif %}
+        {% endfor %}
+
+        {% if strength_count == 0 %}
+            <div style="padding: 1rem; background: var(--bg-subtle); color: #666; font-size: 0.82rem; text-align: center;">
+                No domain currently meets the 70% threshold. Focus on the remedial action plans below to build your core strengths.
+            </div>
+        {% endif %}
+    </div>
+
+    <!-- WEAKNESSES & REMEDIAL AREAS CARD -->
+    <div class="card" style="border: 1px solid #000; margin-bottom: 0;">
+        <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 1rem; border-bottom: 1px solid var(--border-light); padding-bottom: 0.75rem;">
+            <span class="badge badge-fail" style="font-size: 0.85rem;">CRITICAL FOCUS AREAS</span>
+        </div>
+        <p style="font-size: 0.85rem; color: #444; margin-bottom: 1rem;">
+            Domains falling below the 70% threshold or requiring urgent practice:
+        </p>
+
+        {% set weak_count = 0 %}
+        {% for d in analysis.domains %}
+            {% if d.status == 'Weakness' or d.status == 'Not Assessed' %}
+                {% set weak_count = weak_count + 1 %}
+                <div style="background: #FFFFFF; border: 1px solid var(--border-mid); border-left: 4px solid #666; padding: 0.85rem 1rem; margin-bottom: 0.75rem; border-radius: 4px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <strong style="color: #000;">{{ d.domain }}</strong>
+                        <span class="badge {% if d.status == 'Weakness' %}badge-fail{% else %}badge-neutral{% endif %}">
+                            {% if d.effective_score is not none %}{{ "%.1f"|format(d.effective_score) }}%{% else %}Unassessed{% endif %}
+                        </span>
+                    </div>
+                    <div style="font-size: 0.8rem; color: #555; margin-top: 0.25rem;">{{ d.reason }}</div>
+                    <div style="display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.5rem;">
+                        <a href="{{ url_for('student_youtube', query=d.recommended_query, domain=d.domain) }}" class="action-link" style="font-size: 0.75rem;">Watch Lessons</a>
+                        <a href="{{ url_for('student_quizzes', domain=d.domain) }}" class="action-link" style="font-size: 0.75rem; background: #555;">Attempt Diagnostic Quiz</a>
+                    </div>
+                </div>
+            {% endif %}
+        {% endfor %}
+
+        {% if weak_count == 0 %}
+            <div style="padding: 1rem; background: var(--bg-subtle); color: #000; font-size: 0.85rem; font-weight: 600; text-align: center;">
+                Outstanding! All four placement tracks meet or exceed college benchmark standards.
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- PRACTICAL ACTION PLAN ROADMAP -->
+<div class="card" style="border: 1px solid var(--border-light);">
+    <h3 style="font-size: 1.15rem; font-weight: 700; color: #000; margin-bottom: 1rem;">
+        Personalized Remedial Action Plans
+    </h3>
+
+    <div style="display: flex; flex-direction: column; gap: 1rem;">
+        {% for d in analysis.domains %}
+        <div style="border: 1px solid var(--border-light); border-radius: 6px; padding: 1.25rem;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                <h4 style="font-size: 1rem; font-weight: 700; color: #000;">{{ loop.index }}. {{ d.domain }} Action Plan</h4>
+                <span class="badge {{ d.badge_class }}">{{ d.status }}</span>
+            </div>
+            
+            <p style="font-size: 0.85rem; color: #333; line-height: 1.5; margin-bottom: 0.75rem;">
+                {{ d.action_plan }}
+            </p>
+
+            <div style="background: var(--bg-subtle); padding: 0.75rem 1rem; border-radius: 4px; font-size: 0.8rem; color: #555; margin-bottom: 0.75rem;">
+                <strong>Recommended Subtopics to Master:</strong>
+                <ul style="margin: 0.35rem 0 0 1.25rem; line-height: 1.4;">
+                    {% for st in d.subtopics %}
+                    <li>{{ st }}</li>
+                    {% endfor %}
+                </ul>
+            </div>
+
+            <div style="display: flex; gap: 0.5rem;">
+                <a href="{{ url_for('student_youtube', query=d.recommended_query, domain=d.domain) }}" class="btn" style="font-size: 0.78rem; padding: 0.4rem 0.85rem;">
+                    Watch Recommended Lessons &rarr;
+                </a>
+                <a href="{{ url_for('student_quizzes', domain=d.domain) }}" class="btn btn-secondary" style="font-size: 0.78rem; padding: 0.4rem 0.85rem;">
+                    Take Practice Quiz
+                </a>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

@@ -102,6 +102,11 @@ class Student(db.Model):
     resume = db.Column(db.String(255), default="Resume_Uploaded.pdf")
 
     performance = db.relationship('PerformanceRecord', backref='student', uselist=False, lazy=True)
+    account_link = db.relationship('StudentAccountLink', backref='student', uselist=False, lazy=True)
+    recommendations = db.relationship('LearningRecommendation', backref='student', lazy=True, order_by='LearningRecommendation.created_at.desc()')
+    youtube_lessons = db.relationship('YouTubeLesson', backref='student', lazy=True, order_by='YouTubeLesson.created_at.desc()')
+    quiz_attempts = db.relationship('QuizAttempt', backref='student', lazy=True, order_by='QuizAttempt.attempted_at.desc()')
+    interview_sessions = db.relationship('MockInterviewSession', backref='student', lazy=True, order_by='MockInterviewSession.started_at.desc()')
 
     @property
     def placement_score(self):
@@ -194,4 +199,108 @@ class AuditLog(db.Model):
     timestamp = db.Column(db.DateTime, default=datetime.utcnow)
 
     student = db.relationship('Student', backref='audit_logs', lazy=True)
+
+# ----------------- MODULE 2 MODELS -----------------
+
+class StudentAccountLink(db.Model):
+    __tablename__ = 'student_account_links'
+    id = db.Column(db.Integer, primary_key=True)
+    student_usn = db.Column(db.String(20), db.ForeignKey('students.usn'), unique=True, nullable=False, index=True)
+    firebase_uid = db.Column(db.String(128), unique=True, nullable=False, index=True)
+    auth_provider = db.Column(db.String(50), default='password') # google, password, phone
+    email = db.Column(db.String(120), nullable=True)
+    phone_number = db.Column(db.String(30), nullable=True)
+    linked_at = db.Column(db.DateTime, default=datetime.utcnow)
+    last_login_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+class LearningRecommendation(db.Model):
+    __tablename__ = 'learning_recommendations'
+    id = db.Column(db.Integer, primary_key=True)
+    student_usn = db.Column(db.String(20), db.ForeignKey('students.usn'), nullable=False, index=True)
+    domain = db.Column(db.String(50), nullable=False) # Aptitude, Coding, Technical Interview, HR Interview
+    subtopic = db.Column(db.String(100), nullable=False)
+    score_pct = db.Column(db.Float, nullable=True)
+    benchmark_pct = db.Column(db.Float, default=70.0)
+    status = db.Column(db.String(30), default='Needs Practice') # Strength, Weakness, Needs Practice
+    reason = db.Column(db.Text, nullable=True)
+    action_plan = db.Column(db.Text, nullable=True)
+    recommended_query = db.Column(db.String(200), nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+class YouTubeLesson(db.Model):
+    __tablename__ = 'youtube_lessons'
+    id = db.Column(db.Integer, primary_key=True)
+    student_usn = db.Column(db.String(20), db.ForeignKey('students.usn'), nullable=False, index=True)
+    video_id = db.Column(db.String(50), nullable=False)
+    title = db.Column(db.String(255), nullable=False)
+    channel_title = db.Column(db.String(150), nullable=True)
+    thumbnail_url = db.Column(db.String(255), nullable=True)
+    topic = db.Column(db.String(100), nullable=False)
+    domain = db.Column(db.String(50), nullable=False)
+    is_completed = db.Column(db.Boolean, default=False)
+    completed_at = db.Column(db.DateTime, nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+class QuizQuestion(db.Model):
+    __tablename__ = 'quiz_questions'
+    id = db.Column(db.Integer, primary_key=True)
+    domain = db.Column(db.String(50), nullable=False, index=True) # Aptitude, Coding, Technical Interview, HR Interview
+    topic = db.Column(db.String(100), nullable=False, index=True)
+    difficulty = db.Column(db.String(20), default='medium') # easy, medium, hard
+    question_type = db.Column(db.String(30), default='mcq') # mcq, coding_output, conceptual, numerical, hr_scenario
+    question_text = db.Column(db.Text, nullable=False)
+    code_snippet = db.Column(db.Text, nullable=True)
+    option_a = db.Column(db.Text, nullable=False)
+    option_b = db.Column(db.Text, nullable=False)
+    option_c = db.Column(db.Text, nullable=False)
+    option_d = db.Column(db.Text, nullable=False)
+    correct_option = db.Column(db.String(5), nullable=False) # 'A', 'B', 'C', 'D'
+    explanation = db.Column(db.Text, nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+class QuizAttempt(db.Model):
+    __tablename__ = 'quiz_attempts'
+    id = db.Column(db.Integer, primary_key=True)
+    student_usn = db.Column(db.String(20), db.ForeignKey('students.usn'), nullable=False, index=True)
+    domain = db.Column(db.String(50), nullable=False)
+    topic = db.Column(db.String(100), nullable=False)
+    difficulty = db.Column(db.String(20), default='medium')
+    total_questions = db.Column(db.Integer, default=5)
+    correct_answers = db.Column(db.Integer, default=0)
+    score_pct = db.Column(db.Float, default=0.0)
+    time_spent_seconds = db.Column(db.Integer, default=0)
+    attempted_at = db.Column(db.DateTime, default=datetime.utcnow)
+    details_json = db.Column(db.Text, nullable=True)
+
+class MockInterviewSession(db.Model):
+    __tablename__ = 'mock_interview_sessions'
+    id = db.Column(db.Integer, primary_key=True)
+    student_usn = db.Column(db.String(20), db.ForeignKey('students.usn'), nullable=False, index=True)
+    interview_type = db.Column(db.String(50), nullable=False) # Coding, Technical, HR, Aptitude, Mixed, Resume & Project
+    difficulty = db.Column(db.String(20), default='Medium') # Easy, Medium, Hard
+    question_count = db.Column(db.Integer, default=5) # 5, 10, 15
+    current_question_index = db.Column(db.Integer, default=0)
+    programming_language = db.Column(db.String(50), default='Python')
+    status = db.Column(db.String(30), default='IN_PROGRESS') # IN_PROGRESS, COMPLETED, ABANDONED
+    started_at = db.Column(db.DateTime, default=datetime.utcnow)
+    completed_at = db.Column(db.DateTime, nullable=True)
+    overall_score = db.Column(db.Float, nullable=True)
+    evaluation_report_json = db.Column(db.Text, nullable=True)
+    
+    qna_records = db.relationship('MockInterviewQnA', backref='session', lazy=True, cascade='all, delete-orphan', order_by='MockInterviewQnA.question_number')
+
+class MockInterviewQnA(db.Model):
+    __tablename__ = 'mock_interview_qna'
+    id = db.Column(db.Integer, primary_key=True)
+    session_id = db.Column(db.Integer, db.ForeignKey('mock_interview_sessions.id'), nullable=False, index=True)
+    question_number = db.Column(db.Integer, nullable=False)
+    question_text = db.Column(db.Text, nullable=False)
+    expected_answer_points = db.Column(db.Text, nullable=True)
+    student_answer = db.Column(db.Text, nullable=True)
+    audio_mode = db.Column(db.Boolean, default=False)
+    score = db.Column(db.Float, nullable=True)
+    feedback = db.Column(db.Text, nullable=True)
+    follow_up_question = db.Column(db.Text, nullable=True)
+    answered_at = db.Column(db.DateTime, nullable=True)
+
 

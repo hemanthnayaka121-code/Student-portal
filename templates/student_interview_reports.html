@@ -1,0 +1,88 @@
+{% extends 'student_base.html' %}
+
+{% block title %}Interview Reports — Student Portal{% endblock %}
+{% block breadcrumb %}AI Interview Reports{% endblock %}
+
+{% block content %}
+<div class="card" style="margin-bottom: 1.5rem; border: 1px solid #000; padding: 1.5rem;">
+    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+        <div>
+            <h1 style="font-size: 1.5rem; font-weight: 700; color: #000; margin-bottom: 0.25rem;">
+                AI Mock Interview Performance Reports
+            </h1>
+            <p style="font-size: 0.85rem; color: #555;">
+                Detailed evaluation records, transcripts, strengths, weaknesses, and communication assessments.
+            </p>
+        </div>
+        <div>
+            <a href="{{ url_for('student_mock_interview') }}" class="btn">
+                Launch New Mock Interview &rarr;
+            </a>
+        </div>
+    </div>
+</div>
+
+<div class="card" style="border: 1px solid var(--border-light);">
+    <h3 style="font-size: 1.15rem; font-weight: 700; color: #000; margin-bottom: 1rem;">
+        Historical Interview Sessions
+    </h3>
+
+    {% if sessions %}
+    <div class="table-responsive">
+    <table class="portal-table">
+        <thead>
+            <tr>
+                <th>Session ID</th>
+                <th>Interview Type</th>
+                <th>Difficulty</th>
+                <th>Questions</th>
+                <th>Overall Score</th>
+                <th>Status</th>
+                <th>Date Attempted</th>
+                <th>Action</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for s in sessions %}
+            <tr>
+                <td><strong>#{{ s.id }}</strong></td>
+                <td><strong>{{ s.interview_type }}</strong></td>
+                <td><span class="badge" style="font-size: 0.72rem;">{{ s.difficulty }}</span></td>
+                <td>{{ s.question_count }} Qs</td>
+                <td>
+                    {% if s.status == 'COMPLETED' and s.overall_score is not none %}
+                        <span class="badge {% if s.overall_score >= 70 %}badge-pass{% else %}badge-fail{% endif %}">
+                            {{ "%.1f"|format(s.overall_score) }}%
+                        </span>
+                    {% else %}
+                        <span class="badge badge-warning">Incomplete</span>
+                    {% endif %}
+                </td>
+                <td style="font-size: 0.82rem;">{{ s.status }}</td>
+                <td style="font-size: 0.8rem; color: #666;">
+                    {{ s.started_at.strftime('%d %b %Y, %I:%M %p') }}
+                </td>
+                <td>
+                    {% if s.status == 'COMPLETED' %}
+                        <a href="{{ url_for('student_interview_view', session_id=s.id) }}" class="btn btn-secondary" style="font-size: 0.75rem; padding: 0.3rem 0.65rem;">
+                            View Report
+                        </a>
+                    {% else %}
+                        <a href="{{ url_for('student_mock_interview_session', session_id=s.id) }}" class="btn" style="font-size: 0.75rem; padding: 0.3rem 0.65rem;">
+                            Resume
+                        </a>
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    </div>
+    {% else %}
+    <div style="text-align: center; padding: 2.5rem 1rem; color: #777;">
+        <p style="font-size: 0.9rem;">No completed interview reports available yet.</p>
+        <p style="font-size: 0.82rem; margin-top: 0.35rem;">Start an AI mock interview session to generate your first detailed performance evaluation.</p>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
