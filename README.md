@@ -1,6 +1,6 @@
 # MIT Mysore — Student Placement Portal & AI Training Application
 
-A comprehensive, mobile-first Student Placement Performance & AI Training Platform built with Python Flask, SQLite/SQLAlchemy, and modern responsive web architecture. Features intelligent diagnostic benchmarking, real-time speech-powered AI mock interviews, interactive diagnostic quizzes, curated YouTube lesson integrations, and Firebase authentication.
+A comprehensive Student Placement Performance & AI Training Platform built with Python Flask, SQLite/SQLAlchemy, and modern web architecture. Features intelligent diagnostic benchmarking, real-time speech-powered AI mock interviews, interactive diagnostic quizzes, curated YouTube lesson integrations, and Firebase authentication.
 
 ---
 
@@ -22,11 +22,11 @@ A comprehensive, mobile-first Student Placement Performance & AI Training Platfo
 - Timed and untimed modes with immediate feedback, detailed explanations, and `localStorage` answer preservation during network interruptions.
 
 ### 4. Curated YouTube Video Masterclasses
-- Integrated YouTube learning catalog with domain-specific placement lessons, thumbnail previews, embedded 16:9 responsive playback, and progress completion tracking.
+- Integrated YouTube learning catalog with domain-specific placement lessons, thumbnail previews, embedded 16:9 playback, and progress completion tracking.
 
-### 5. Mobile-First Responsive Design
-- Optimized for smartphones starting at 320px width up to high-resolution desktop monitors.
-- 56px sticky top header with 12-section off-canvas drawer, sticky 5-item bottom quick-nav bar, 44px+ touch targets, and iOS 16px auto-zoom prevention.
+### 5. Unified Portal Architecture
+- Consistent monochrome design system across all roles (Placement Admin, Coordinator, HOD, and Student).
+- Comprehensive 12-section sidebar navigation, dynamic breadcrumbs, and responsive data visualization powered by Plotly.js.
 
 ### 6. Institutional Role-Based Access Control (RBAC)
 - **Placement Admin / Placement Officers**: Institution-wide placement control and analytics.
@@ -40,7 +40,7 @@ A comprehensive, mobile-first Student Placement Performance & AI Training Platfo
 
 - **Backend**: Python 3.10+, Flask
 - **Database**: SQLite / PostgreSQL via Flask-SQLAlchemy
-- **Frontend**: Mobile-first responsive HTML5, CSS3, JavaScript (Vanilla ES6)
+- **Frontend**: Clean monochrome HTML5, CSS3, JavaScript (Vanilla ES6)
 - **Authentication**: Firebase Authentication + Server-side session verification
 - **AI & Speech**: Web Speech API, Text-to-Speech (TTS), Automated NLP evaluation heuristics
 - **Visuals & Charts**: Plotly.js responsive graphs
