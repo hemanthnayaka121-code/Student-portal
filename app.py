@@ -139,6 +139,14 @@ def inject_student_notifications():
             unread_count = 0
     return dict(unread_notifications_count=unread_count)
 
+import mimetypes
+mimetypes.add_type('text/css', '.css')
+mimetypes.add_type('image/png', '.png')
+mimetypes.add_type('image/jpeg', '.jpg')
+mimetypes.add_type('image/jpeg', '.jpeg')
+mimetypes.add_type('application/javascript', '.js')
+mimetypes.add_type('image/svg+xml', '.svg')
+
 @app.route('/static/<path:filename>')
 def serve_static(filename):
     static_dirs = [
@@ -149,8 +157,17 @@ def serve_static(filename):
     ]
     for s_dir in static_dirs:
         if s_dir and os.path.exists(os.path.join(s_dir, filename)):
-            return send_from_directory(s_dir, filename)
+            mime_type, _ = mimetypes.guess_type(filename)
+            return send_from_directory(s_dir, filename, mimetype=mime_type)
     abort(404)
+
+@app.route('/css/<path:filename>')
+def serve_css(filename):
+    return serve_static(f'css/{filename}')
+
+@app.route('/images/<path:filename>')
+def serve_images(filename):
+    return serve_static(f'images/{filename}')
 
 @app.after_request
 def add_security_headers(response):
