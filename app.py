@@ -1167,11 +1167,11 @@ def student_login():
         # Case A: Token-based sign in (Google, Phone OTP, Firebase Client Token)
         if login_type == 'token':
             id_token = request.form.get('id_token', '').strip()
-            provider = request.form.get('provider', 'firebase')
+            provider = request.form.get('provider', 'google')
             claims = verify_firebase_token(id_token)
             if not claims:
                 record_failed_login(client_ip)
-                flash('Identity verification failed: Invalid Firebase authentication token.', 'error')
+                flash('Identity verification failed: Invalid Google authentication token.', 'error')
                 return redirect(url_for('student_login'))
 
             matched_student, match_err = match_student_identity(claims)
@@ -1190,7 +1190,7 @@ def student_login():
                 return redirect(url_for('student_login'))
 
             reset_failed_logins(client_ip)
-            flash(f"Welcome, {matched_student.name}! Authenticated via Firebase {provider.capitalize()}.", 'success')
+            flash(f"Welcome, {matched_student.name}! Authenticated via Google Account ({claims.get('email')}).", 'success')
             return redirect(url_for('student_dashboard'))
 
         # Case B: Email & Password

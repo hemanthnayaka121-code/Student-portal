@@ -64,16 +64,16 @@
             </p>
         </div>
 
-        <!-- Dynamic Notice Box (hidden unless active) -->
-        <div id="status-alert-box" style="display: none; padding: 0.85rem 1rem; margin-bottom: 1.5rem; font-size: 0.82rem; line-height: 1.45; border: 1px solid #000; text-align: left;"></div>
+        <!-- Dynamic Notice / Status Box -->
+        <div id="status-alert-box" style="display: none; padding: 0.85rem 1rem; margin-bottom: 1.5rem; font-size: 0.82rem; line-height: 1.45; border: 1px solid #000; text-align: left; border-radius: 4px;"></div>
 
         <!-- Google Authentication Action Card -->
-        <div style="background: #FAFAFA; border: 1px solid var(--border-mid); padding: 1.75rem 1.25rem; border-radius: 4px; margin-bottom: 1.75rem;">
-            <p style="font-size: 0.86rem; color: #333; margin: 0 0 1.25rem 0; line-height: 1.5;">
+        <div style="background: #FAFAFA; border: 1px solid var(--border-mid); padding: 2rem 1.5rem; border-radius: 4px; margin-bottom: 1.75rem;">
+            <p style="font-size: 0.88rem; color: #333; margin: 0 0 1.25rem 0; line-height: 1.5;">
                 Sign in with your <strong>Google Account</strong> to access your placement dashboard, diagnostic assessment results, and verified achievements portfolio.
             </p>
 
-            <!-- Single Dedicated Google Login Action -->
+            <!-- Exclusive Google Sign In Button -->
             <button type="button" id="google-auth-btn" onclick="handleGoogleSignIn()" class="btn-google-auth">
                 <svg width="20" height="20" viewBox="0 0 24 24" style="flex-shrink: 0;">
                     <path fill="#EA4335" d="M12 5c1.6 0 3 .6 4.1 1.6l3.1-3.1C17.3 1.7 14.8 1 12 1 7.5 1 3.7 3.6 1.9 7.3l3.7 2.9C6.5 7.4 9 5 12 5z"/>
@@ -83,14 +83,6 @@
                 </svg>
                 <span id="google-btn-text">Sign In with Google</span>
             </button>
-
-            <!-- Direct Account Selector Trigger -->
-            <div style="margin-top: 0.85rem; text-align: center;">
-                <button type="button" onclick="openGoogleAccountChooser()" style="background: none; border: none; color: #1a73e8; font-size: 0.82rem; font-weight: 600; text-decoration: underline; cursor: pointer; display: inline-flex; align-items: center; gap: 0.35rem; padding: 0.25rem 0.5rem;">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="8.5" cy="7" r="4"></circle><line x1="20" y1="8" x2="20" y2="14"></line><line x1="23" y1="11" x2="17" y2="11"></line></svg>
-                    <span>Choose or switch Google Account</span>
-                </button>
-            </div>
 
             <div style="display: flex; align-items: center; justify-content: center; gap: 0.4rem; margin-top: 1rem; font-size: 0.74rem; color: #666;">
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#666" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
@@ -108,160 +100,6 @@
             </div>
         </div>
 
-    </div>
-</div>
-
-<!-- ========================================================================= -->
-<!-- GOOGLE ACCOUNT CHOOSER MODAL (OFFICIAL GOOGLE AUTH STYLE)                -->
-<!-- ========================================================================= -->
-<div id="google-account-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0, 0, 0, 0.65); z-index: 99999; align-items: center; justify-content: center; padding: 1rem; backdrop-filter: blur(2px);">
-    <div style="background: #FFFFFF; border-radius: 8px; width: 100%; max-width: 440px; box-shadow: 0 24px 48px rgba(0, 0, 0, 0.28); border: 1px solid #DADCE0; overflow: hidden; text-align: left; position: relative;">
-        
-        <!-- Header -->
-        <div style="padding: 1.75rem 1.75rem 1rem; text-align: center; border-bottom: 1px solid #ECEFF1; position: relative;">
-            <button type="button" onclick="closeGoogleAccountChooser()" style="position: absolute; top: 1rem; right: 1rem; background: none; border: none; font-size: 1.4rem; color: #5F6368; cursor: pointer; line-height: 1; padding: 0.25rem 0.5rem;" title="Close">&times;</button>
-            <div style="display: inline-block; margin-bottom: 0.5rem;">
-                <svg width="32" height="32" viewBox="0 0 24 24">
-                    <path fill="#EA4335" d="M12 5c1.6 0 3 .6 4.1 1.6l3.1-3.1C17.3 1.7 14.8 1 12 1 7.5 1 3.7 3.6 1.9 7.3l3.7 2.9C6.5 7.4 9 5 12 5z"/>
-                    <path fill="#4285F4" d="M23.5 12.3c0-.8-.1-1.6-.2-2.3H12v4.5h6.5c-.3 1.5-1.1 2.8-2.4 3.7l3.7 2.9c2.2-2 3.7-5 3.7-8.8z"/>
-                    <path fill="#FBBC05" d="M5.6 14.8c-.2-.7-.4-1.5-.4-2.8s.2-2.1.4-2.8L1.9 6.3C.7 8.7 0 10.8 0 12s.7 3.3 1.9 5.7l3.7-2.9z"/>
-                    <path fill="#34A853" d="M12 23c3.2 0 6-1.1 8-3l-3.7-2.9c-1.1.7-2.5 1.2-4.3 1.2-3 0-5.5-2-6.4-4.8L1.9 16.4C3.7 20.1 7.5 23 12 23z"/>
-                </svg>
-            </div>
-            <h2 style="font-size: 1.25rem; font-weight: 700; color: #202124; margin: 0 0 0.25rem; letter-spacing: -0.01em;">Sign in with Google</h2>
-            <p style="font-size: 0.82rem; color: #5F6368; margin: 0; line-height: 1.4;">Choose which Google account to consider for MIT Student Placement Portal</p>
-        </div>
-
-        <!-- 1. ACCOUNTS LIST VIEW -->
-        <div id="accounts-list-view" style="padding: 0.75rem 0;">
-            <div style="font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.08em; font-weight: 700; color: #70757A; padding: 0.5rem 1.5rem 0.35rem;">
-                Available Student Accounts
-            </div>
-
-            <!-- Alice Sharma -->
-            <div onclick="selectGoogleAccount('alice.is@mitm.ac.in', 'Alice Sharma', 'ISE')" style="display: flex; align-items: center; gap: 1rem; padding: 0.75rem 1.5rem; cursor: pointer; transition: background 0.15s ease; border-bottom: 1px solid #F1F3F4;" onmouseover="this.style.background='#F8F9FA'" onmouseout="this.style.background='#FFFFFF'">
-                <div style="width: 38px; height: 38px; border-radius: 50%; background: #1A73E8; color: #FFFFFF; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 1rem; flex-shrink: 0;">
-                    A
-                </div>
-                <div style="flex: 1; min-width: 0;">
-                    <div style="font-weight: 600; font-size: 0.88rem; color: #202124; display: flex; align-items: center; gap: 0.5rem;">
-                        <span>Alice Sharma</span>
-                        <span style="font-size: 0.68rem; background: #E8F0FE; color: #1A73E8; padding: 0.1rem 0.4rem; border-radius: 3px; font-weight: 600;">ISE &bull; Placed</span>
-                    </div>
-                    <div style="font-size: 0.78rem; color: #5F6368; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">alice.is@mitm.ac.in</div>
-                </div>
-            </div>
-
-            <!-- Bob Verma -->
-            <div onclick="selectGoogleAccount('bob.is@mitm.ac.in', 'Bob Verma', 'ISE')" style="display: flex; align-items: center; gap: 1rem; padding: 0.75rem 1.5rem; cursor: pointer; transition: background 0.15s ease; border-bottom: 1px solid #F1F3F4;" onmouseover="this.style.background='#F8F9FA'" onmouseout="this.style.background='#FFFFFF'">
-                <div style="width: 38px; height: 38px; border-radius: 50%; background: #34A853; color: #FFFFFF; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 1rem; flex-shrink: 0;">
-                    B
-                </div>
-                <div style="flex: 1; min-width: 0;">
-                    <div style="font-weight: 600; font-size: 0.88rem; color: #202124; display: flex; align-items: center; gap: 0.5rem;">
-                        <span>Bob Verma</span>
-                        <span style="font-size: 0.68rem; background: #E6F4EA; color: #137333; padding: 0.1rem 0.4rem; border-radius: 3px; font-weight: 600;">ISE &bull; 8th Sem</span>
-                    </div>
-                    <div style="font-size: 0.78rem; color: #5F6368; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">bob.is@mitm.ac.in</div>
-                </div>
-            </div>
-
-            <!-- Charlie Patel -->
-            <div onclick="selectGoogleAccount('charlie.is@mitm.ac.in', 'Charlie Patel', 'ISE')" style="display: flex; align-items: center; gap: 1rem; padding: 0.75rem 1.5rem; cursor: pointer; transition: background 0.15s ease; border-bottom: 1px solid #F1F3F4;" onmouseover="this.style.background='#F8F9FA'" onmouseout="this.style.background='#FFFFFF'">
-                <div style="width: 38px; height: 38px; border-radius: 50%; background: #FBBC05; color: #FFFFFF; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 1rem; flex-shrink: 0;">
-                    C
-                </div>
-                <div style="flex: 1; min-width: 0;">
-                    <div style="font-weight: 600; font-size: 0.88rem; color: #202124; display: flex; align-items: center; gap: 0.5rem;">
-                        <span>Charlie Patel</span>
-                        <span style="font-size: 0.68rem; background: #FEF7E0; color: #B06000; padding: 0.1rem 0.4rem; border-radius: 3px; font-weight: 600;">ISE &bull; 8th Sem</span>
-                    </div>
-                    <div style="font-size: 0.78rem; color: #5F6368; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">charlie.is@mitm.ac.in</div>
-                </div>
-            </div>
-
-            <!-- Divya Reddy -->
-            <div onclick="selectGoogleAccount('divya.is@mitm.ac.in', 'Divya Reddy', 'ISE')" style="display: flex; align-items: center; gap: 1rem; padding: 0.75rem 1.5rem; cursor: pointer; transition: background 0.15s ease; border-bottom: 1px solid #F1F3F4;" onmouseover="this.style.background='#F8F9FA'" onmouseout="this.style.background='#FFFFFF'">
-                <div style="width: 38px; height: 38px; border-radius: 50%; background: #9334E8; color: #FFFFFF; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 1rem; flex-shrink: 0;">
-                    D
-                </div>
-                <div style="flex: 1; min-width: 0;">
-                    <div style="font-weight: 600; font-size: 0.88rem; color: #202124; display: flex; align-items: center; gap: 0.5rem;">
-                        <span>Divya Reddy</span>
-                        <span style="font-size: 0.68rem; background: #F3E8FD; color: #7627BB; padding: 0.1rem 0.4rem; border-radius: 3px; font-weight: 600;">ISE &bull; 8th Sem</span>
-                    </div>
-                    <div style="font-size: 0.78rem; color: #5F6368; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">divya.is@mitm.ac.in</div>
-                </div>
-            </div>
-
-            <!-- Option: Use another account -->
-            <div onclick="showCustomGoogleForm()" style="display: flex; align-items: center; gap: 1rem; padding: 0.85rem 1.5rem; cursor: pointer; transition: background 0.15s ease;" onmouseover="this.style.background='#F8F9FA'" onmouseout="this.style.background='#FFFFFF'">
-                <div style="width: 38px; height: 38px; border-radius: 50%; background: #F1F3F4; color: #5F6368; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="8.5" cy="7" r="4"></circle><line x1="20" y1="8" x2="20" y2="14"></line><line x1="23" y1="11" x2="17" y2="11"></line></svg>
-                </div>
-                <div style="flex: 1;">
-                    <div style="font-weight: 600; font-size: 0.88rem; color: #1A73E8;">Use another Google Account</div>
-                    <div style="font-size: 0.76rem; color: #5F6368;">Enter your personal or institutional Google account</div>
-                </div>
-            </div>
-        </div>
-
-        <!-- 2. CUSTOM GOOGLE ACCOUNT FORM VIEW (ENTER ANY EMAIL) -->
-        <div id="custom-account-view" style="display: none; padding: 1.25rem 1.5rem 1.5rem;">
-            <button type="button" onclick="showAccountsList()" style="background: none; border: none; color: #1A73E8; font-size: 0.82rem; font-weight: 600; cursor: pointer; padding: 0; margin-bottom: 1rem; display: inline-flex; align-items: center; gap: 0.35rem;">
-                &larr; Back to account list
-            </button>
-
-            <div style="font-size: 0.95rem; font-weight: 700; color: #202124; margin-bottom: 0.25rem;">
-                Enter your Google Account
-            </div>
-            <p style="font-size: 0.78rem; color: #5F6368; margin: 0 0 1rem; line-height: 1.4;">
-                Sign in with your Gmail or Maharaja Institute of Technology Mysore student email.
-            </p>
-
-            <div style="margin-bottom: 0.85rem;">
-                <label style="display: block; font-size: 0.78rem; font-weight: 700; color: #333; margin-bottom: 0.3rem;">
-                    Google Email Address <span style="color:#D93025;">*</span>
-                </label>
-                <input type="email" id="custom-google-email" placeholder="e.g. yourname@gmail.com or @mitmysore.in" style="width: 100%; padding: 0.65rem 0.75rem; font-size: 0.88rem; border: 1px solid #DADCE0; border-radius: 4px; box-sizing: border-box; outline: none;" onfocus="this.style.borderColor='#1A73E8'" onblur="this.style.borderColor='#DADCE0'">
-            </div>
-
-            <div style="margin-bottom: 0.85rem;">
-                <label style="display: block; font-size: 0.78rem; font-weight: 700; color: #333; margin-bottom: 0.3rem;">
-                    Your Full Name <span style="color:#888; font-weight:normal;">(optional)</span>
-                </label>
-                <input type="text" id="custom-google-name" placeholder="e.g. Hemanth Nayak" style="width: 100%; padding: 0.65rem 0.75rem; font-size: 0.88rem; border: 1px solid #DADCE0; border-radius: 4px; box-sizing: border-box; outline: none;" onfocus="this.style.borderColor='#1A73E8'" onblur="this.style.borderColor='#DADCE0'">
-            </div>
-
-            <div style="margin-bottom: 1rem;">
-                <label style="display: block; font-size: 0.78rem; font-weight: 700; color: #333; margin-bottom: 0.3rem;">
-                    Department
-                </label>
-                <select id="custom-google-dept" style="width: 100%; padding: 0.65rem 0.75rem; font-size: 0.85rem; border: 1px solid #DADCE0; border-radius: 4px; box-sizing: border-box; background: #fff; outline: none;">
-                    <option value="ISE">Information Science and Engineering (ISE)</option>
-                    <option value="CSE">Computer Science and Engineering (CSE)</option>
-                    <option value="ECE">Electronics and Communication Engineering (ECE)</option>
-                    <option value="AI">Artificial Intelligence (AI)</option>
-                    <option value="CSD">Computer Science and Data Science (CSD)</option>
-                    <option value="CSML">Computer Science and Machine Learning (CSML)</option>
-                    <option value="MECH">Mechanical Engineering (MECH)</option>
-                    <option value="CIVIL">Civil Engineering (CIVIL)</option>
-                    <option value="IOT">Internet of Things (IOT)</option>
-                    <option value="CE">Computer Engineering (CE)</option>
-                </select>
-            </div>
-
-            <div id="custom-input-error" style="display: none; color: #D93025; font-size: 0.76rem; margin-bottom: 0.75rem;"></div>
-
-            <button type="button" onclick="submitCustomGoogleAccount()" class="btn-google-auth" style="margin-top: 0.25rem;">
-                <span id="custom-btn-text">Sign In with this Google Account &rarr;</span>
-            </button>
-        </div>
-
-        <!-- Footer -->
-        <div style="padding: 0.85rem 1.5rem; background: #F8F9FA; border-top: 1px solid #ECEFF1; font-size: 0.74rem; color: #5F6368; line-height: 1.45;">
-            To continue, Google will share your verified email address and student identity with Maharaja Institute of Technology Mysore Placement Portal.
-        </div>
     </div>
 </div>
 
@@ -296,26 +134,79 @@ try {
     console.error("Firebase initialization note:", e);
 }
 
-// GOOGLE SIGN-IN HANDLER (TRY POPUP WITH PROMPT, FALL BACK TO ACCOUNT CHOOSER)
-function handleGoogleSignIn() {
+// Handle Google Redirect Result on page load
+if (auth) {
+    auth.getRedirectResult().then(function(result) {
+        if (result && result.user) {
+            setButtonLoading(true);
+            result.user.getIdToken().then(function(idToken) {
+                submitFirebaseToken(idToken, 'google');
+            });
+        }
+    }).catch(function(error) {
+        console.error("Redirect sign-in error:", error);
+        handleAuthError(error);
+    });
+}
+
+function setButtonLoading(loading) {
     const btn = document.getElementById('google-auth-btn');
     const btnText = document.getElementById('google-btn-text');
-
-    if (btn) btn.disabled = true;
+    if (btn) btn.disabled = loading;
     if (btnText) {
-        btnText.innerHTML = '<span style="display:inline-block; width:14px; height:14px; border:2px solid #fff; border-top-color:transparent; border-radius:50%; animation: spin 0.8s linear infinite; margin-right:8px; vertical-align:middle;"></span> Connecting Google Sign-In...';
+        if (loading) {
+            btnText.innerHTML = '<span style="display:inline-block; width:14px; height:14px; border:2px solid #fff; border-top-color:transparent; border-radius:50%; animation: spin 0.8s linear infinite; margin-right:8px; vertical-align:middle;"></span> Connecting Google Sign-In...';
+        } else {
+            btnText.innerText = "Sign In with Google";
+        }
     }
+}
+
+function showStatusAlert(message, type) {
+    const box = document.getElementById('status-alert-box');
+    if (box) {
+        box.style.display = 'block';
+        box.style.background = type === 'error' ? '#FFF0F0' : '#E6F4EA';
+        box.style.color = type === 'error' ? '#C5221F' : '#137333';
+        box.style.borderColor = type === 'error' ? '#C5221F' : '#137333';
+        box.innerHTML = message;
+    }
+}
+
+function handleAuthError(error) {
+    setButtonLoading(false);
+    if (error.code === 'auth/popup-closed-by-user') {
+        return;
+    }
+    if (error.code === 'auth/unauthorized-domain') {
+        showStatusAlert('<strong>Firebase Domain Not Authorized:</strong><br>Please add <code>' + window.location.hostname + '</code> in your <a href="https://console.firebase.google.com/project/fir-734dc/authentication/settings" target="_blank" style="color: inherit; text-decoration: underline;">Firebase Console &rarr; Authentication &rarr; Settings &rarr; Authorized domains</a>.', 'error');
+        return;
+    }
+    if (error.code === 'auth/popup-blocked') {
+        // Fallback to full page redirect if popup is blocked
+        const provider = new firebase.auth.GoogleAuthProvider();
+        provider.setCustomParameters({ prompt: 'select_account' });
+        auth.signInWithRedirect(provider);
+        return;
+    }
+    showStatusAlert('<strong>Google Authentication Notice:</strong> ' + (error.message || error.code), 'error');
+}
+
+// EXCLUSIVE GOOGLE SIGN-IN HANDLER
+function handleGoogleSignIn() {
+    setButtonLoading(true);
 
     if (!auth) {
-        openGoogleAccountChooser();
-        if (btn) btn.disabled = false;
-        if (btnText) btnText.innerText = "Sign In with Google";
+        showStatusAlert("Firebase is not initialized. Please refresh the page.", "error");
+        setButtonLoading(false);
         return;
     }
 
     try {
         const provider = new firebase.auth.GoogleAuthProvider();
         provider.setCustomParameters({ prompt: 'select_account' });
+        provider.addScope('email');
+        provider.addScope('profile');
 
         auth.signInWithPopup(provider)
             .then(function(result) {
@@ -325,106 +216,18 @@ function handleGoogleSignIn() {
                 submitFirebaseToken(idToken, 'google');
             })
             .catch(function(error) {
-                console.warn("Google popup notice / fallback:", error.code, error.message);
-                if (btn) btn.disabled = false;
-                if (btnText) btnText.innerText = "Sign In with Google";
-
-                if (error.code === 'auth/popup-closed-by-user') {
+                console.error("Google popup error:", error);
+                if (error.code === 'auth/popup-blocked' || error.code === 'auth/cancelled-popup-request') {
+                    // Smoothly fall back to redirect on mobile or blocked popup
+                    auth.signInWithRedirect(provider);
                     return;
                 }
-                // When popup cannot proceed on domain or is blocked, show Google Account Chooser
-                openGoogleAccountChooser();
+                handleAuthError(error);
             });
     } catch (e) {
-        console.warn("Google initialization exception, showing account chooser:", e);
-        if (btn) btn.disabled = false;
-        if (btnText) btnText.innerText = "Sign In with Google";
-        openGoogleAccountChooser();
+        console.error("Google sign-in exception:", e);
+        handleAuthError(e);
     }
-}
-
-// GOOGLE ACCOUNT CHOOSER MODAL CONTROLLERS
-function openGoogleAccountChooser() {
-    const modal = document.getElementById('google-account-modal');
-    if (modal) {
-        modal.style.display = 'flex';
-        showAccountsList();
-    }
-}
-
-function closeGoogleAccountChooser() {
-    const modal = document.getElementById('google-account-modal');
-    if (modal) {
-        modal.style.display = 'none';
-    }
-}
-
-function showAccountsList() {
-    const listView = document.getElementById('accounts-list-view');
-    const customView = document.getElementById('custom-account-view');
-    if (listView) listView.style.display = 'block';
-    if (customView) customView.style.display = 'none';
-}
-
-function showCustomGoogleForm() {
-    const listView = document.getElementById('accounts-list-view');
-    const customView = document.getElementById('custom-account-view');
-    if (listView) listView.style.display = 'none';
-    if (customView) customView.style.display = 'block';
-    const emailInput = document.getElementById('custom-google-email');
-    if (emailInput) emailInput.focus();
-}
-
-function selectGoogleAccount(email, name, dept) {
-    if (!email || !email.includes('@')) {
-        alert("Please provide a valid Google Account email address.");
-        return;
-    }
-
-    // Indicate submission
-    const modal = document.getElementById('google-account-modal');
-    if (modal) {
-        modal.innerHTML = `
-            <div style="background: #FFFFFF; border-radius: 8px; width: 100%; max-width: 360px; padding: 2.5rem 1.5rem; text-align: center; box-shadow: 0 20px 40px rgba(0,0,0,0.25);">
-                <div style="display:inline-block; width:36px; height:36px; border:3px solid #1A73E8; border-top-color:transparent; border-radius:50%; animation: spin 0.8s linear infinite; margin-bottom: 1rem;"></div>
-                <div style="font-weight: 700; font-size: 1rem; color: #202124; margin-bottom: 0.35rem;">Verifying Google Account...</div>
-                <div style="font-size: 0.82rem; color: #5F6368;">${email}</div>
-            </div>
-        `;
-    }
-
-    const payload = {
-        email: email.trim().toLowerCase(),
-        name: name ? name.trim() : email.split('@')[0],
-        department: dept || 'ISE',
-        provider: 'google.com'
-    };
-
-    const token = "GOOGLE_AUTH:" + JSON.stringify(payload);
-    submitFirebaseToken(token, 'google');
-}
-
-function submitCustomGoogleAccount() {
-    const emailInput = document.getElementById('custom-google-email');
-    const nameInput = document.getElementById('custom-google-name');
-    const deptSelect = document.getElementById('custom-google-dept');
-    const errBox = document.getElementById('custom-input-error');
-
-    const email = emailInput ? emailInput.value.trim() : '';
-    const name = nameInput ? nameInput.value.trim() : '';
-    const dept = deptSelect ? deptSelect.value : 'ISE';
-
-    if (!email || !email.includes('@') || !email.includes('.')) {
-        if (errBox) {
-            errBox.innerText = "Please enter a valid Google email address.";
-            errBox.style.display = 'block';
-        }
-        if (emailInput) emailInput.focus();
-        return;
-    }
-
-    if (errBox) errBox.style.display = 'none';
-    selectGoogleAccount(email, name, dept);
 }
 
 // TOKEN SUBMISSION TO BACKEND

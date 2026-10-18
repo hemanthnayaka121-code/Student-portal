@@ -69,10 +69,11 @@ def verify_firebase_token(id_token):
             decoded_token = fb_auth.verify_id_token(id_token)
             return {
                 'uid': decoded_token.get('uid'),
+                'name': decoded_token.get('name'),
                 'email': decoded_token.get('email'),
                 'phone_number': decoded_token.get('phone_number'),
                 'email_verified': decoded_token.get('email_verified', False),
-                'auth_provider': decoded_token.get('firebase', {}).get('sign_in_provider', 'firebase')
+                'auth_provider': decoded_token.get('firebase', {}).get('sign_in_provider', 'google.com')
             }
         except Exception as err:
             pass # Fall through to Google public cert verification
@@ -101,10 +102,11 @@ def verify_firebase_token(id_token):
                 )
                 return {
                     'uid': decoded.get('sub') or decoded.get('user_id'),
+                    'name': decoded.get('name'),
                     'email': decoded.get('email'),
                     'phone_number': decoded.get('phone_number'),
                     'email_verified': decoded.get('email_verified', False),
-                    'auth_provider': decoded.get('firebase', {}).get('sign_in_provider', 'firebase')
+                    'auth_provider': decoded.get('firebase', {}).get('sign_in_provider', 'google.com')
                 }
             else:
                 # If certs expired, refresh and retry once
@@ -122,10 +124,11 @@ def verify_firebase_token(id_token):
                     )
                     return {
                         'uid': decoded.get('sub') or decoded.get('user_id'),
+                        'name': decoded.get('name'),
                         'email': decoded.get('email'),
                         'phone_number': decoded.get('phone_number'),
                         'email_verified': decoded.get('email_verified', False),
-                        'auth_provider': decoded.get('firebase', {}).get('sign_in_provider', 'firebase')
+                        'auth_provider': decoded.get('firebase', {}).get('sign_in_provider', 'google.com')
                     }
         except Exception as e:
             print(f"Google public cert token verification notice: {e}")
