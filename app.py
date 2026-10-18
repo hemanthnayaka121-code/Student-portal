@@ -139,12 +139,28 @@ def inject_student_notifications():
             unread_count = 0
     return dict(unread_notifications_count=unread_count)
 
+@app.route('/static/<path:filename>')
+def serve_static(filename):
+    static_dirs = [
+        app.static_folder,
+        os.path.join(app.root_path, 'static'),
+        os.path.join(os.path.dirname(os.path.abspath(__file__)), 'static'),
+        os.path.join(os.getcwd(), 'static')
+    ]
+    for s_dir in static_dirs:
+        if s_dir and os.path.exists(os.path.join(s_dir, filename)):
+            return send_from_directory(s_dir, filename)
+    abort(404)
+
 @app.after_request
 def add_security_headers(response):
-    # Prevent caching of protected pages to protect sensitive student records after logout
-    response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate, max-age=0"
-    response.headers["Pragma"] = "no-cache"
-    response.headers["Expires"] = "0"
+    # Only disable caching on dynamic HTML pages; allow browser caching for static CSS/images
+    if not request.path.startswith('/static/'):
+        response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate, max-age=0"
+        response.headers["Pragma"] = "no-cache"
+        response.headers["Expires"] = "0"
+    else:
+        response.headers["Cache-Control"] = "public, max-age=86400"
     response.headers["X-Content-Type-Options"] = "nosniff"
     response.headers["X-Frame-Options"] = "DENY"
     return response
