@@ -28,10 +28,22 @@ import time
 from datetime import datetime, timedelta
 
 app = Flask(__name__)
+handler = app  # Explicit Vercel serverless function entrypoint
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'supersecretkey_mitm_secure_2026')
-app.config['UPLOAD_FOLDER'] = os.path.join(app.root_path, 'static', 'uploads', 'certificates')
+
+# Support read-only serverless filesystems (e.g. AWS Lambda / Vercel Serverless Function)
+if os.environ.get('VERCEL'):
+    import tempfile
+    app.config['UPLOAD_FOLDER'] = os.path.join(tempfile.gettempdir(), 'uploads', 'certificates')
+else:
+    app.config['UPLOAD_FOLDER'] = os.path.join(app.root_path, 'static', 'uploads', 'certificates')
+
 app.config['MAX_CONTENT_LENGTH'] = 5 * 1024 * 1024  # 5MB max upload
-os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
+
+try:
+    os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
+except OSError as e:
+    print(f"Notice: Upload folder creation bypassed in read-only environment: {e}")
 
 # Database configuration: support Vercel serverless environment and remote PostgreSQL
 db_url = os.environ.get('DATABASE_URL')
@@ -41,13 +53,39 @@ if db_url:
     app.config['SQLALCHEMY_DATABASE_URI'] = db_url
 elif os.environ.get('VERCEL'):
     import shutil
-    tmp_db_path = "/tmp/placement.db"
-    source_db_path = os.path.join(app.instance_path, "placement.db")
-    if not os.path.exists(tmp_db_path) and os.path.exists(source_db_path):
-        try:
-            shutil.copy2(source_db_path, tmp_db_path)
-        except Exception as e:
-            print(f"Notice: Failed to copy database to /tmp: {e}")
+    import tempfile
+    
+    tmp_dir = tempfile.gettempdir()
+    tmp_db_path = os.path.join(tmp_dir, "placement.db")
+    
+    # Candidate source locations to copy existing seeded database from
+    candidate_sources = [
+        os.path.join(app.root_path, "instance", "placement.db"),
+        os.path.join(app.instance_path, "placement.db"),
+        os.path.join(os.path.dirname(os.path.abspath(__file__)), "instance", "placement.db"),
+        os.path.join(os.getcwd(), "instance", "placement.db"),
+        os.path.join(app.root_path, "placement.db"),
+        os.path.join(os.getcwd(), "placement.db"),
+    ]
+    
+    source_db_path = None
+    for candidate in candidate_sources:
+        if os.path.exists(candidate) and os.path.getsize(candidate) > 1000:
+            source_db_path = candidate
+            break
+            
+    try:
+        os.makedirs(tmp_dir, exist_ok=True)
+        # Copy seeded database if tmp_db does not exist or is smaller than source
+        if source_db_path:
+            if not os.path.exists(tmp_db_path) or os.path.getsize(tmp_db_path) < os.path.getsize(source_db_path):
+                shutil.copy2(source_db_path, tmp_db_path)
+                print(f"[Vercel] Successfully copied database from {source_db_path} ({os.path.getsize(source_db_path)} bytes) to {tmp_db_path}")
+        else:
+            print("[Vercel] Warning: No source placement.db found in candidate locations.")
+    except Exception as e:
+        print(f"[Vercel] Warning: Database copy to {tmp_db_path} failed: {e}")
+        
     app.config['SQLALCHEMY_DATABASE_URI'] = f"sqlite:///{tmp_db_path}"
 else:
     app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///placement.db'
@@ -58,6 +96,13 @@ app.config['SESSION_COOKIE_HTTPONLY'] = True
 app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
 
 db.init_app(app)
+
+# Ensure database tables exist in any serverless container
+with app.app_context():
+    try:
+        db.create_all()
+    except Exception as e:
+        print(f"Notice: db.create_all() exception: {e}")
 
 # In-memory rate limiting tracker (ip_address -> list of timestamp failures)
 failed_login_attempts = {}

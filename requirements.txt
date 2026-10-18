@@ -7,3 +7,4 @@ firebase-admin>=6.5.0
 google-api-python-client>=2.100.0
 python-dotenv>=1.0.0
 cryptography>=41.0.0
+PyJWT>=2.8.0
