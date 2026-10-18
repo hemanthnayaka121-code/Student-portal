@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ student.name }} — Verified Engineering Portfolio</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <style>
+        @media print {
+            .no-print { display: none !important; }
+            body { background: #fff !important; }
+            .portfolio-sheet { border: none !important; box-shadow: none !important; margin: 0 !important; padding: 0 !important; }
+        }
+        body {
+            background-color: #f7f7f7;
+            padding: 2rem 1rem;
+        }
+        .portfolio-sheet {
+            max-width: 820px;
+            margin: 0 auto;
+            background: #ffffff;
+            border: 2px solid #000000;
+            padding: 2.5rem;
+            box-shadow: 0 8px 30px rgba(0,0,0,0.08);
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Print Action Bar -->
+    <div class="no-print" style="max-width: 820px; margin: 0 auto 1rem; display: flex; justify-content: space-between; align-items: center;">
+        <a href="{{ url_for('student_achievements', tab='achievements') }}" style="font-size: 0.85rem; font-weight: 600; color: #000; text-decoration: none;">
+            &larr; Back to Achievement Hub
+        </a>
+        <button onclick="window.print()" class="btn" style="padding: 0.45rem 1.25rem; font-size: 0.85rem;">
+            🖨️ Print / Save as PDF
+        </button>
+    </div>
+
+    <!-- Official Portfolio Document -->
+    <div class="portfolio-sheet">
+        <!-- Institution Header -->
+        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #000; padding-bottom: 1.25rem; margin-bottom: 1.5rem;">
+            <div style="display: flex; align-items: center; gap: 1rem;">
+                <img src="{{ url_for('static', filename='images/mit_logo.png') }}" alt="MIT Mysore Logo" style="width: 68px; height: 68px; object-fit: contain;">
+                <div>
+                    <h2 style="font-size: 1.25rem; font-weight: 800; letter-spacing: -0.01em; margin: 0;">
+                        MAHARAJA INSTITUTE OF TECHNOLOGY MYSORE
+                    </h2>
+                    <div style="font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.05em; color: #444; font-weight: 600;">
+                        Department of {{ student.department.name }} &bull; Affiliated to VTU Belagavi
+                    </div>
+                </div>
+            </div>
+            <div style="text-align: right; font-size: 0.75rem; color: #666;">
+                <div>Official Placement Portfolio</div>
+                <div>Generated: <strong>{{ today }}</strong></div>
+            </div>
+        </div>
+
+        <!-- Student Candidate Profile -->
+        <div style="background: var(--bg-subtle); border: 1px solid var(--border-mid); padding: 1.25rem; margin-bottom: 2rem; border-radius: 4px;">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                <div>
+                    <h1 style="font-size: 1.6rem; font-weight: 800; color: #000; margin: 0 0 0.25rem;">
+                        {{ student.name }}
+                    </h1>
+                    <div style="font-size: 0.88rem; color: #333; font-weight: 600;">
+                        Candidate for Bachelor of Engineering (B.E.) &bull; {{ student.department.name }}
+                    </div>
+                    <div style="font-size: 0.82rem; color: #555; margin-top: 0.35rem;">
+                        <strong>USN:</strong> {{ student.usn }} &bull; <strong>Branch Code:</strong> {{ student.department.code }}
+                    </div>
+                </div>
+                <div style="text-align: right;">
+                    <span class="badge" style="background: #000; color: #fff; font-size: 0.75rem; padding: 4px 8px;">
+                        {{ portfolio.total_verified_certificates }} Verified Credentials
+                    </span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Summary Statistics Matrix -->
+        <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.75rem; margin-bottom: 2rem;">
+            <div style="border: 1px solid var(--border-mid); padding: 0.75rem; text-align: center; border-radius: 4px; background: #fafafa;">
+                <div style="font-size: 1.4rem; font-weight: 800; color: #000;">{{ portfolio.total_completed_courses }}</div>
+                <div style="font-size: 0.72rem; text-transform: uppercase; color: #555; font-weight: 600;">Courses Completed</div>
+            </div>
+            <div style="border: 1px solid var(--border-mid); padding: 0.75rem; text-align: center; border-radius: 4px; background: #fafafa;">
+                <div style="font-size: 1.4rem; font-weight: 800; color: #000;">{{ portfolio.workshops_attended }}</div>
+                <div style="font-size: 0.72rem; text-transform: uppercase; color: #555; font-weight: 600;">Workshops Attended</div>
+            </div>
+            <div style="border: 1px solid var(--border-mid); padding: 0.75rem; text-align: center; border-radius: 4px; background: #fafafa;">
+                <div style="font-size: 1.4rem; font-weight: 800; color: #000;">{{ portfolio.hackathons_participated }}</div>
+                <div style="font-size: 0.72rem; text-transform: uppercase; color: #555; font-weight: 600;">Hackathons & Contests</div>
+            </div>
+            <div style="border: 1px solid var(--border-mid); padding: 0.75rem; text-align: center; border-radius: 4px; background: #fafafa;">
+                <div style="font-size: 1.4rem; font-weight: 800; color: #000;">{{ portfolio.internships_completed }}</div>
+                <div style="font-size: 0.72rem; text-transform: uppercase; color: #555; font-weight: 600;">Internships & Projects</div>
+            </div>
+        </div>
+
+        <!-- Validated Skills Matrix -->
+        {% if portfolio.skills_developed %}
+        <div style="margin-bottom: 2rem;">
+            <h3 style="font-size: 0.95rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 1px solid #000; padding-bottom: 0.4rem; margin-bottom: 0.75rem;">
+                Validated Engineering Core Competencies
+            </h3>
+            <div style="display: flex; flex-wrap: wrap; gap: 0.5rem;">
+                {% for sk in portfolio.skills_developed %}
+                <span class="badge" style="border: 1px solid #000; font-size: 0.78rem; padding: 3px 8px; font-weight: 600;">
+                    {{ sk }}
+                </span>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Verified Achievements & Certifications -->
+        <div style="margin-bottom: 2rem;">
+            <h3 style="font-size: 0.95rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 1px solid #000; padding-bottom: 0.4rem; margin-bottom: 1rem;">
+                Verified Courses, Certifications & Technical Milestones
+            </h3>
+
+            {% if portfolio.verified_achievements %}
+            <div style="display: flex; flex-direction: column; gap: 1.25rem;">
+                {% for a in portfolio.verified_achievements %}
+                <div style="border-left: 3px solid #000; padding-left: 1rem;">
+                    <div style="display: flex; justify-content: space-between; align-items: baseline;">
+                        <h4 style="font-size: 1.05rem; font-weight: 700; margin: 0 0 0.15rem; color: #000;">
+                            {{ a.title }}
+                        </h4>
+                        <span style="font-size: 0.8rem; font-weight: 600; color: #555;">
+                            {{ a.completion_date.strftime('%B %Y') }}
+                        </span>
+                    </div>
+
+                    <div style="font-size: 0.85rem; color: #333; margin-bottom: 0.25rem;">
+                        <strong>Source:</strong> {{ a.provider_or_organizer }} &bull; 
+                        <strong>Category:</strong> {{ a.category.replace('_', ' ').title() }} &bull; 
+                        <span style="font-size: 0.75rem; font-weight: 700; text-transform: uppercase; background: #000; color: #fff; padding: 2px 6px; border-radius: 3px;">
+                            &check; Verified ({{ a.verification_method or 'Institutional Audit' }})
+                        </span>
+                    </div>
+
+                    {% if a.external_certificate_id %}
+                    <div style="font-size: 0.78rem; color: #666; font-family: monospace; margin-bottom: 0.2rem;">
+                        Credential ID: {{ a.external_certificate_id }}
+                    </div>
+                    {% endif %}
+
+                    {% if a.skills_acquired %}
+                    <div style="font-size: 0.78rem; color: #555; margin-bottom: 0.25rem;">
+                        <em>Key Skills:</em> {{ a.skills_acquired }}
+                    </div>
+                    {% endif %}
+
+                    {% if a.certificate_url %}
+                    <div style="font-size: 0.78rem; margin-top: 0.2rem;">
+                        <a href="{{ a.certificate_url }}" target="_blank" style="color: #000; word-break: break-all;">
+                            🔗 Verification Link: {{ a.certificate_url }}
+                        </a>
+                    </div>
+                    {% elif a.evidence_file %}
+                    <div style="font-size: 0.78rem; margin-top: 0.2rem; color: #444;">
+                        📁 Institutional Digital Archive Document: <span style="font-family: monospace;">{{ a.evidence_file.split('/')[-1] }}</span>
+                    </div>
+                    {% endif %}
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div style="font-size: 0.85rem; color: #666; font-style: italic;">
+                No verified certificates recorded on profile yet.
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Institutional Endorsement Footer -->
+        <div style="border-top: 1px solid var(--border-light); padding-top: 1.5rem; margin-top: 2.5rem; display: flex; justify-content: space-between; align-items: flex-end; font-size: 0.75rem; color: #666;">
+            <div>
+                <div>Placement & Training Cell</div>
+                <div>Maharaja Institute of Technology Mysore</div>
+                <div>Belawadi, Srirangapatna Taluk, Mandya - 571477</div>
+            </div>
+            <div style="text-align: right;">
+                <div style="font-weight: 700; color: #000; text-transform: uppercase;">Authenticated via Student Portal</div>
+                <div>Module 2 — AI Performance & Achievement System</div>
+            </div>
+        </div>
+    </div>
+
+</body>
+</html>

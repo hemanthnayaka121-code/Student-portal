@@ -47,3 +47,6 @@ venv.bak/
 Thumbs.db
 
 .vercel
+
+# Database backups
+instance/*backup*.db

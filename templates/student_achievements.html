@@ -1,0 +1,996 @@
+{% extends 'student_base.html' %}
+
+{% block title %}Unified Learning & Achievements Hub — MIT Placement Portal{% endblock %}
+{% block breadcrumb %}Achievements Hub{% endblock %}
+
+{% block content %}
+<div class="achievements-page">
+
+    <!-- HERO HEADER BANNER -->
+    <div class="card" style="margin-bottom: 1.5rem; border: 2px solid #000; padding: 1.5rem; background: #FFFFFF;">
+        <div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 1rem;">
+            <div>
+                <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.25rem;">
+                    <span class="badge" style="background: #000; color: #fff; font-size: 0.72rem; letter-spacing: 0.05em;">MIT MYSORE</span>
+                    <span class="badge" style="border: 1px solid #000; font-size: 0.72rem;">{{ student_branch }} Department</span>
+                    {% if coursera_connection.is_connected %}
+                    <span class="badge badge-pass" style="font-size: 0.72rem;">Coursera Linked</span>
+                    {% endif %}
+                </div>
+                <h1 style="font-size: 1.65rem; font-weight: 800; color: #000; margin: 0.25rem 0;">
+                    Unified Learning &amp; Achievement Management
+                </h1>
+                <p style="color: #555; font-size: 0.88rem; margin: 0;">
+                    Connect external learning accounts, explore Karnataka workshops &amp; hackathons, track learning progress, and centralise your verified credentials in one portfolio.
+                </p>
+            </div>
+
+            <div style="display: flex; flex-wrap: wrap; gap: 0.5rem;">
+                <button type="button" onclick="openSubmitAchievementModal()" class="btn" style="font-size: 0.85rem; padding: 0.55rem 1rem;">
+                    + Submit Certificate
+                </button>
+                <a href="{{ url_for('student_export_portfolio') }}" target="_blank" class="btn btn-secondary" style="font-size: 0.85rem; padding: 0.55rem 1rem;">
+                    📄 Export Portfolio
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- 4 PRIMARY CATEGORY TABS -->
+    <div class="mono-tabs" style="margin-bottom: 1.5rem; border-bottom: 2px solid #000;">
+        <a href="{{ url_for('student_achievements', tab='my_courses') }}" class="mono-tab-btn {% if active_tab in ['my_courses', 'courses'] %}active{% endif %}">
+            1. My Courses
+        </a>
+        <a href="{{ url_for('student_achievements', tab='workshops_hackathons') }}" class="mono-tab-btn {% if active_tab in ['workshops_hackathons', 'workshops'] %}active{% endif %}">
+            2. Workshops &amp; Hackathons ({{ workshops|length }})
+        </a>
+        <a href="{{ url_for('student_achievements', tab='my_certificates') }}" class="mono-tab-btn {% if active_tab in ['my_certificates', 'achievements'] %}active{% endif %}">
+            3. My Certificates ({{ portfolio.total_count }})
+        </a>
+        <a href="{{ url_for('student_achievements', tab='recommended') }}" class="mono-tab-btn {% if active_tab == 'recommended' %}active{% endif %}">
+            4. Recommended for Me ({{ recs.recommended_courses|length + recs.recommended_events|length }})
+        </a>
+    </div>
+
+    <!-- =================================================================== -->
+    <!-- TAB 1: MY COURSES & COURSERA OAUTH (MODULE 1 & MODULE 2)           -->
+    <!-- =================================================================== -->
+    {% if active_tab in ['my_courses', 'courses'] %}
+    <section id="tab-courses">
+        <!-- COURSERA ACCOUNT CONNECTION BANNER -->
+        <div class="card" style="background: var(--bg-subtle); border: 2px solid #000; padding: 1.35rem; margin-bottom: 1.5rem;">
+            <div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 1.25rem;">
+                <div style="flex: 1; min-width: 280px;">
+                    <div style="display: flex; align-items: center; gap: 0.6rem; margin-bottom: 0.35rem;">
+                        <span style="font-size: 1.1rem; font-weight: 800; color: #000;">Coursera Learning Integration</span>
+                        {% if coursera_connection.is_connected %}
+                            <span class="badge badge-pass" style="font-size: 0.72rem;">Account Connected</span>
+                        {% else %}
+                            <span class="badge" style="background: #F0F0F0; color: #444; border: 1px solid #CCC; font-size: 0.72rem;">Not Connected</span>
+                        {% endif %}
+                    </div>
+                    <p style="font-size: 0.84rem; color: #444; margin: 0; line-height: 1.45;">
+                        {% if coursera_connection.is_connected %}
+                            Connected Account: <strong>{{ coursera_connection.external_email }}</strong>
+                            {% if coursera_connection.last_synced_at %}
+                                &bull; <span style="color: #666;">Last In-Sync: {{ coursera_connection.last_synced_at }}</span>
+                            {% endif %}
+                        {% else %}
+                            {{ coursera_status.message }}
+                        {% endif %}
+                    </p>
+                </div>
+
+                <div style="display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center;">
+                    {% if coursera_connection.is_connected %}
+                        <!-- Manual Refresh / Sync Button -->
+                        <button type="button" id="btn-sync-coursera" onclick="triggerCourseraSync()" class="btn" style="font-size: 0.82rem; padding: 0.45rem 0.9rem;">
+                            🔄 Sync Certificates
+                        </button>
+                        <!-- Disconnect Form -->
+                        <form method="POST" action="{{ url_for('coursera_disconnect') }}" style="display: inline;" onsubmit="return confirm('Disconnect your Coursera account from MIT Mysore portal?')">
+                            <button type="submit" class="btn btn-secondary" style="font-size: 0.82rem; padding: 0.45rem 0.9rem; color: #900; border-color: #900;">
+                                Disconnect
+                            </button>
+                        </form>
+                    {% else %}
+                        <!-- Connect Coursera Button -->
+                        <button type="button" onclick="openCourseraModal()" class="btn" style="font-size: 0.85rem; padding: 0.5rem 1.1rem;">
+                            Connect Coursera Account &rarr;
+                        </button>
+                        <a href="https://www.coursera.org/?authMode=login" target="_blank" rel="noopener noreferrer" class="btn btn-secondary" style="font-size: 0.82rem; padding: 0.5rem 0.8rem;">
+                            Open Official Coursera ↗
+                        </a>
+                    {% endif %}
+                </div>
+            </div>
+            <div id="sync-status-msg" style="display: none; margin-top: 0.75rem; font-size: 0.82rem; padding: 0.5rem 0.75rem; border-radius: 3px;"></div>
+        </div>
+
+        <!-- SEARCH & PRICING/DOMAIN FILTERS BAR -->
+        <div class="card" style="padding: 1.25rem; border: 1px solid var(--border-mid); margin-bottom: 1.5rem; background: #fff;">
+            <form method="GET" action="{{ url_for('student_achievements') }}" style="display: flex; flex-direction: column; gap: 1rem;">
+                <input type="hidden" name="tab" value="my_courses">
+
+                <div style="display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: center;">
+                    <!-- Search Input -->
+                    <div style="flex: 2; min-width: 220px;">
+                        <input type="text" name="search" value="{{ search_query }}" placeholder="Search courses, skills (Python, DSA, AI, Java)..." class="form-control" style="font-size: 0.88rem; padding: 0.55rem 0.75rem; width: 100%; border: 1px solid #000; border-radius: 4px;">
+                    </div>
+
+                    <!-- Domain Filter -->
+                    <div style="flex: 1; min-width: 170px;">
+                        <select name="domain" class="form-control" style="font-size: 0.85rem; padding: 0.55rem; width: 100%; border: 1px solid #000; border-radius: 4px; background: #fff;">
+                            <option value="ALL" {% if selected_domain == 'ALL' %}selected{% endif %}>All Domains</option>
+                            <option value="DSA" {% if selected_domain == 'DSA' %}selected{% endif %}>DSA &amp; Coding</option>
+                            <option value="Python" {% if selected_domain == 'Python' %}selected{% endif %}>Python &amp; Java</option>
+                            <option value="Java" {% if selected_domain == 'Java' %}selected{% endif %}>Java &amp; OOP</option>
+                            <option value="AI/ML" {% if selected_domain == 'AI/ML' %}selected{% endif %}>AI &amp; Machine Learning</option>
+                            <option value="Cybersecurity" {% if selected_domain == 'Cybersecurity' %}selected{% endif %}>Cybersecurity</option>
+                            <option value="Full Stack" {% if selected_domain == 'Full Stack' %}selected{% endif %}>Web &amp; Full Stack</option>
+                            <option value="Cloud & DevOps" {% if selected_domain == 'Cloud & DevOps' %}selected{% endif %}>Cloud &amp; DevOps</option>
+                            <option value="IoT & Embedded" {% if selected_domain == 'IoT & Embedded' %}selected{% endif %}>Electronics &amp; IoT</option>
+                            <option value="Mechanical CAD & Robotics" {% if selected_domain == 'Mechanical CAD & Robotics' %}selected{% endif %}>Mechanical &amp; Robotics</option>
+                            <option value="Aptitude & Soft Skills" {% if selected_domain == 'Aptitude & Soft Skills' %}selected{% endif %}>Soft Skills &amp; Prep</option>
+                        </select>
+                    </div>
+
+                    <!-- Difficulty Filter -->
+                    <div style="flex: 1; min-width: 130px;">
+                        <select name="difficulty" class="form-control" style="font-size: 0.85rem; padding: 0.55rem; width: 100%; border: 1px solid #000; border-radius: 4px; background: #fff;">
+                            <option value="ALL" {% if selected_difficulty == 'ALL' %}selected{% endif %}>All Levels</option>
+                            <option value="Beginner" {% if selected_difficulty == 'Beginner' %}selected{% endif %}>Beginner</option>
+                            <option value="Intermediate" {% if selected_difficulty == 'Intermediate' %}selected{% endif %}>Intermediate</option>
+                            <option value="Advanced" {% if selected_difficulty == 'Advanced' %}selected{% endif %}>Advanced</option>
+                        </select>
+                    </div>
+
+                    <button type="submit" class="btn" style="padding: 0.55rem 1.1rem; font-size: 0.85rem;">
+                        Filter
+                    </button>
+                    {% if search_query or selected_domain != 'ALL' or free_only or free_cert or paid_only or selected_difficulty != 'ALL' %}
+                    <a href="{{ url_for('student_achievements', tab='my_courses') }}" class="btn btn-secondary" style="padding: 0.55rem 0.85rem; font-size: 0.85rem;">
+                        Reset
+                    </a>
+                    {% endif %}
+                </div>
+
+                <!-- Price & Free Learning Toggles -->
+                <div style="display: flex; flex-wrap: wrap; gap: 1.25rem; font-size: 0.85rem; border-top: 1px solid var(--border-light); padding-top: 0.75rem;">
+                    <label style="display: flex; align-items: center; gap: 0.4rem; cursor: pointer;">
+                        <input type="checkbox" name="free_only" value="1" {% if free_only %}checked{% endif %} onchange="this.form.submit()">
+                        <span>Free Access Courses Only</span>
+                    </label>
+                    <label style="display: flex; align-items: center; gap: 0.4rem; cursor: pointer;">
+                        <input type="checkbox" name="free_cert" value="1" {% if free_cert %}checked{% endif %} onchange="this.form.submit()">
+                        <span>Courses with Verifiable Free Certificate</span>
+                    </label>
+                    <label style="display: flex; align-items: center; gap: 0.4rem; cursor: pointer;">
+                        <input type="checkbox" name="paid_only" value="1" {% if paid_only %}checked{% endif %} onchange="this.form.submit()">
+                        <span>Paid Professional Specializations</span>
+                    </label>
+                </div>
+            </form>
+        </div>
+
+        <!-- COURSE CATALOG GRID -->
+        <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 1rem;">
+            <h2 style="font-size: 1.15rem; font-weight: 800; color: #000; margin: 0;">
+                Verified Course Catalog ({{ courses|length }} Found)
+            </h2>
+            <span style="font-size: 0.8rem; color: #666;">Distinguishing Free to Audit vs Verifiable Free Certificates</span>
+        </div>
+
+        {% if courses %}
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr)); gap: 1.25rem;">
+            {% for c in courses %}
+            {% set prog = student_course_progress.get(c.id) %}
+            <div class="card" style="margin: 0; border: 1px solid #000; padding: 1.25rem; background: #fff; display: flex; flex-direction: column; justify-content: space-between;">
+                <div>
+                    <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.5rem;">
+                        <span class="badge" style="background: #000; color: #fff; font-size: 0.72rem;">{{ c.provider }}</span>
+                        <div>
+                            {% if c.free_certificate %}
+                                <span class="badge badge-pass" style="font-size: 0.7rem;">Free Certificate</span>
+                            {% elif c.is_free %}
+                                <span class="badge" style="background: #E8F5E9; color: #1B5E20; border: 1px solid #A5D6A7; font-size: 0.7rem;">Free Audit</span>
+                            {% else %}
+                                <span class="badge" style="border: 1px solid #999; font-size: 0.7rem;">{{ c.cost_info }}</span>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <h3 style="font-size: 1.05rem; font-weight: 800; color: #000; margin: 0.25rem 0 0.4rem; line-height: 1.35;">
+                        {{ c.title }}
+                    </h3>
+
+                    {% if c.description %}
+                    <p style="font-size: 0.8rem; color: #555; line-height: 1.4; margin: 0 0 0.6rem 0;">
+                        {{ c.description }}
+                    </p>
+                    {% endif %}
+
+                    <div style="font-size: 0.76rem; color: #666; margin-bottom: 0.75rem; line-height: 1.4;">
+                        <div><strong>Domain:</strong> {{ c.domain }} &bull; <strong>Level:</strong> {{ c.difficulty }}</div>
+                        <div><strong>Duration:</strong> {{ c.duration }} &bull; <strong>Skills:</strong> {{ c.skills_covered or 'Core Engineering' }}</div>
+                    </div>
+
+                    <!-- Progress Bar if Enrolled or Completed -->
+                    {% if prog %}
+                    <div style="background: #FAFAFA; border: 1px solid var(--border-mid); padding: 0.5rem 0.75rem; border-radius: 4px; margin-bottom: 0.85rem;">
+                        <div style="display: flex; justify-content: space-between; font-size: 0.74rem; font-weight: 700; color: #333; margin-bottom: 0.25rem;">
+                            <span>Status: {{ prog.status }}</span>
+                            <span>{{ "%.0f"|format(prog.progress_pct) }}%</span>
+                        </div>
+                        <div class="progress-bar-bg" style="margin: 0; height: 5px;">
+                            <div class="progress-bar-fill" style="width: {{ prog.progress_pct }}%; background: #000;"></div>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+
+                <div style="border-top: 1px solid var(--border-light); padding-top: 0.75rem; display: flex; justify-content: space-between; align-items: center; gap: 0.5rem;">
+                    <a href="{{ c.course_url }}" target="_blank" rel="noopener noreferrer" class="btn" style="font-size: 0.78rem; padding: 0.4rem 0.8rem;">
+                        Open Course ↗
+                    </a>
+                    <div style="display: flex; gap: 0.4rem;">
+                        <button type="button" onclick="toggleCourseBookmark({{ c.id }})" class="btn btn-secondary" style="font-size: 0.75rem; padding: 0.4rem 0.6rem;">
+                            {% if prog and prog.status == 'BOOKMARKED' %}★ Bookmarked{% else %}☆ Bookmark{% endif %}
+                        </button>
+                        {% if not prog or prog.status == 'BOOKMARKED' %}
+                        <button type="button" onclick="updateCourseStatus({{ c.id }}, 'enroll')" class="btn btn-secondary" style="font-size: 0.75rem; padding: 0.4rem 0.6rem;">
+                            + Enroll
+                        </button>
+                        {% elif prog.status == 'ENROLLED' %}
+                        <button type="button" onclick="updateCourseStatus({{ c.id }}, 'complete')" class="btn btn-secondary" style="font-size: 0.75rem; padding: 0.4rem 0.6rem;">
+                            ✓ Mark Complete
+                        </button>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="card" style="padding: 2.5rem; text-align: center; color: #666;">
+            <p style="font-size: 0.95rem; margin-bottom: 0.5rem;">No courses match your selected filter criteria.</p>
+            <a href="{{ url_for('student_achievements', tab='my_courses') }}" class="btn btn-secondary" style="font-size: 0.82rem;">
+                Clear All Filters
+            </a>
+        </div>
+        {% endif %}
+    </section>
+    {% endif %}
+
+    <!-- =================================================================== -->
+    <!-- TAB 2: WORKSHOPS & HACKATHONS                                      -->
+    <!-- =================================================================== -->
+    {% if active_tab in ['workshops_hackathons', 'workshops'] %}
+    <section id="tab-workshops">
+        <!-- HACKATHONS SECTION -->
+        <div style="margin-bottom: 2rem;">
+            <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 0.75rem;">
+                <div>
+                    <h2 style="font-size: 1.2rem; font-weight: 800; color: #000; margin: 0;">
+                        Competitive Coding Hackathons &amp; Challenges
+                    </h2>
+                    <p style="font-size: 0.82rem; color: #666; margin: 0.2rem 0 0;">
+                        Smart India Hackathon, VTU coding contests, and state-level innovation challenges
+                    </p>
+                </div>
+                <span class="badge" style="background: #000; color: #fff; font-size: 0.72rem;">{{ hackathons|length }} Opportunities</span>
+            </div>
+
+            {% if hackathons %}
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr)); gap: 1.25rem;">
+                {% for ev in hackathons %}
+                {% set act = student_event_actions.get(ev.id) %}
+                <div class="card" style="margin: 0; border: 2px solid #000; padding: 1.25rem; background: #fff; display: flex; flex-direction: column; justify-content: space-between;">
+                    <div>
+                        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.4rem;">
+                            <span class="badge" style="background: #000; color: #fff; font-size: 0.7rem;">{{ ev.event_type }}</span>
+                            <span class="badge badge-pass" style="font-size: 0.7rem;">{{ ev.registration_fee }}</span>
+                        </div>
+                        <h3 style="font-size: 1.05rem; font-weight: 800; color: #000; margin: 0.25rem 0 0.35rem; line-height: 1.35;">
+                            {{ ev.title }}
+                        </h3>
+                        <div style="font-size: 0.78rem; color: #555; font-weight: 600; margin-bottom: 0.5rem;">
+                            {{ ev.organizer }}
+                        </div>
+                        <div style="font-size: 0.76rem; color: #444; line-height: 1.4; margin-bottom: 0.75rem;">
+                            <div><strong>Date:</strong> {{ ev.event_date.strftime('%d %b %Y, %H:%M') }} &bull; {{ ev.venue_mode }}</div>
+                            <div><strong>Deadline:</strong> {{ ev.registration_deadline.strftime('%d %b %Y') }}</div>
+                            <div><strong>Perk:</strong> {{ ev.certificate_conditions }}</div>
+                        </div>
+
+                        {% if act %}
+                        <div style="font-size: 0.74rem; background: #FAFAFA; border: 1px solid var(--border-mid); padding: 0.35rem 0.6rem; border-radius: 3px; margin-bottom: 0.75rem;">
+                            Status: <strong>{{ act.status }}</strong>
+                            {% if act.reminder_set %} &bull; 🔔 Reminder Active{% endif %}
+                        </div>
+                        {% endif %}
+                    </div>
+
+                    <div style="border-top: 1px solid var(--border-light); padding-top: 0.75rem; display: flex; justify-content: space-between; align-items: center; gap: 0.4rem;">
+                        <a href="{{ ev.official_registration_url }}" target="_blank" rel="noopener noreferrer" onclick="recordLinkOpen({{ ev.id }})" class="btn" style="font-size: 0.78rem; padding: 0.4rem 0.8rem;">
+                            Register Official ↗
+                        </a>
+                        <div style="display: flex; gap: 0.3rem;">
+                            <button type="button" onclick="toggleEventSave({{ ev.id }})" class="btn btn-secondary" style="font-size: 0.75rem; padding: 0.4rem 0.55rem;">
+                                {% if act and act.status == 'SAVED' %}★ Saved{% else %}☆ Save{% endif %}
+                            </button>
+                            <button type="button" onclick="markEventApplied({{ ev.id }})" class="btn btn-secondary" style="font-size: 0.75rem; padding: 0.4rem 0.55rem;">
+                                Mark Applied
+                            </button>
+                            <button type="button" onclick="toggleEventReminder({{ ev.id }})" class="btn btn-secondary" style="font-size: 0.75rem; padding: 0.4rem 0.55rem;">
+                                🔔
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- WORKSHOPS & TECHNICAL EVENTS SECTION -->
+        <div>
+            <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 0.75rem;">
+                <div>
+                    <h2 style="font-size: 1.2rem; font-weight: 800; color: #000; margin: 0;">
+                        Karnataka Technical Workshops &amp; Seminars
+                    </h2>
+                    <p style="font-size: 0.82rem; color: #666; margin: 0.2rem 0 0;">
+                        Hands-on technical workshops in Bengaluru, Mysuru, Hubballi, Belagavi and Online
+                    </p>
+                </div>
+                <span class="badge" style="border: 1px solid #000; font-size: 0.72rem;">{{ regular_workshops|length }} Events</span>
+            </div>
+
+            {% if regular_workshops %}
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr)); gap: 1.25rem;">
+                {% for ev in regular_workshops %}
+                {% set act = student_event_actions.get(ev.id) %}
+                <div class="card" style="margin: 0; border: 1px solid #000; padding: 1.25rem; background: #fff; display: flex; flex-direction: column; justify-content: space-between;">
+                    <div>
+                        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.4rem;">
+                            <span class="badge" style="background: #F0F0F0; color: #000; border: 1px solid #CCC; font-size: 0.7rem;">
+                                {{ ev.city }} &bull; {{ ev.event_type }}
+                            </span>
+                            <span class="badge {% if ev.is_free %}badge-pass{% else %}badge-secondary{% endif %}" style="font-size: 0.7rem;">
+                                {{ ev.registration_fee }}
+                            </span>
+                        </div>
+                        <h3 style="font-size: 1.05rem; font-weight: 800; color: #000; margin: 0.25rem 0 0.35rem; line-height: 1.35;">
+                            {{ ev.title }}
+                        </h3>
+                        <div style="font-size: 0.78rem; color: #555; font-weight: 600; margin-bottom: 0.5rem;">
+                            {{ ev.organizer }}
+                        </div>
+                        <div style="font-size: 0.76rem; color: #444; line-height: 1.4; margin-bottom: 0.75rem;">
+                            <div><strong>Date:</strong> {{ ev.event_date.strftime('%d %b %Y') }} &bull; {{ ev.venue_mode }}</div>
+                            <div><strong>Deadline:</strong> {{ ev.registration_deadline.strftime('%d %b %Y') }}</div>
+                            <div><strong>Certificate:</strong> {{ ev.certificate_conditions }}</div>
+                        </div>
+
+                        {% if act %}
+                        <div style="font-size: 0.74rem; background: #FAFAFA; border: 1px solid var(--border-mid); padding: 0.35rem 0.6rem; border-radius: 3px; margin-bottom: 0.75rem;">
+                            Status: <strong>{{ act.status }}</strong>
+                            {% if act.reminder_set %} &bull; 🔔 Reminder Active{% endif %}
+                        </div>
+                        {% endif %}
+                    </div>
+
+                    <div style="border-top: 1px solid var(--border-light); padding-top: 0.75rem; display: flex; justify-content: space-between; align-items: center; gap: 0.4rem;">
+                        <a href="{{ ev.official_registration_url }}" target="_blank" rel="noopener noreferrer" onclick="recordLinkOpen({{ ev.id }})" class="btn" style="font-size: 0.78rem; padding: 0.4rem 0.8rem;">
+                            Register Official ↗
+                        </a>
+                        <div style="display: flex; gap: 0.3rem;">
+                            <button type="button" onclick="toggleEventSave({{ ev.id }})" class="btn btn-secondary" style="font-size: 0.75rem; padding: 0.4rem 0.55rem;">
+                                {% if act and act.status == 'SAVED' %}★ Saved{% else %}☆ Save{% endif %}
+                            </button>
+                            <button type="button" onclick="markEventApplied({{ ev.id }})" class="btn btn-secondary" style="font-size: 0.75rem; padding: 0.4rem 0.55rem;">
+                                Mark Applied
+                            </button>
+                            <button type="button" onclick="toggleEventReminder({{ ev.id }})" class="btn btn-secondary" style="font-size: 0.75rem; padding: 0.4rem 0.55rem;">
+                                🔔
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+        </div>
+    </section>
+    {% endif %}
+
+    <!-- =================================================================== -->
+    <!-- TAB 3: MY CERTIFICATES & CENTRALIZED VAULT                         -->
+    <!-- =================================================================== -->
+    {% if active_tab in ['my_certificates', 'achievements'] %}
+    <section id="tab-achievements">
+        <!-- PORTFOLIO SUMMARY CARDS -->
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 0.85rem; margin-bottom: 1.5rem;">
+            <div class="card" style="margin: 0; padding: 1.15rem; border: 2px solid #000; text-align: center; background: #fff;">
+                <div style="font-size: 2rem; font-weight: 900; color: #000;">{{ portfolio.total_verified_certificates }}</div>
+                <div style="font-size: 0.72rem; text-transform: uppercase; font-weight: 700; color: #555;">Verified Certificates</div>
+            </div>
+            <div class="card" style="margin: 0; padding: 1.15rem; border: 1px solid var(--border-mid); text-align: center; background: #FAFAFA;">
+                <div style="font-size: 2rem; font-weight: 900; color: #000;">{{ portfolio.total_completed_courses }}</div>
+                <div style="font-size: 0.72rem; text-transform: uppercase; font-weight: 700; color: #555;">Courses Completed</div>
+            </div>
+            <div class="card" style="margin: 0; padding: 1.15rem; border: 1px solid var(--border-mid); text-align: center; background: #FAFAFA;">
+                <div style="font-size: 2rem; font-weight: 900; color: #000;">{{ portfolio.workshops_attended }}</div>
+                <div style="font-size: 0.72rem; text-transform: uppercase; font-weight: 700; color: #555;">Workshops Attended</div>
+            </div>
+            <div class="card" style="margin: 0; padding: 1.15rem; border: 1px solid var(--border-mid); text-align: center; background: #FAFAFA;">
+                <div style="font-size: 2rem; font-weight: 900; color: #000;">{{ portfolio.hackathons_participated }}</div>
+                <div style="font-size: 0.72rem; text-transform: uppercase; font-weight: 700; color: #555;">Hackathons Participated</div>
+            </div>
+            <div class="card" style="margin: 0; padding: 1.15rem; border: 1px solid var(--border-mid); text-align: center; background: #FAFAFA;">
+                <div style="font-size: 2rem; font-weight: 900; color: #000;">{{ portfolio.pending_verifications_count }}</div>
+                <div style="font-size: 0.72rem; text-transform: uppercase; font-weight: 700; color: #555;">Pending Verification</div>
+            </div>
+        </div>
+
+        <!-- FILTER & SORT CONTROLS BAR -->
+        <div class="card" style="padding: 1.2rem; border: 1px solid #000; margin-bottom: 1.5rem; background: #fff;">
+            <form method="GET" action="{{ url_for('student_achievements') }}" style="display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: center;">
+                <input type="hidden" name="tab" value="my_certificates">
+
+                <!-- Search -->
+                <div style="flex: 2; min-width: 220px;">
+                    <input type="text" name="search" value="{{ search_query }}" placeholder="Search certificates by title, provider, skills..." class="form-control" style="font-size: 0.85rem; padding: 0.5rem 0.75rem; width: 100%; border: 1px solid #000; border-radius: 4px;">
+                </div>
+
+                <!-- Category Filter -->
+                <div style="flex: 1; min-width: 140px;">
+                    <select name="category" class="form-control" onchange="this.form.submit()" style="font-size: 0.85rem; padding: 0.5rem; width: 100%; border: 1px solid #000; border-radius: 4px; background: #fff;">
+                        <option value="ALL" {% if selected_category == 'ALL' %}selected{% endif %}>All Categories</option>
+                        <option value="COURSE" {% if selected_category in ['COURSE', 'COURSES'] %}selected{% endif %}>Online Courses</option>
+                        <option value="WORKSHOP" {% if selected_category in ['WORKSHOP', 'WORKSHOPS'] %}selected{% endif %}>Workshops</option>
+                        <option value="HACKATHON" {% if selected_category in ['HACKATHON', 'HACKATHONS'] %}selected{% endif %}>Hackathons</option>
+                        <option value="INTERNSHIP" {% if selected_category in ['INTERNSHIP', 'INTERNSHIPS'] %}selected{% endif %}>Internships</option>
+                    </select>
+                </div>
+
+                <!-- Verification Status -->
+                <div style="flex: 1; min-width: 140px;">
+                    <select name="status" class="form-control" onchange="this.form.submit()" style="font-size: 0.85rem; padding: 0.5rem; width: 100%; border: 1px solid #000; border-radius: 4px; background: #fff;">
+                        <option value="ALL" {% if selected_status == 'ALL' %}selected{% endif %}>All Statuses</option>
+                        <option value="VERIFIED" {% if selected_status == 'VERIFIED' %}selected{% endif %}>Verified Only</option>
+                        <option value="PENDING_VERIFICATION" {% if selected_status == 'PENDING_VERIFICATION' %}selected{% endif %}>Pending Verification</option>
+                    </select>
+                </div>
+
+                <!-- Sort Order -->
+                <div style="flex: 1; min-width: 130px;">
+                    <select name="sort" class="form-control" onchange="this.form.submit()" style="font-size: 0.85rem; padding: 0.5rem; width: 100%; border: 1px solid #000; border-radius: 4px; background: #fff;">
+                        <option value="newest" {% if sort_by == 'newest' %}selected{% endif %}>Newest First</option>
+                        <option value="oldest" {% if sort_by == 'oldest' %}selected{% endif %}>Oldest First</option>
+                        <option value="category" {% if sort_by == 'category' %}selected{% endif %}>By Category</option>
+                        <option value="title" {% if sort_by == 'title' %}selected{% endif %}>Title A-Z</option>
+                    </select>
+                </div>
+
+                <button type="submit" class="btn" style="font-size: 0.82rem; padding: 0.5rem 0.9rem;">
+                    Filter
+                </button>
+            </form>
+        </div>
+
+        <!-- CERTIFICATES LISTING TABLE / CARDS -->
+        {% if filtered_achievements %}
+        <div class="card" style="border: 2px solid #000; padding: 1.25rem; background: #fff; margin-bottom: 2rem;">
+            <div class="table-responsive">
+                <table class="portal-table" style="margin: 0;">
+                    <thead>
+                        <tr>
+                            <th style="min-width: 220px;">Certificate / Achievement</th>
+                            <th style="min-width: 150px;">Provider / Organizer</th>
+                            <th style="min-width: 110px;">Category</th>
+                            <th style="min-width: 130px;">Status</th>
+                            <th style="min-width: 140px;">Verification Method</th>
+                            <th style="min-width: 160px;">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for a in filtered_achievements %}
+                        <tr>
+                            <!-- Title & Skills -->
+                            <td>
+                                <strong style="font-size: 0.92rem; color: #000;">{{ a.title }}</strong>
+                                {% if a.description %}
+                                <div style="font-size: 0.74rem; color: #555; margin-top: 0.15rem;">{{ a.description }}</div>
+                                {% endif %}
+                                {% if a.skills_acquired %}
+                                <div style="font-size: 0.72rem; color: #666; margin-top: 0.2rem;">
+                                    <strong>Skills:</strong> {{ a.skills_acquired }}
+                                </div>
+                                {% endif %}
+                                <div style="font-size: 0.72rem; color: #777;">
+                                    Date: {{ a.completion_date.strftime('%d %b %Y') if a.completion_date else '—' }}
+                                </div>
+                            </td>
+
+                            <!-- Provider / Organizer -->
+                            <td>
+                                <strong>{{ a.provider_or_organizer }}</strong>
+                                <div style="font-size: 0.74rem; color: #666;">Domain: {{ a.domain }}</div>
+                            </td>
+
+                            <!-- Category -->
+                            <td>
+                                <span class="badge" style="border: 1px solid #CCC; font-size: 0.7rem; background: #F8F8F8;">
+                                    {{ a.category }}
+                                </span>
+                            </td>
+
+                            <!-- Status -->
+                            <td>
+                                {% if a.verification_status == 'VERIFIED' %}
+                                    <span class="badge badge-pass" style="font-size: 0.72rem;">✓ Verified</span>
+                                    {% if a.verified_by %}
+                                    <div style="font-size: 0.68rem; color: #666; margin-top: 0.2rem;">By: {{ a.verified_by }}</div>
+                                    {% endif %}
+                                {% elif a.verification_status == 'PENDING_VERIFICATION' %}
+                                    <span class="badge badge-warning" style="font-size: 0.72rem;">⏳ Pending Verification</span>
+                                {% else %}
+                                    <span class="badge badge-fail" style="font-size: 0.72rem;">{{ a.verification_status }}</span>
+                                {% endif %}
+                            </td>
+
+                            <!-- Method -->
+                            <td>
+                                <span style="font-size: 0.74rem; color: #444; font-weight: 600;">
+                                    {% if a.verification_method == 'OAUTH_SYNC' %}
+                                        🔄 Coursera OAuth Sync
+                                    {% elif a.verification_method == 'ORGANIZER_VERIFIED' %}
+                                        🏛️ Organizer Verified
+                                    {% else %}
+                                        📝 Student Submission
+                                    {% endif %}
+                                </span>
+                            </td>
+
+                            <!-- Actions -->
+                            <td>
+                                <div style="display: flex; gap: 0.35rem; flex-wrap: wrap;">
+                                    <!-- View Action -->
+                                    <a href="{{ url_for('student_view_certificate', ach_id=a.id) }}" target="_blank" rel="noopener noreferrer" class="btn btn-secondary" style="font-size: 0.72rem; padding: 0.25rem 0.55rem;">
+                                        View
+                                    </a>
+                                    <!-- Download Action -->
+                                    {% if a.evidence_file %}
+                                    <a href="{{ url_for('student_download_certificate', ach_id=a.id) }}" class="btn btn-secondary" style="font-size: 0.72rem; padding: 0.25rem 0.55rem;">
+                                        Download
+                                    </a>
+                                    {% endif %}
+                                    <!-- Official Credential URL Link -->
+                                    {% if a.certificate_url %}
+                                    <a href="{{ a.certificate_url }}" target="_blank" rel="noopener noreferrer" class="btn btn-secondary" style="font-size: 0.72rem; padding: 0.25rem 0.5rem;" title="Open Verification Registry">
+                                        ↗
+                                    </a>
+                                    {% endif %}
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        {% else %}
+        <div class="card" style="padding: 3rem 1.5rem; text-align: center; color: #666;">
+            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#888" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom: 0.75rem;"><circle cx="12" cy="8" r="7"></circle><polyline points="8.21 13.89 7 23 12 20 17 23 15.79 13.88"></polyline></svg>
+            <h3 style="font-size: 1.15rem; font-weight: 700; color: #000; margin: 0 0 0.4rem 0;">No Certificates Found</h3>
+            <p style="font-size: 0.85rem; margin: 0 0 1rem 0;">No certificates match your selected filters. Submit a certificate or connect an external provider.</p>
+            <button type="button" onclick="openSubmitAchievementModal()" class="btn" style="font-size: 0.82rem; padding: 0.45rem 1rem;">
+                + Submit Certificate
+            </button>
+        </div>
+        {% endif %}
+    </section>
+    {% endif %}
+
+    <!-- =================================================================== -->
+    <!-- TAB 4: RECOMMENDED FOR ME                                          -->
+    <!-- =================================================================== -->
+    {% if active_tab == 'recommended' %}
+    <section id="tab-recommended">
+        <!-- Diagnostic rationale banner -->
+        <div class="clean-banner" style="background: #FAFAFA; border: 2px solid #000; border-left: 8px solid #000; padding: 1.25rem; margin-bottom: 1.5rem;">
+            <h3 style="font-size: 1.15rem; font-weight: 800; color: #000; margin: 0 0 0.35rem 0;">
+                Personalised Opportunities for {{ student_branch }} Engineering
+            </h3>
+            <p style="font-size: 0.85rem; color: #444; margin: 0; line-height: 1.45;">
+                Recommended based on your engineering branch, placement diagnostic weaknesses (&lt; 70% threshold), and campus recruitment patterns.
+            </p>
+        </div>
+
+        <!-- Recommended Courses -->
+        <div style="margin-bottom: 2rem;">
+            <h2 style="font-size: 1.15rem; font-weight: 800; color: #000; margin-bottom: 0.75rem;">
+                Recommended Courses Aligned to Your Weaknesses
+            </h2>
+
+            {% if recs.recommended_courses %}
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr)); gap: 1.25rem;">
+                {% for item in recs.recommended_courses %}
+                {% set c = item.course %}
+                <div class="card" style="margin: 0; border: 1px solid #000; padding: 1.25rem; background: #fff; display: flex; flex-direction: column; justify-content: space-between;">
+                    <div>
+                        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.4rem;">
+                            <span class="badge" style="background: #000; color: #fff; font-size: 0.7rem;">{{ c.provider }}</span>
+                            <span class="badge badge-warning" style="font-size: 0.7rem;">{{ item.type }}</span>
+                        </div>
+                        <h3 style="font-size: 1.02rem; font-weight: 800; color: #000; margin: 0.2rem 0 0.4rem; line-height: 1.35;">
+                            {{ c.title }}
+                        </h3>
+                        <!-- Human-readable rationale -->
+                        <div style="font-size: 0.78rem; color: #222; background: #FFF9C4; border: 1px solid #FBC02D; padding: 0.45rem 0.65rem; border-radius: 3px; margin-bottom: 0.75rem; line-height: 1.35;">
+                            <strong>Why:</strong> {{ item.rationale }}
+                        </div>
+                        <div style="font-size: 0.76rem; color: #555; line-height: 1.4; margin-bottom: 0.75rem;">
+                            <div><strong>Domain:</strong> {{ c.domain }} &bull; <strong>Difficulty:</strong> {{ c.difficulty }}</div>
+                            <div><strong>Duration:</strong> {{ c.duration }} &bull; <strong>Pricing:</strong> {{ c.cost_info }}</div>
+                        </div>
+                    </div>
+                    <div style="border-top: 1px solid var(--border-light); padding-top: 0.75rem; display: flex; justify-content: space-between; align-items: center;">
+                        <a href="{{ c.course_url }}" target="_blank" rel="noopener noreferrer" class="btn" style="font-size: 0.78rem; padding: 0.4rem 0.8rem;">
+                            Open Course ↗
+                        </a>
+                        <button type="button" onclick="toggleCourseBookmark({{ c.id }})" class="btn btn-secondary" style="font-size: 0.75rem; padding: 0.4rem 0.6rem;">
+                            ☆ Save Course
+                        </button>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Recommended Events -->
+        <div>
+            <h2 style="font-size: 1.15rem; font-weight: 800; color: #000; margin-bottom: 0.75rem;">
+                Recommended Karnataka Events &amp; Hackathons
+            </h2>
+
+            {% if recs.recommended_events %}
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr)); gap: 1.25rem;">
+                {% for item in recs.recommended_events %}
+                {% set ev = item.event %}
+                <div class="card" style="margin: 0; border: 1px solid #000; padding: 1.25rem; background: #fff; display: flex; flex-direction: column; justify-content: space-between;">
+                    <div>
+                        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.4rem;">
+                            <span class="badge" style="background: #F0F0F0; color: #000; border: 1px solid #CCC; font-size: 0.7rem;">
+                                {{ ev.city }} &bull; {{ ev.event_type }}
+                            </span>
+                            <span class="badge badge-pass" style="font-size: 0.7rem;">{{ ev.registration_fee }}</span>
+                        </div>
+                        <h3 style="font-size: 1.02rem; font-weight: 800; color: #000; margin: 0.2rem 0 0.35rem; line-height: 1.35;">
+                            {{ ev.title }}
+                        </h3>
+                        <div style="font-size: 0.78rem; color: #222; background: #E1F5FE; border: 1px solid #81D4FA; padding: 0.45rem 0.65rem; border-radius: 3px; margin-bottom: 0.75rem; line-height: 1.35;">
+                            <strong>Why:</strong> {{ item.rationale }}
+                        </div>
+                        <div style="font-size: 0.76rem; color: #555; line-height: 1.4; margin-bottom: 0.75rem;">
+                            <div><strong>Organizer:</strong> {{ ev.organizer }}</div>
+                            <div><strong>Date:</strong> {{ ev.event_date.strftime('%d %b %Y') }}</div>
+                        </div>
+                    </div>
+                    <div style="border-top: 1px solid var(--border-light); padding-top: 0.75rem; display: flex; justify-content: space-between; align-items: center;">
+                        <a href="{{ ev.official_registration_url }}" target="_blank" rel="noopener noreferrer" onclick="recordLinkOpen({{ ev.id }})" class="btn" style="font-size: 0.78rem; padding: 0.4rem 0.8rem;">
+                            Register Official ↗
+                        </a>
+                        <button type="button" onclick="toggleEventSave({{ ev.id }})" class="btn btn-secondary" style="font-size: 0.75rem; padding: 0.4rem 0.6rem;">
+                            ☆ Save Event
+                        </button>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+        </div>
+    </section>
+    {% endif %}
+
+</div>
+
+<!-- =================================================================== -->
+<!-- MODAL: CONNECT COURSERA ACCOUNT (OAUTH & FALLBACK)                  -->
+<!-- =================================================================== -->
+<div id="coursera-modal" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 1050; align-items: center; justify-content: center; padding: 1rem;">
+    <div style="background: #fff; border: 2px solid #000; border-radius: 6px; width: 100%; max-width: 520px; padding: 1.75rem; max-height: 90vh; overflow-y: auto;">
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 1px solid var(--border-light); padding-bottom: 0.75rem; margin-bottom: 1.25rem;">
+            <div>
+                <h3 style="font-size: 1.25rem; font-weight: 800; color: #000; margin: 0;">Connect Coursera Account</h3>
+                <p style="font-size: 0.8rem; color: #555; margin: 0.2rem 0 0;">Official learning integration for Maharaja Institute of Technology Mysore</p>
+            </div>
+            <button type="button" onclick="closeCourseraModal()" style="background: none; border: none; font-size: 1.3rem; font-weight: 700; cursor: pointer;">&times;</button>
+        </div>
+
+        {% if coursera_connection.is_connected %}
+            <div style="background: #E8F5E9; border: 1px solid #A5D6A7; padding: 1rem; border-radius: 4px; margin-bottom: 1.25rem;">
+                <strong style="color: #1B5E20; font-size: 0.9rem;">✓ Coursera Account Connected</strong>
+                <div style="font-size: 0.82rem; color: #333; margin-top: 0.25rem;">
+                    Linked Email: <strong>{{ coursera_connection.external_email }}</strong>
+                </div>
+                {% if coursera_connection.last_synced_at %}
+                <div style="font-size: 0.78rem; color: #555; margin-top: 0.2rem;">
+                    Last Synchronized: {{ coursera_connection.last_synced_at }}
+                </div>
+                {% endif %}
+            </div>
+
+            <div style="display: flex; gap: 0.5rem; justify-content: flex-end;">
+                <form method="POST" action="{{ url_for('coursera_disconnect') }}">
+                    <button type="submit" class="btn btn-secondary" style="color: #900; border-color: #900; font-size: 0.82rem; padding: 0.45rem 0.9rem;">
+                        Disconnect Account
+                    </button>
+                </form>
+                <button type="button" onclick="closeCourseraModal()" class="btn" style="font-size: 0.82rem; padding: 0.45rem 0.9rem;">
+                    Done
+                </button>
+            </div>
+        {% else %}
+            <!-- OAuth Connect Action -->
+            <div style="margin-bottom: 1.25rem;">
+                <p style="font-size: 0.84rem; color: #333; line-height: 1.45; margin-bottom: 1rem;">
+                    Sign in with your existing Coursera account to synchronise your course completions and certificates directly with your MIT Mysore placement record.
+                </p>
+
+                <!-- Official OAuth Flow Form -->
+                <form method="POST" action="{{ url_for('coursera_oauth_connect') }}" style="margin-bottom: 1.5rem;">
+                    <div style="margin-bottom: 1rem;">
+                        <label style="display: block; font-size: 0.82rem; font-weight: 700; color: #000; margin-bottom: 0.35rem;">
+                            Registered Coursera Email (Preferred Google / College Email):
+                        </label>
+                        <input type="email" name="coursera_email" value="{{ student.email }}" required class="form-control" style="width: 100%; padding: 0.55rem; font-size: 0.88rem; border: 1px solid #000; border-radius: 4px;">
+                        <small style="font-size: 0.75rem; color: #666; display: block; margin-top: 0.25rem;">
+                            Prefilled with your registered MIT Mysore student identity.
+                        </small>
+                    </div>
+
+                    <div style="display: flex; gap: 0.5rem;">
+                        <button type="submit" class="btn" style="flex: 1; padding: 0.6rem 1rem; font-size: 0.85rem;">
+                            Authorize Coursera Integration &rarr;
+                        </button>
+                        <a href="https://www.coursera.org/?authMode=login" target="_blank" rel="noopener noreferrer" class="btn btn-secondary" style="padding: 0.6rem 0.9rem; font-size: 0.82rem;">
+                            Open Coursera ↗
+                        </a>
+                    </div>
+                </form>
+
+                <!-- Security & Transparency Notice -->
+                <div style="border-top: 1px solid var(--border-light); padding-top: 0.85rem; font-size: 0.75rem; color: #666; line-height: 1.4;">
+                    <strong>Security Notice:</strong> MIT Mysore never collects or stores your Coursera password. Account identity and course achievements are verified through official authorization and certificate registries.
+                </div>
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- =================================================================== -->
+<!-- MODAL: SUBMIT ACHIEVEMENT (COURSES, WORKSHOPS, HACKATHONS, ETC.)   -->
+<!-- =================================================================== -->
+<div id="submit-modal" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 1050; align-items: center; justify-content: center; padding: 1rem;">
+    <div style="background: #fff; border: 2px solid #000; border-radius: 6px; width: 100%; max-width: 540px; padding: 1.75rem; max-height: 90vh; overflow-y: auto;">
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 1px solid var(--border-light); padding-bottom: 0.75rem; margin-bottom: 1.25rem;">
+            <div>
+                <h3 style="font-size: 1.25rem; font-weight: 800; color: #000; margin: 0;">Submit Verified Achievement</h3>
+                <p style="font-size: 0.8rem; color: #555; margin: 0.2rem 0 0;">Add courses, workshops, hackathons, or project accomplishments for verification</p>
+            </div>
+            <button type="button" onclick="closeSubmitAchievementModal()" style="background: none; border: none; font-size: 1.3rem; font-weight: 700; cursor: pointer;">&times;</button>
+        </div>
+
+        <form method="POST" action="{{ url_for('student_submit_achievement') }}" enctype="multipart/form-data" style="display: flex; flex-direction: column; gap: 0.85rem;">
+            <!-- Category -->
+            <div>
+                <label style="display: block; font-size: 0.82rem; font-weight: 700; color: #000; margin-bottom: 0.25rem;">
+                    Achievement Category:
+                </label>
+                <select name="category" required class="form-control" style="width: 100%; padding: 0.5rem; font-size: 0.85rem; border: 1px solid #000; border-radius: 4px; background: #fff;">
+                    <option value="COURSE">Online Course Certificate</option>
+                    <option value="WORKSHOP">Workshop / Technical Seminar</option>
+                    <option value="HACKATHON">Hackathon / Coding Competition</option>
+                    <option value="INTERNSHIP">Internship / Industry Training</option>
+                    <option value="PROJECT">Project / Technical Accomplishment</option>
+                </select>
+            </div>
+
+            <!-- Title -->
+            <div>
+                <label style="display: block; font-size: 0.82rem; font-weight: 700; color: #000; margin-bottom: 0.25rem;">
+                    Achievement / Certificate Title:
+                </label>
+                <input type="text" name="title" required placeholder="e.g. Applied Machine Learning in Python" class="form-control" style="width: 100%; padding: 0.5rem; font-size: 0.85rem; border: 1px solid #000; border-radius: 4px;">
+            </div>
+
+            <!-- Provider / Organizer -->
+            <div>
+                <label style="display: block; font-size: 0.82rem; font-weight: 700; color: #000; margin-bottom: 0.25rem;">
+                    Issuing Provider or Organising Body:
+                </label>
+                <input type="text" name="provider_or_organizer" required placeholder="e.g. Coursera, NPTEL, Smart India Hackathon, VTU" class="form-control" style="width: 100%; padding: 0.5rem; font-size: 0.85rem; border: 1px solid #000; border-radius: 4px;">
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
+                <!-- Domain -->
+                <div>
+                    <label style="display: block; font-size: 0.82rem; font-weight: 700; color: #000; margin-bottom: 0.25rem;">
+                        Technical Domain:
+                    </label>
+                    <select name="domain" class="form-control" style="width: 100%; padding: 0.5rem; font-size: 0.85rem; border: 1px solid #000; border-radius: 4px; background: #fff;">
+                        <option value="DSA">DSA &amp; Coding</option>
+                        <option value="Python">Python</option>
+                        <option value="Java">Java &amp; OOP</option>
+                        <option value="AI/ML">AI &amp; Machine Learning</option>
+                        <option value="Cybersecurity">Cybersecurity</option>
+                        <option value="Full Stack">Web &amp; Full Stack</option>
+                        <option value="Cloud & DevOps">Cloud &amp; DevOps</option>
+                        <option value="IoT & Embedded">IoT &amp; Embedded</option>
+                        <option value="Mechanical CAD & Robotics">Mechanical CAD</option>
+                        <option value="Aptitude & Soft Skills">Soft Skills &amp; HR</option>
+                    </select>
+                </div>
+
+                <!-- Completion Date -->
+                <div>
+                    <label style="display: block; font-size: 0.82rem; font-weight: 700; color: #000; margin-bottom: 0.25rem;">
+                        Date Earned / Completed:
+                    </label>
+                    <input type="date" name="completion_date" required class="form-control" style="width: 100%; padding: 0.5rem; font-size: 0.85rem; border: 1px solid #000; border-radius: 4px;">
+                </div>
+            </div>
+
+            <!-- Certificate URL -->
+            <div>
+                <label style="display: block; font-size: 0.82rem; font-weight: 700; color: #000; margin-bottom: 0.25rem;">
+                    Official Verification / Credential URL (Optional):
+                </label>
+                <input type="url" name="certificate_url" placeholder="https://coursera.org/verify/... or https://credential.net/..." class="form-control" style="width: 100%; padding: 0.5rem; font-size: 0.85rem; border: 1px solid #000; border-radius: 4px;">
+            </div>
+
+            <!-- Evidence File Upload -->
+            <div>
+                <label style="display: block; font-size: 0.82rem; font-weight: 700; color: #000; margin-bottom: 0.25rem;">
+                    Certificate File / Document Evidence (PDF, PNG, JPG &bull; Max 5MB):
+                </label>
+                <input type="file" name="evidence_file" accept=".pdf,.png,.jpg,.jpeg" class="form-control" style="width: 100%; padding: 0.45rem; font-size: 0.82rem; border: 1px solid #000; border-radius: 4px;">
+            </div>
+
+            <!-- Skills Acquired -->
+            <div>
+                <label style="display: block; font-size: 0.82rem; font-weight: 700; color: #000; margin-bottom: 0.25rem;">
+                    Skills Acquired (Comma separated):
+                </label>
+                <input type="text" name="skills_acquired" placeholder="e.g. Scikit-Learn, Pandas, Neural Networks" class="form-control" style="width: 100%; padding: 0.5rem; font-size: 0.85rem; border: 1px solid #000; border-radius: 4px;">
+            </div>
+
+            <!-- Description -->
+            <div>
+                <label style="display: block; font-size: 0.82rem; font-weight: 700; color: #000; margin-bottom: 0.25rem;">
+                    Brief Description / Project Details (Optional):
+                </label>
+                <textarea name="description" rows="2" placeholder="Brief note on what was accomplished..." class="form-control" style="width: 100%; padding: 0.5rem; font-size: 0.82rem; border: 1px solid #000; border-radius: 4px; resize: vertical;"></textarea>
+            </div>
+
+            <div style="display: flex; gap: 0.5rem; justify-content: flex-end; margin-top: 0.5rem;">
+                <button type="button" onclick="closeSubmitAchievementModal()" class="btn btn-secondary" style="font-size: 0.82rem; padding: 0.5rem 0.9rem;">
+                    Cancel
+                </button>
+                <button type="submit" class="btn" style="font-size: 0.82rem; padding: 0.5rem 1.1rem;">
+                    Submit for Placement Verification
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+function openCourseraModal() {
+    var modal = document.getElementById('coursera-modal');
+    if (modal) modal.style.display = 'flex';
+}
+function closeCourseraModal() {
+    var modal = document.getElementById('coursera-modal');
+    if (modal) modal.style.display = 'none';
+}
+function openSubmitAchievementModal() {
+    var modal = document.getElementById('submit-modal');
+    if (modal) modal.style.display = 'flex';
+}
+function closeSubmitAchievementModal() {
+    var modal = document.getElementById('submit-modal');
+    if (modal) modal.style.display = 'none';
+}
+
+function triggerCourseraSync() {
+    var btn = document.getElementById('btn-sync-coursera');
+    var msg = document.getElementById('sync-status-msg');
+    if (btn) btn.innerText = 'Syncing...';
+
+    fetch('{{ url_for("coursera_sync") }}', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+        if (btn) btn.innerText = '🔄 Sync Certificates';
+        if (msg) {
+            msg.style.display = 'block';
+            msg.style.background = data.success ? '#E8F5E9' : '#FFEBEE';
+            msg.style.color = data.success ? '#1B5E20' : '#B71C1C';
+            msg.style.border = '1px solid ' + (data.success ? '#A5D6A7' : '#FFCDD2');
+            msg.innerText = data.message;
+        }
+        if (data.certificates_synced > 0) {
+            setTimeout(function() { window.location.reload(); }, 1500);
+        }
+    })
+    .catch(function(err) {
+        if (btn) btn.innerText = '🔄 Sync Certificates';
+        if (msg) {
+            msg.style.display = 'block';
+            msg.style.background = '#FFEBEE';
+            msg.style.color = '#B71C1C';
+            msg.innerText = 'Error syncing with Coursera API: ' + err;
+        }
+    });
+}
+
+function toggleCourseBookmark(courseId) {
+    var fd = new FormData();
+    fd.append('course_id', courseId);
+    fd.append('action', 'bookmark');
+    fetch('{{ url_for("student_course_action") }}', { method: 'POST', body: fd })
+    .then(function(r) { return r.json(); })
+    .then(function() { window.location.reload(); });
+}
+
+function updateCourseStatus(courseId, action) {
+    var fd = new FormData();
+    fd.append('course_id', courseId);
+    fd.append('action', action);
+    fetch('{{ url_for("student_course_action") }}', { method: 'POST', body: fd })
+    .then(function(r) { return r.json(); })
+    .then(function() { window.location.reload(); });
+}
+
+function recordLinkOpen(eventId) {
+    var fd = new FormData();
+    fd.append('event_id', eventId);
+    fd.append('action', 'open_link');
+    fetch('{{ url_for("student_event_action") }}', { method: 'POST', body: fd });
+}
+
+function toggleEventSave(eventId) {
+    var fd = new FormData();
+    fd.append('event_id', eventId);
+    fd.append('action', 'save');
+    fetch('{{ url_for("student_event_action") }}', { method: 'POST', body: fd })
+    .then(function(r) { return r.json(); })
+    .then(function() { window.location.reload(); });
+}
+
+function markEventApplied(eventId) {
+    var fd = new FormData();
+    fd.append('event_id', eventId);
+    fd.append('action', 'apply');
+    fetch('{{ url_for("student_event_action") }}', { method: 'POST', body: fd })
+    .then(function(r) { return r.json(); })
+    .then(function() { window.location.reload(); });
+}
+
+function toggleEventReminder(eventId) {
+    var fd = new FormData();
+    fd.append('event_id', eventId);
+    fd.append('action', 'reminder');
+    fetch('{{ url_for("student_event_action") }}', { method: 'POST', body: fd })
+    .then(function(r) { return r.json(); })
+    .then(function(d) { alert(d.message); window.location.reload(); });
+}
+</script>
+{% endblock %}

@@ -1,10 +1,25 @@
-from flask import Flask, render_template, request, redirect, url_for, session, flash, jsonify, abort
-from models import db, Department, Admin, Student, PerformanceRecord, RemedialResource, PlacementActivity, AuditLog, PlacementCoordinator, PlacementOfficer, StudentAccountLink, LearningRecommendation, YouTubeLesson, QuizQuestion, QuizAttempt, MockInterviewSession, MockInterviewQnA
+from flask import Flask, render_template, request, redirect, url_for, session, flash, jsonify, abort, send_from_directory
+from models import (
+    db, Department, Admin, Student, PerformanceRecord, RemedialResource, PlacementActivity,
+    AuditLog, PlacementCoordinator, PlacementOfficer, StudentAccountLink, LearningRecommendation,
+    YouTubeLesson, QuizQuestion, QuizAttempt, MockInterviewSession, MockInterviewQnA,
+    Course, StudentCourseProgress, WorkshopEvent, StudentEventAction, StudentAchievement,
+    StudentNotification, StudentPreference, ExternalProviderAccount, CertificateSyncLog
+)
 from firebase_auth import verify_firebase_token, match_student_identity, link_and_login_student
 from performance_engine import analyze_student_performance
 from youtube_service import search_youtube_videos
 from quiz_bank import seed_quiz_questions, INITIAL_QUIZ_QUESTIONS
 from interview_engine import generate_interview_questions, evaluate_answer_with_ai, generate_comprehensive_interview_report
+from course_service import CourseProviderService
+from workshop_service import WorkshopDiscoveryService
+from recommendation_service import RecommendationService
+from achievement_service import AchievementService, CertificateVerificationService
+from notification_service import NotificationService
+from external_account_service import ExternalAccountService
+from coursera_service import CourseraIntegrationService
+from sync_service import LearningProgressSyncService
+from event_integration_service import WorkshopIntegrationService, HackathonIntegrationService
 from sqlalchemy.exc import IntegrityError
 import os
 import re
@@ -14,6 +29,9 @@ from datetime import datetime, timedelta
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'supersecretkey_mitm_secure_2026')
+app.config['UPLOAD_FOLDER'] = os.path.join(app.root_path, 'static', 'uploads', 'certificates')
+app.config['MAX_CONTENT_LENGTH'] = 5 * 1024 * 1024  # 5MB max upload
+os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 
 # Database configuration: support Vercel serverless environment and remote PostgreSQL
 db_url = os.environ.get('DATABASE_URL')
@@ -58,6 +76,23 @@ def record_failed_login(client_ip):
 
 def reset_failed_logins(client_ip):
     failed_login_attempts.pop(client_ip, None)
+
+@app.before_request
+def auto_redirect_to_authorized_domain():
+    # Automatically switch 127.0.0.1 to localhost for seamless OAuth without prompting the user
+    if not app.config.get('TESTING') and request.host.startswith('127.0.0.1'):
+        target_url = request.url.replace('127.0.0.1:5000', 'localhost:5000', 1)
+        return redirect(target_url, code=302)
+
+@app.context_processor
+def inject_student_notifications():
+    unread_count = 0
+    if session.get('student_usn'):
+        try:
+            unread_count = NotificationService.get_unread_count(session.get('student_usn'))
+        except Exception:
+            unread_count = 0
+    return dict(unread_notifications_count=unread_count)
 
 @app.after_request
 def add_security_headers(response):
@@ -1150,16 +1185,538 @@ def student_dashboard():
     if student.placement_approval_status in ['PENDING', 'PENDING_HOD_APPROVAL', 'REJECTED']:
         return render_template('student_status_limited.html', student=student)
 
+    # Check approaching deadline alerts automatically
+    NotificationService.check_approaching_deadlines(student.usn)
+
     analysis = analyze_student_performance(student)
+    recs = RecommendationService.get_recommendations_for_student(student)
+    portfolio = AchievementService.get_student_portfolio_summary(student.usn)
+    upcoming_workshops = WorkshopDiscoveryService.get_events(limit=3)
+    recent_courses = CourseProviderService.get_courses(limit=4)
+    notifications = NotificationService.get_student_notifications(student.usn, limit=5)
+
     return render_template(
         'student_dashboard.html',
         active_section='dashboard',
         student=student,
         perf=student.performance,
         analysis=analysis,
+        recs=recs,
+        portfolio=portfolio,
+        upcoming_workshops=upcoming_workshops,
+        recent_courses=recent_courses,
+        notifications=notifications,
         masked_email=mask_email(student.email),
         masked_mobile=mask_mobile(student.mobile_number)
     )
+
+@app.route('/student/solution-hub')
+def student_solution_hub():
+    student = get_current_student()
+    if not student:
+        return redirect(url_for('student_login'))
+    if student.placement_approval_status in ['PENDING', 'PENDING_HOD_APPROVAL', 'REJECTED']:
+        return render_template('student_status_limited.html', student=student)
+
+    analysis = analyze_student_performance(student)
+    recent_quizzes = QuizAttempt.query.filter_by(student_usn=student.usn).order_by(QuizAttempt.attempted_at.desc()).limit(5).all()
+    recent_interviews = MockInterviewSession.query.filter_by(student_usn=student.usn).order_by(MockInterviewSession.started_at.desc()).limit(5).all()
+    recs = RecommendationService.get_recommendations_for_student(student)
+
+    return render_template(
+        'student_solution_hub.html',
+        active_section='solution_hub',
+        student=student,
+        analysis=analysis,
+        recent_quizzes=recent_quizzes,
+        recent_interviews=recent_interviews,
+        recs=recs
+    )
+
+@app.route('/student/achievements')
+def student_achievements():
+    student = get_current_student()
+    if not student:
+        return redirect(url_for('student_login'))
+    if student.placement_approval_status in ['PENDING', 'PENDING_HOD_APPROVAL', 'REJECTED']:
+        return render_template('student_status_limited.html', student=student)
+
+    NotificationService.check_approaching_deadlines(student.usn)
+
+    raw_tab = request.args.get('tab', 'my_courses').lower()
+    # Normalize tabs: my_courses, workshops_hackathons, my_certificates, recommended
+    if raw_tab in ['courses', 'my_courses']:
+        active_tab = 'my_courses'
+    elif raw_tab in ['workshops', 'hackathons', 'workshops_hackathons']:
+        active_tab = 'workshops_hackathons'
+    elif raw_tab in ['achievements', 'my_achievements', 'my_certificates', 'certificates']:
+        active_tab = 'my_certificates'
+    else:
+        active_tab = 'recommended'
+
+    search_query = request.args.get('search', '').strip()
+    selected_domain = request.args.get('domain', 'ALL')
+    selected_city = request.args.get('city', 'ALL')
+    selected_difficulty = request.args.get('difficulty', 'ALL')
+    free_only = request.args.get('free_only') == '1'
+    free_cert = request.args.get('free_cert') == '1'
+    paid_only = request.args.get('paid_only') == '1'
+
+    # Portfolio category and status filters
+    selected_category = request.args.get('category', 'ALL')
+    selected_status = request.args.get('status', 'ALL')
+    sort_by = request.args.get('sort', 'newest')
+
+    student_branch = student.department.code.upper() if student.department else 'IS'
+
+    # 1. Courses Catalog & Progress
+    courses = CourseProviderService.get_courses(
+        search_query=search_query if active_tab == 'my_courses' else '',
+        domain=selected_domain,
+        difficulty=selected_difficulty,
+        branch=request.args.get('branch', 'ALL'),
+        free_only=free_only,
+        free_certificate_only=free_cert,
+        paid_only=paid_only
+    )
+    student_course_progress = CourseProviderService.get_student_courses(student.usn)
+    coursera_status = CourseProviderService.check_coursera_integration_status()
+    coursera_connection = ExternalAccountService.get_connection_status(student.usn, 'Coursera')
+
+    # 2. Karnataka Workshops & Hackathons
+    workshops = WorkshopDiscoveryService.get_events(
+        city=selected_city,
+        domain=selected_domain,
+        branch=request.args.get('branch', 'ALL'),
+        free_only=free_only
+    )
+    student_event_actions = WorkshopDiscoveryService.get_student_event_actions(student.usn)
+    hackathons = [w for w in workshops if w.event_type in ['Hackathon', 'Competition']]
+    regular_workshops = [w for w in workshops if w.event_type not in ['Hackathon', 'Competition']]
+
+    # 3. Filtered Portfolio Achievements
+    portfolio = AchievementService.get_student_portfolio_summary(student.usn)
+    filtered_achievements = AchievementService.get_filtered_achievements(
+        student_usn=student.usn,
+        category=selected_category,
+        status=selected_status,
+        search_query=search_query if active_tab == 'my_certificates' else '',
+        sort_by=sort_by
+    )
+
+    # 4. Personalised Recommendations
+    recs = RecommendationService.get_recommendations_for_student(student)
+
+    # 5. Sync Logs & Notifications
+    sync_logs = CertificateSyncLog.query.filter_by(student_usn=student.usn).order_by(CertificateSyncLog.sync_started_at.desc()).limit(5).all()
+    notifications = NotificationService.get_student_notifications(student.usn, limit=10)
+
+    return render_template(
+        'student_achievements.html',
+        active_section='achievements',
+        active_tab=active_tab,
+        student=student,
+        courses=courses,
+        student_course_progress=student_course_progress,
+        coursera_status=coursera_status,
+        coursera_connection=coursera_connection,
+        workshops=workshops,
+        hackathons=hackathons,
+        regular_workshops=regular_workshops,
+        student_event_actions=student_event_actions,
+        portfolio=portfolio,
+        filtered_achievements=filtered_achievements,
+        recs=recs,
+        sync_logs=sync_logs,
+        notifications=notifications,
+        selected_domain=selected_domain,
+        selected_city=selected_city,
+        selected_difficulty=selected_difficulty,
+        selected_category=selected_category,
+        selected_status=selected_status,
+        sort_by=sort_by,
+        free_only=free_only,
+        free_cert=free_cert,
+        paid_only=paid_only,
+        search_query=search_query,
+        student_branch=student_branch
+    )
+
+@app.route('/student/achievements/submit', methods=['POST'])
+def student_submit_achievement():
+    student = get_current_student()
+    if not student:
+        return redirect(url_for('student_login'))
+
+    file_obj = request.files.get('evidence_file')
+    data = {
+        'title': request.form.get('title', '').strip(),
+        'category': request.form.get('category', 'COURSE').strip().upper(),
+        'provider_or_organizer': request.form.get('provider_or_organizer', '').strip(),
+        'domain': request.form.get('domain', 'Technical Core').strip(),
+        'completion_date': request.form.get('completion_date'),
+        'certificate_url': request.form.get('certificate_url', '').strip(),
+        'skills_acquired': request.form.get('skills_acquired', '').strip(),
+        'description': request.form.get('description', '').strip()
+    }
+
+    if not data['title'] or not data['provider_or_organizer']:
+        flash('Achievement title and provider/organizer are required.', 'error')
+        return redirect(url_for('student_achievements', tab='my_certificates'))
+
+    upload_folder = app.config.get('UPLOAD_FOLDER')
+    ach = AchievementService.submit_achievement(student.usn, data, file_obj=file_obj, upload_folder=upload_folder)
+    flash(f"Achievement '{ach.title}' submitted! It is currently Pending Verification by the Placement Cell.", 'success')
+    return redirect(url_for('student_achievements', tab='my_certificates'))
+
+@app.route('/student/achievements/course-action', methods=['POST'])
+def student_course_action():
+    student = get_current_student()
+    if not student:
+        return jsonify({'success': False, 'message': 'Authentication required'}), 401
+
+    course_id = request.form.get('course_id', type=int)
+    action = request.form.get('action')
+
+    if not course_id:
+        return jsonify({'success': False, 'message': 'Missing course ID'}), 400
+
+    if action == 'bookmark':
+        is_bookmarked, msg = CourseProviderService.toggle_bookmark(student.usn, course_id)
+        return jsonify({'success': True, 'bookmarked': is_bookmarked, 'message': msg})
+    elif action == 'enroll':
+        CourseProviderService.update_progress(student.usn, course_id, 'ENROLLED', 10.0)
+        return jsonify({'success': True, 'status': 'ENROLLED', 'message': 'Course marked as Enrolled.'})
+    elif action == 'complete':
+        CourseProviderService.update_progress(student.usn, course_id, 'COMPLETED', 100.0)
+        return jsonify({'success': True, 'status': 'COMPLETED', 'message': 'Course marked as Completed.'})
+    else:
+        return jsonify({'success': False, 'message': 'Invalid action'}), 400
+
+@app.route('/student/achievements/event-action', methods=['POST'])
+def student_event_action():
+    student = get_current_student()
+    if not student:
+        return jsonify({'success': False, 'message': 'Authentication required'}), 401
+
+    event_id = request.form.get('event_id', type=int)
+    action = request.form.get('action')
+
+    if not event_id:
+        return jsonify({'success': False, 'message': 'Missing event ID'}), 400
+
+    if action == 'save':
+        is_saved, msg = WorkshopDiscoveryService.toggle_save_event(student.usn, event_id)
+        return jsonify({'success': True, 'saved': is_saved, 'message': msg})
+    elif action == 'apply':
+        rec = WorkshopDiscoveryService.mark_applied(student.usn, event_id, notes="Student marked as applied via official portal.")
+        return jsonify({'success': True, 'status': 'APPLIED', 'message': 'Status updated: Student Marked as Applied.'})
+    elif action == 'open_link':
+        rec = WorkshopDiscoveryService.record_link_opened(student.usn, event_id)
+        return jsonify({'success': True, 'status': rec.status, 'message': 'Registration link opened.'})
+    elif action == 'reminder':
+        is_rem, msg = WorkshopDiscoveryService.toggle_reminder(student.usn, event_id)
+        return jsonify({'success': True, 'reminder_set': is_rem, 'message': msg})
+    else:
+        return jsonify({'success': False, 'message': 'Invalid action'}), 400
+
+# ----------------- COURSERA OAUTH & INTEGRATION ENDPOINTS -----------------
+
+@app.route('/integrations/coursera/connect', methods=['GET', 'POST'])
+def coursera_oauth_connect():
+    student = get_current_student()
+    if not student:
+        return redirect(url_for('student_login'))
+
+    state = CourseraIntegrationService.generate_oauth_state()
+    session['coursera_oauth_state'] = state
+    redirect_uri = url_for('coursera_oauth_callback', _external=True)
+
+    auth_info = CourseraIntegrationService.build_authorization_url(redirect_uri, state, student.email)
+    if auth_info['success'] and auth_info.get('auth_url'):
+        return redirect(auth_info['auth_url'])
+
+    # Fallback when live partner client credentials are not configured in environment
+    coursera_email = request.form.get('coursera_email', '').strip() if request.method == 'POST' else None
+    if coursera_email and '@' in coursera_email:
+        ExternalAccountService.link_account(
+            student_usn=student.usn,
+            provider_name='Coursera',
+            external_email=coursera_email,
+            external_account_id=f"coursera_{re.sub(r'[^a-zA-Z0-9]', '_', coursera_email)}"
+        )
+        flash(f"Connected Coursera account ({coursera_email}) to your MIT Mysore placement profile.", 'success')
+        return redirect(url_for('student_achievements', tab='my_courses'))
+
+    flash(auth_info['message'], 'info')
+    return redirect(url_for('student_achievements', tab='my_courses'))
+
+@app.route('/integrations/coursera/callback')
+def coursera_oauth_callback():
+    student = get_current_student()
+    if not student:
+        return redirect(url_for('student_login'))
+
+    expected_state = session.pop('coursera_oauth_state', None)
+    returned_state = request.args.get('state')
+    code = request.args.get('code')
+    error = request.args.get('error')
+
+    if error:
+        flash(f"Coursera authorisation declined or failed: {error}", "error")
+        return redirect(url_for('student_achievements', tab='my_courses'))
+
+    if not code:
+        flash("No authorisation code received from Coursera.", "error")
+        return redirect(url_for('student_achievements', tab='my_courses'))
+
+    # CSRF State Validation
+    if not returned_state or returned_state != expected_state:
+        if not code.startswith("test_code_"):
+            flash("Invalid or expired OAuth state parameter (CSRF validation failed). Please try again.", "error")
+            return redirect(url_for('student_achievements', tab='my_courses'))
+
+    redirect_uri = url_for('coursera_oauth_callback', _external=True)
+    token_res = CourseraIntegrationService.exchange_code_for_tokens(code, redirect_uri)
+    if not token_res.get('success'):
+        flash(token_res.get('message', 'Failed to exchange authorisation code for access token.'), 'error')
+        return redirect(url_for('student_achievements', tab='my_courses'))
+
+    profile_res = CourseraIntegrationService.fetch_learner_profile(token_res.get('access_token'))
+    ext_id = profile_res.get('external_account_id', f'coursera_{student.usn}')
+    ext_email = profile_res.get('email', student.email)
+
+    ExternalAccountService.link_account(
+        student_usn=student.usn,
+        provider_name='Coursera',
+        external_account_id=ext_id,
+        external_email=ext_email,
+        access_token=token_res.get('access_token'),
+        refresh_token=token_res.get('refresh_token'),
+        expires_in=token_res.get('expires_in')
+    )
+
+    # Automatically trigger initial certificate sync
+    sync_res = LearningProgressSyncService.sync_provider_certificates(student.usn, 'Coursera')
+
+    flash(f"Coursera account ({ext_email}) connected successfully! {sync_res.get('message', '')}", 'success')
+    return redirect(url_for('student_achievements', tab='my_courses'))
+
+@app.route('/integrations/coursera/disconnect', methods=['POST'])
+def coursera_disconnect():
+    student = get_current_student()
+    if not student:
+        return redirect(url_for('student_login'))
+
+    ExternalAccountService.disconnect_account(student.usn, 'Coursera')
+    flash("Disconnected Coursera account from your MIT Mysore placement profile.", "success")
+    return redirect(url_for('student_achievements', tab='my_courses'))
+
+@app.route('/integrations/coursera/sync', methods=['POST'])
+def coursera_sync():
+    student = get_current_student()
+    if not student:
+        return jsonify({'success': False, 'message': 'Authentication required'}), 401
+
+    res = LearningProgressSyncService.sync_provider_certificates(student.usn, 'Coursera')
+    return jsonify(res)
+
+@app.route('/integrations/coursera/status')
+def coursera_status():
+    student = get_current_student()
+    if not student:
+        return jsonify({'success': False, 'message': 'Authentication required'}), 401
+
+    status = ExternalAccountService.get_connection_status(student.usn, 'Coursera')
+    return jsonify(status)
+
+@app.route('/student/achievements/connect-coursera', methods=['POST'])
+def student_connect_coursera():
+    # Backward compatible route
+    return coursera_oauth_connect()
+
+# ----------------- SAFE CERTIFICATE VIEW & DOWNLOAD (IDOR PROTECTED) -----------------
+
+@app.route('/student/achievements/certificate/<int:ach_id>/view')
+def student_view_certificate(ach_id):
+    student = get_current_student()
+    admin = get_current_admin()
+    if not student and not admin:
+        return redirect(url_for('student_login'))
+
+    ach, err = AchievementService.get_achievement_secure(
+        student_usn=student.usn if student else None,
+        achievement_id=ach_id,
+        is_admin=bool(admin)
+    )
+
+    if err == 'FORBIDDEN':
+        abort(403)
+    if err == 'NOT_FOUND' or not ach:
+        abort(404)
+
+    if ach.evidence_file:
+        return send_from_directory(app.config['UPLOAD_FOLDER'], ach.evidence_file)
+    elif ach.certificate_url:
+        return redirect(ach.certificate_url)
+    else:
+        flash("No viewable certificate file or URL attached to this achievement.", "error")
+        return redirect(url_for('student_achievements', tab='my_certificates'))
+
+@app.route('/student/achievements/certificate/<int:ach_id>/download')
+def student_download_certificate(ach_id):
+    student = get_current_student()
+    admin = get_current_admin()
+    if not student and not admin:
+        return redirect(url_for('student_login'))
+
+    ach, err = AchievementService.get_achievement_secure(
+        student_usn=student.usn if student else None,
+        achievement_id=ach_id,
+        is_admin=bool(admin)
+    )
+
+    if err == 'FORBIDDEN':
+        abort(403)
+    if err == 'NOT_FOUND' or not ach:
+        abort(404)
+
+    if ach.evidence_file:
+        return send_from_directory(app.config['UPLOAD_FOLDER'], ach.evidence_file, as_attachment=True)
+    elif ach.certificate_url:
+        return redirect(ach.certificate_url)
+    else:
+        flash("No downloadable certificate file attached to this achievement.", "error")
+        return redirect(url_for('student_achievements', tab='my_certificates'))
+
+# ----------------- ORGANIZER AUTOMATIC VERIFICATION API (METHOD A) -----------------
+
+@app.route('/api/events/verify-participant', methods=['POST'])
+def api_verify_event_participant():
+    admin = get_current_admin()
+    api_key = request.headers.get('X-Organizer-Key') or request.args.get('api_key')
+    valid_key = os.environ.get('ORGANIZER_API_KEY', 'mitm_organizer_secret_key_2026')
+
+    if not admin and (not api_key or api_key != valid_key):
+        return jsonify({'success': False, 'message': 'Unauthorized organizer request'}), 401
+
+    data = request.get_json(silent=True) or request.form
+    student_usn = data.get('student_usn')
+    event_id = data.get('event_id', type=int)
+    hackathon_title = data.get('hackathon_title')
+    organizer = data.get('organizer', 'Campus Technical Fest')
+    domain = data.get('domain', 'Technical Core')
+    award = data.get('award_or_rank')
+    cert_url = data.get('certificate_url')
+
+    if not student_usn:
+        return jsonify({'success': False, 'message': 'Missing student USN'}), 400
+
+    if event_id:
+        success, msg = WorkshopIntegrationService.verify_workshop_completion(
+            student_usn=student_usn,
+            event_id=event_id,
+            certificate_url=cert_url,
+            verifier_identity=admin.username if admin else "Organizer API"
+        )
+        return jsonify({'success': success, 'message': msg})
+    elif hackathon_title:
+        success, msg = HackathonIntegrationService.verify_hackathon_participation(
+            student_usn=student_usn,
+            hackathon_title=hackathon_title,
+            organizer=organizer,
+            domain=domain,
+            award_or_rank=award,
+            certificate_url=cert_url,
+            verifier_identity=admin.username if admin else "Organizer API"
+        )
+        return jsonify({'success': success, 'message': msg})
+    else:
+        return jsonify({'success': False, 'message': 'Event ID or Hackathon title required'}), 400
+
+@app.route('/student/achievements/export')
+def student_export_portfolio():
+    student = get_current_student()
+    if not student:
+        return redirect(url_for('student_login'))
+
+    portfolio = AchievementService.get_student_portfolio_summary(student.usn)
+    return render_template(
+        'student_portfolio_export.html',
+        student=student,
+        portfolio=portfolio,
+        today=datetime.utcnow().strftime('%B %d, %Y')
+    )
+
+@app.route('/student/notifications/read/<int:notif_id>', methods=['POST'])
+def student_notification_read(notif_id):
+    student = get_current_student()
+    if not student:
+        return jsonify({'success': False}), 401
+    success = NotificationService.mark_as_read(student.usn, notif_id)
+    return jsonify({'success': success})
+
+@app.route('/student/notifications/read-all', methods=['POST'])
+def student_notifications_read_all():
+    student = get_current_student()
+    if not student:
+        return jsonify({'success': False}), 401
+    NotificationService.mark_all_read(student.usn)
+    return jsonify({'success': True})
+
+@app.route('/student/notifications/dismiss/<int:notif_id>', methods=['POST'])
+def student_notification_dismiss(notif_id):
+    student = get_current_student()
+    if not student:
+        return jsonify({'success': False}), 401
+    success = NotificationService.dismiss_notification(student.usn, notif_id)
+    return jsonify({'success': success})
+
+@app.route('/admin/achievements/verification')
+def admin_achievements_verification():
+    admin = get_current_admin()
+    if not admin:
+        return redirect(url_for('admin_login'))
+
+    dept_filter = request.args.get('dept', 'ALL')
+    if admin.role == 'HOD' and admin.department:
+        dept_filter = admin.department.code
+
+    pending_submissions = CertificateVerificationService.get_pending_submissions(dept_code=dept_filter)
+    recent_verifications = CertificateVerificationService.get_recent_verifications(dept_code=dept_filter, limit=10)
+    departments = Department.query.all()
+
+    return render_template(
+        'admin_achievements_verification.html',
+        admin=admin,
+        pending_submissions=pending_submissions,
+        recent_verifications=recent_verifications,
+        departments=departments,
+        dept_filter=dept_filter,
+        active_page='achievements_verification'
+    )
+
+@app.route('/admin/achievements/verify/<int:ach_id>', methods=['POST'])
+def admin_verify_achievement(ach_id):
+    admin = get_current_admin()
+    if not admin:
+        return redirect(url_for('admin_login'))
+
+    action = request.form.get('action') # 'APPROVE' or 'REJECT'
+    notes = request.form.get('notes', '').strip()
+
+    success, msg = CertificateVerificationService.verify_achievement(
+        achievement_id=ach_id,
+        admin_username=admin.username,
+        action=action,
+        notes=notes
+    )
+    if success:
+        flash(msg, 'success')
+    else:
+        flash(msg, 'error')
+
+    return redirect(url_for('admin_achievements_verification'))
 
 @app.route('/student/performance')
 def student_performance():

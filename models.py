@@ -107,6 +107,13 @@ class Student(db.Model):
     youtube_lessons = db.relationship('YouTubeLesson', backref='student', lazy=True, order_by='YouTubeLesson.created_at.desc()')
     quiz_attempts = db.relationship('QuizAttempt', backref='student', lazy=True, order_by='QuizAttempt.attempted_at.desc()')
     interview_sessions = db.relationship('MockInterviewSession', backref='student', lazy=True, order_by='MockInterviewSession.started_at.desc()')
+    course_progress = db.relationship('StudentCourseProgress', backref='student', lazy=True, cascade='all, delete-orphan', order_by='StudentCourseProgress.saved_at.desc()')
+    event_actions = db.relationship('StudentEventAction', backref='student', lazy=True, cascade='all, delete-orphan', order_by='StudentEventAction.updated_at.desc()')
+    achievements = db.relationship('StudentAchievement', backref='student', lazy=True, cascade='all, delete-orphan', order_by='StudentAchievement.completion_date.desc()')
+    notifications = db.relationship('StudentNotification', backref='student', lazy=True, cascade='all, delete-orphan', order_by='StudentNotification.created_at.desc()')
+    preference = db.relationship('StudentPreference', backref='student', uselist=False, lazy=True, cascade='all, delete-orphan')
+    provider_accounts = db.relationship('ExternalProviderAccount', backref='student', lazy=True, cascade='all, delete-orphan', order_by='ExternalProviderAccount.created_at.desc()')
+    sync_logs = db.relationship('CertificateSyncLog', backref='student', lazy=True, cascade='all, delete-orphan', order_by='CertificateSyncLog.sync_started_at.desc()')
 
     @property
     def placement_score(self):
@@ -302,5 +309,166 @@ class MockInterviewQnA(db.Model):
     feedback = db.Column(db.Text, nullable=True)
     follow_up_question = db.Column(db.Text, nullable=True)
     answered_at = db.Column(db.DateTime, nullable=True)
+
+# ----------------- MODULE 3: ACHIEVEMENT & WORKSHOP HUB MODELS -----------------
+
+class Course(db.Model):
+    __tablename__ = 'courses'
+    id = db.Column(db.Integer, primary_key=True)
+    course_id = db.Column(db.String(100), unique=True, nullable=False, index=True)
+    title = db.Column(db.String(255), nullable=False)
+    description = db.Column(db.Text, nullable=True)
+    provider = db.Column(db.String(100), default='Coursera', index=True)
+    domain = db.Column(db.String(100), nullable=False, index=True)
+    target_branches = db.Column(db.String(100), default='ALL') # 'IS,CS', 'EC', 'ME', 'ALL'
+    difficulty = db.Column(db.String(50), default='Intermediate')
+    skills_covered = db.Column(db.String(255), default='')
+    duration = db.Column(db.String(50), default='4-6 Weeks')
+    course_url = db.Column(db.String(500), nullable=False)
+    thumbnail_url = db.Column(db.String(500), nullable=True)
+    is_free = db.Column(db.Boolean, default=True, index=True)
+    free_certificate = db.Column(db.Boolean, default=False, index=True)
+    cost_info = db.Column(db.String(100), default='Free to Audit')
+    certificate_info = db.Column(db.String(255), default='Shareable Certificate upon completion')
+    rating = db.Column(db.Float, default=4.8)
+    last_verified_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    student_progress = db.relationship('StudentCourseProgress', backref='course', lazy=True, cascade='all, delete-orphan')
+
+class StudentCourseProgress(db.Model):
+    __tablename__ = 'student_course_progress'
+    id = db.Column(db.Integer, primary_key=True)
+    student_usn = db.Column(db.String(20), db.ForeignKey('students.usn'), nullable=False, index=True)
+    course_id = db.Column(db.Integer, db.ForeignKey('courses.id'), nullable=False, index=True)
+    status = db.Column(db.String(30), default='BOOKMARKED', index=True) # BOOKMARKED, ENROLLED, IN_PROGRESS, COMPLETED
+    progress_pct = db.Column(db.Float, default=0.0)
+    saved_at = db.Column(db.DateTime, default=datetime.utcnow)
+    enrolled_at = db.Column(db.DateTime, nullable=True)
+    completed_at = db.Column(db.DateTime, nullable=True)
+
+    __table_args__ = (db.UniqueConstraint('student_usn', 'course_id', name='uq_student_course'),)
+
+class WorkshopEvent(db.Model):
+    __tablename__ = 'workshop_events'
+    id = db.Column(db.Integer, primary_key=True)
+    title = db.Column(db.String(255), nullable=False)
+    organizer = db.Column(db.String(150), nullable=False)
+    domain = db.Column(db.String(100), nullable=False, index=True)
+    target_branches = db.Column(db.String(100), default='ALL') # 'IS,CS', 'EC', 'ME', 'ALL'
+    event_type = db.Column(db.String(50), default='Workshop') # Workshop, Hackathon, Technical Fest, Bootcamp
+    city = db.Column(db.String(50), default='Bengaluru', index=True) # Bengaluru, Mysuru, Mangaluru, Hubballi, Belagavi, Online
+    venue_mode = db.Column(db.String(50), default='In-Person') # In-Person, Online, Hybrid
+    venue_details = db.Column(db.String(255), default='Campus Center')
+    event_date = db.Column(db.DateTime, nullable=False)
+    registration_deadline = db.Column(db.DateTime, nullable=False)
+    is_free = db.Column(db.Boolean, default=True, index=True)
+    registration_fee = db.Column(db.String(50), default='Free of Cost')
+    certificate_available = db.Column(db.Boolean, default=True)
+    certificate_conditions = db.Column(db.String(255), default='Certificate awarded upon completion')
+    official_registration_url = db.Column(db.String(500), nullable=False)
+    source_url = db.Column(db.String(500), nullable=True)
+    is_verified = db.Column(db.Boolean, default=True)
+    last_verified_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    student_actions = db.relationship('StudentEventAction', backref='event', lazy=True, cascade='all, delete-orphan')
+
+class StudentEventAction(db.Model):
+    __tablename__ = 'student_event_actions'
+    id = db.Column(db.Integer, primary_key=True)
+    student_usn = db.Column(db.String(20), db.ForeignKey('students.usn'), nullable=False, index=True)
+    event_id = db.Column(db.Integer, db.ForeignKey('workshop_events.id'), nullable=False, index=True)
+    status = db.Column(db.String(30), default='SAVED', index=True) # SAVED, REGISTRATION_OPENED, APPLIED, ATTENDED
+    reminder_set = db.Column(db.Boolean, default=False)
+    notes = db.Column(db.String(255), nullable=True)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    __table_args__ = (db.UniqueConstraint('student_usn', 'event_id', name='uq_student_event'),)
+
+class StudentAchievement(db.Model):
+    __tablename__ = 'student_achievements'
+    id = db.Column(db.Integer, primary_key=True)
+    student_usn = db.Column(db.String(20), db.ForeignKey('students.usn'), nullable=False, index=True)
+    category = db.Column(db.String(50), default='COURSE') # COURSE, CERTIFICATE, WORKSHOP, HACKATHON, INTERNSHIP, COMPETITION, PROJECT, TRAINING
+    achievement_type = db.Column(db.String(50), default='COURSE') # Normalized: COURSE, WORKSHOP, HACKATHON, INTERNSHIP, COMPETITION
+    title = db.Column(db.String(255), nullable=False)
+    provider_or_organizer = db.Column(db.String(150), nullable=False)
+    domain = db.Column(db.String(100), nullable=False)
+    completion_date = db.Column(db.DateTime, nullable=False)
+    certificate_url = db.Column(db.String(500), nullable=True)
+    evidence_file = db.Column(db.String(255), nullable=True)
+    skills_acquired = db.Column(db.String(255), nullable=True)
+    verification_status = db.Column(db.String(30), default='PENDING_VERIFICATION', index=True) # PENDING_VERIFICATION, VERIFIED, REJECTED
+    verification_method = db.Column(db.String(50), default='MANUAL_SUBMISSION') # OAUTH_SYNC, ORGANIZER_VERIFIED, MANUAL_SUBMISSION, ADMIN_VERIFIED
+    verified_by = db.Column(db.String(100), nullable=True)
+    verified_at = db.Column(db.DateTime, nullable=True)
+    verification_notes = db.Column(db.String(255), nullable=True)
+    external_certificate_id = db.Column(db.String(100), nullable=True, index=True)
+    is_coursera_sync = db.Column(db.Boolean, default=False)
+    description = db.Column(db.Text, nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    __table_args__ = (
+        db.UniqueConstraint('student_usn', 'provider_or_organizer', 'external_certificate_id', name='uq_student_provider_cert'),
+    )
+
+class StudentNotification(db.Model):
+    __tablename__ = 'student_notifications'
+    id = db.Column(db.Integer, primary_key=True)
+    student_usn = db.Column(db.String(20), db.ForeignKey('students.usn'), nullable=False, index=True)
+    title = db.Column(db.String(200), nullable=False)
+    message = db.Column(db.Text, nullable=False)
+    category = db.Column(db.String(50), default='WORKSHOP') # WORKSHOP, DEADLINE, COURSE, ACHIEVEMENT, RECOMMENDATION
+    action_url = db.Column(db.String(255), nullable=True)
+    is_read = db.Column(db.Boolean, default=False, index=True)
+    is_dismissed = db.Column(db.Boolean, default=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
+
+class StudentPreference(db.Model):
+    __tablename__ = 'student_preferences'
+    id = db.Column(db.Integer, primary_key=True)
+    student_usn = db.Column(db.String(20), db.ForeignKey('students.usn'), unique=True, nullable=False, index=True)
+    interested_domains = db.Column(db.String(255), default='DSA, Python, AI/ML')
+    career_goal = db.Column(db.String(150), default='Software Development Engineer')
+    notify_workshops = db.Column(db.Boolean, default=True)
+    notify_deadlines = db.Column(db.Boolean, default=True)
+    notify_free_courses = db.Column(db.Boolean, default=True)
+    coursera_email = db.Column(db.String(120), nullable=True)
+    coursera_connected = db.Column(db.Boolean, default=False)
+    coursera_connected_at = db.Column(db.DateTime, nullable=True)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+class ExternalProviderAccount(db.Model):
+    __tablename__ = 'external_provider_accounts'
+    id = db.Column(db.Integer, primary_key=True)
+    student_usn = db.Column(db.String(20), db.ForeignKey('students.usn'), nullable=False, index=True)
+    provider_name = db.Column(db.String(50), default='Coursera', nullable=False, index=True) # Coursera, NPTEL, edX, etc.
+    external_account_id = db.Column(db.String(150), nullable=True) # e.g. Coursera user ID or sub
+    external_email = db.Column(db.String(150), nullable=True)
+    access_token = db.Column(db.Text, nullable=True) # Encrypted or protected
+    refresh_token = db.Column(db.Text, nullable=True)
+    token_expires_at = db.Column(db.DateTime, nullable=True)
+    connection_status = db.Column(db.String(30), default='CONNECTED', index=True) # CONNECTED, DISCONNECTED, EXPIRED, CONFIG_REQUIRED
+    last_synced_at = db.Column(db.DateTime, nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    __table_args__ = (db.UniqueConstraint('student_usn', 'provider_name', name='uq_student_provider_account'),)
+
+class CertificateSyncLog(db.Model):
+    __tablename__ = 'certificate_sync_logs'
+    id = db.Column(db.Integer, primary_key=True)
+    student_usn = db.Column(db.String(20), db.ForeignKey('students.usn'), nullable=False, index=True)
+    provider_name = db.Column(db.String(50), default='Coursera', nullable=False)
+    sync_started_at = db.Column(db.DateTime, default=datetime.utcnow)
+    sync_completed_at = db.Column(db.DateTime, nullable=True)
+    sync_status = db.Column(db.String(30), default='SUCCESS') # SUCCESS, NO_NEW_CERTIFICATES, FAILED, PARTNER_API_UNAVAILABLE
+    certificates_found = db.Column(db.Integer, default=0)
+    certificates_synced = db.Column(db.Integer, default=0)
+    error_category = db.Column(db.String(50), nullable=True)
+    error_message = db.Column(db.Text, nullable=True)
+
+
 
 
