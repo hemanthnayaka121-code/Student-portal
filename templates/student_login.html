@@ -115,12 +115,12 @@ if (window.location.hostname === '127.0.0.1') {
 
 // --- FIREBASE CLIENT CONFIGURATION ---
 const firebaseConfig = {
-  apiKey: "AIzaSyD7tJ6EFA47BmT1-3JSNYGJ8OzC6Pu7DBE",
-  authDomain: "fir-734dc.firebaseapp.com",
-  projectId: "fir-734dc",
-  storageBucket: "fir-734dc.firebasestorage.app",
-  messagingSenderId: "416430759127",
-  appId: "1:416430759127:web:fa05c109936d63e251a492"
+  apiKey: "AIzaSyDnz7sk3q8AwD4vwdg6FBReDgppyvU4pUc",
+  authDomain: "student-portal-4fcbd.firebaseapp.com",
+  projectId: "student-portal-4fcbd",
+  storageBucket: "student-portal-4fcbd.firebasestorage.app",
+  messagingSenderId: "361106968306",
+  appId: "1:361106968306:web:802b395d5973ed1f79ca6b"
 };
 
 let auth = null;
@@ -179,7 +179,7 @@ function handleAuthError(error) {
         return;
     }
     if (error.code === 'auth/unauthorized-domain') {
-        showStatusAlert('<strong>Firebase Domain Not Authorized:</strong><br>Please add <code>' + window.location.hostname + '</code> in your <a href="https://console.firebase.google.com/project/fir-734dc/authentication/settings" target="_blank" style="color: inherit; text-decoration: underline;">Firebase Console &rarr; Authentication &rarr; Settings &rarr; Authorized domains</a>.', 'error');
+        showStatusAlert('<strong>Firebase Domain Not Authorized:</strong><br>Please add <code>' + window.location.hostname + '</code> in your <a href="https://console.firebase.google.com/project/student-portal-4fcbd/authentication/settings" target="_blank" style="color: inherit; text-decoration: underline;">Firebase Console &rarr; Authentication &rarr; Settings &rarr; Authorized domains</a>.', 'error');
         return;
     }
     if (error.code === 'auth/popup-blocked') {

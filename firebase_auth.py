@@ -25,7 +25,7 @@ try:
         print(f"Firebase Admin SDK initialized using {service_account_path}.")
     elif not firebase_admin._apps:
         try:
-            firebase_admin.initialize_app(options={'projectId': os.environ.get('FIREBASE_PROJECT_ID', 'fir-734dc')})
+            firebase_admin.initialize_app(options={'projectId': os.environ.get('FIREBASE_PROJECT_ID', 'student-portal-4fcbd')})
             FIREBASE_INITIALIZED = True
         except Exception:
             FIREBASE_INITIALIZED = False
@@ -33,7 +33,7 @@ except Exception as e:
     FIREBASE_INITIALIZED = False
     print(f"Firebase Admin SDK not initialized with live credentials: {e}")
 
-FIREBASE_PROJECT_ID = os.environ.get('FIREBASE_PROJECT_ID', 'fir-734dc')
+FIREBASE_PROJECT_ID = os.environ.get('FIREBASE_PROJECT_ID', 'student-portal-4fcbd')
 _GOOGLE_CERTS_CACHE = {'timestamp': 0, 'certs': {}}
 
 def _get_google_public_certs():
@@ -55,7 +55,7 @@ def verify_firebase_token(id_token):
     """
     Verifies a Firebase ID token.
     1. Attempts Firebase Admin SDK if service account is available.
-    2. Validates cryptographically against Google's public certificates for project fir-734dc.
+    2. Validates cryptographically against Google's public certificates for project student-portal-4fcbd.
     3. Supports developer / test tokens for automated test isolation.
     Returns:
         dict containing verified claims: {uid, email, phone_number, email_verified, auth_provider} or None.
