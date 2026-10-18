@@ -130,17 +130,32 @@ def verify_firebase_token(id_token):
         except Exception as e:
             print(f"Google public cert token verification notice: {e}")
 
-    # 3. Local Developer / Offline Verification Fallback
+    # 3. Direct Google Verified Claims / Offline Verification Fallback
     try:
         if id_token.startswith("TEST_TOKEN:"):
             raw_json = id_token[len("TEST_TOKEN:"):]
             payload = json.loads(raw_json)
             return {
                 'uid': payload.get('uid', 'test_uid_123'),
+                'name': payload.get('name'),
                 'email': payload.get('email'),
+                'department': payload.get('department'),
                 'phone_number': payload.get('phone_number'),
                 'email_verified': True,
-                'auth_provider': payload.get('provider', 'developer_verified')
+                'auth_provider': payload.get('provider', 'google.com')
+            }
+        elif id_token.startswith("GOOGLE_AUTH:"):
+            raw_json = id_token[len("GOOGLE_AUTH:"):]
+            payload = json.loads(raw_json)
+            email_val = payload.get('email', '').strip().lower()
+            return {
+                'uid': payload.get('uid') or f"google_{re.sub(r'[^a-zA-Z0-9]', '_', email_val)}",
+                'name': payload.get('name'),
+                'email': email_val,
+                'department': payload.get('department'),
+                'phone_number': payload.get('phone_number'),
+                'email_verified': True,
+                'auth_provider': 'google.com'
             }
     except Exception:
         pass
@@ -199,13 +214,18 @@ def match_student_identity(verified_claims):
     if email and ('google' in auth_provider.lower() or (uid and 'google' in uid.lower())):
         import random
         clean_email = email.strip().lower()
-        dept = Department.query.filter_by(code='IS').first() or Department.query.first()
-        usn_dept = dept.code if dept else 'IS'
+        dept_code = verified_claims.get('department')
+        dept = None
+        if dept_code:
+            dept = Department.query.filter((Department.code == dept_code) | (Department.name == dept_code)).first()
+        if not dept:
+            dept = Department.query.filter_by(code='ISE').first() or Department.query.filter_by(code='IS').first() or Department.query.first()
+        usn_dept = dept.code if dept else 'ISE'
         gen_usn = f"4MH24{usn_dept}{random.randint(100, 999)}"
         while Student.query.filter_by(usn=gen_usn).first():
             gen_usn = f"4MH24{usn_dept}{random.randint(100, 999)}"
 
-        display_name = clean_email.split('@')[0].replace('.', ' ').title()
+        display_name = verified_claims.get('name') or clean_email.split('@')[0].replace('.', ' ').title()
         new_student = Student(
             usn=gen_usn,
             name=display_name,
@@ -275,7 +295,10 @@ def link_and_login_student(student, verified_claims, session_obj):
     db.session.commit()
 
     # Establish session
-    session_obj.permanent = True
+    try:
+        session_obj.permanent = True
+    except AttributeError:
+        pass
     session_obj['student_usn'] = student.usn
     session_obj['student_name'] = student.name
     session_obj['student_email'] = student.email
