@@ -179,7 +179,12 @@ function handleAuthError(error) {
         return;
     }
     if (error.code === 'auth/unauthorized-domain') {
-        showStatusAlert('<strong>Firebase Domain Not Authorized:</strong><br>Please add <code>' + window.location.hostname + '</code> in your <a href="https://console.firebase.google.com/project/student-portal-4fcbd/authentication/settings" target="_blank" style="color: inherit; text-decoration: underline;">Firebase Console &rarr; Authentication &rarr; Settings &rarr; Authorized domains</a>.', 'error');
+        showStatusAlert('<strong>Firebase Domain Not Authorized:</strong><br>' +
+            'Please add <code>' + window.location.hostname + '</code> (or <code>vercel.app</code>) in your Firebase Console.<br>' +
+            '<div style="display:flex; gap:0.5rem; flex-wrap:wrap; margin-top:0.5rem;">' +
+            '<button type="button" onclick="navigator.clipboard.writeText(window.location.hostname); this.innerText=\'Copied!\';" style="background:#000; color:#fff; border:none; padding:5px 12px; border-radius:3px; cursor:pointer; font-size:0.78rem; font-weight:700;">📋 Copy Domain</button>' +
+            '<a href="https://console.firebase.google.com/project/student-portal-4fcbd/authentication/settings" target="_blank" style="background:#1a73e8; color:#fff; text-decoration:none; padding:5px 12px; border-radius:3px; font-size:0.78rem; font-weight:700; display:inline-flex; align-items:center;">Open Firebase Settings &rarr;</a>' +
+            '</div>', 'error');
         return;
     }
     if (error.code === 'auth/popup-blocked') {
