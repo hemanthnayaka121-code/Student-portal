@@ -1,0 +1,253 @@
+{% extends 'base.html' %}
+
+{% block title %}Account & Security Settings — MIT Placement Portal{% endblock %}
+
+{% block content %}
+<div style="max-width: 1000px; margin: 2rem auto; padding: 0 1.5rem;">
+
+    <!-- Navigation Header -->
+    <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #000; padding-bottom: 1.25rem; margin-bottom: 2rem; flex-wrap: wrap; gap: 1rem;">
+        <div style="display: flex; align-items: center; gap: 1rem;">
+            <img src="{{ url_for('static', filename='images/mit_logo.png') }}" alt="MIT Mysore Logo" style="width: 50px; height: 50px; object-fit: contain;">
+            <div>
+                <h1 style="font-size: 1.5rem; font-weight: 800; color: #000; margin: 0; text-transform: uppercase;">
+                    Account &amp; Security Settings
+                </h1>
+                <p style="color: #666; font-size: 0.85rem; margin: 2px 0 0 0;">
+                    Manage credentials, password security, recovery contacts, and session authorization
+                </p>
+            </div>
+        </div>
+        <div style="display: flex; gap: 0.75rem;">
+            {% if session.get('role') == 'PLACEMENT_ADMIN' %}
+                <a href="{{ url_for('portal_dashboard') }}" class="btn btn-secondary" style="border: 1px solid #000; padding: 0.5rem 1rem; font-size: 0.82rem; background: #fff; color: #000;">
+                    &larr; Admin Dashboard
+                </a>
+            {% elif session.get('role') == 'PLACEMENT_COORDINATOR' %}
+                <a href="{{ url_for('coordinator_dashboard') }}" class="btn btn-secondary" style="border: 1px solid #000; padding: 0.5rem 1rem; font-size: 0.82rem; background: #fff; color: #000;">
+                    &larr; Coordinator Console
+                </a>
+            {% elif session.get('role') == 'HOD' and session.get('hod_dept_code') %}
+                <a href="{{ url_for('hod_dashboard', dept_code=session.get('hod_dept_code')) }}" class="btn btn-secondary" style="border: 1px solid #000; padding: 0.5rem 1rem; font-size: 0.82rem; background: #fff; color: #000;">
+                    &larr; HOD Dashboard
+                </a>
+            {% else %}
+                <a href="{{ url_for('portal_dashboard') }}" class="btn btn-secondary" style="border: 1px solid #000; padding: 0.5rem 1rem; font-size: 0.82rem; background: #fff; color: #000;">
+                    &larr; Main Portal
+                </a>
+            {% endif %}
+            <a href="{{ url_for('admin_logout') }}" class="btn" style="background: #000; color: #fff; border: 1px solid #000; padding: 0.5rem 1rem; font-size: 0.82rem;">
+                Logout
+            </a>
+        </div>
+    </div>
+
+    <!-- Flashed Status Messages -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            <div style="margin-bottom: 2rem;">
+                {% for category, message in messages %}
+                    <div class="flash-{{ category }}" style="font-size: 0.88rem; padding: 0.85rem 1.25rem; border-radius: 4px; border: 1px solid {% if category == 'error' %}#C5221F{% else %}#137333{% endif %}; background: {% if category == 'error' %}#FFF0F0{% else %}#E6F4EA{% endif %}; color: {% if category == 'error' %}#C5221F{% else %}#137333{% endif %}; margin-bottom: 0.5rem;">
+                        <strong>{% if category == 'error' %}&#9888; Notice:{% else %}&#10004; Updated:{% endif %}</strong> {{ message }}
+                    </div>
+                {% endfor %}
+            </div>
+        {% endif %}
+    {% endwith %}
+
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; align-items: start;">
+
+        <!-- LEFT COLUMN: Profile Info & Change Password -->
+        <div>
+            
+            <!-- 1. Profile Overview Card -->
+            <div class="card" style="border: 1px solid #000; padding: 1.5rem; border-radius: 4px; margin-bottom: 2rem; background: #FAFAFA;">
+                <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #ddd; padding-bottom: 0.75rem; margin-bottom: 1rem;">
+                    <h2 style="font-size: 1.1rem; font-weight: 700; margin: 0; text-transform: uppercase;">
+                        Account Identity
+                    </h2>
+                    <span class="badge" style="background: #000; color: #fff; font-size: 0.75rem; padding: 3px 8px;">
+                        {{ admin.role }}
+                    </span>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; font-size: 0.85rem;">
+                    <div>
+                        <span style="color: #666; font-size: 0.75rem; text-transform: uppercase; display: block;">Username:</span>
+                        <strong style="color: #000; font-family: monospace; font-size: 1rem;">{{ admin.username }}</strong>
+                    </div>
+                    <div>
+                        <span style="color: #666; font-size: 0.75rem; text-transform: uppercase; display: block;">Assigned Department:</span>
+                        <strong style="color: #000;">
+                            {% if admin.department %}{{ admin.department.name }} ({{ admin.department.code }}){% else %}College-Wide Central{% endif %}
+                        </strong>
+                    </div>
+                    <div>
+                        <span style="color: #666; font-size: 0.75rem; text-transform: uppercase; display: block;">Session Version:</span>
+                        <strong style="color: #000; font-family: monospace;">v{{ admin.session_version or 1 }}</strong>
+                    </div>
+                    <div>
+                        <span style="color: #666; font-size: 0.75rem; text-transform: uppercase; display: block;">Last Password Changed:</span>
+                        <strong style="color: #000;">
+                            {{ admin.password_changed_at.strftime('%Y-%m-%d %H:%M UTC') if admin.password_changed_at else 'Initial Bootstrap' }}
+                        </strong>
+                    </div>
+                </div>
+
+                <!-- Update Username Sub-Form -->
+                <div style="margin-top: 1.5rem; border-top: 1px dashed #ccc; padding-top: 1rem;">
+                    <details>
+                        <summary style="font-size: 0.82rem; font-weight: 700; color: #000; cursor: pointer;">
+                            &#9998; Change Username
+                        </summary>
+                        <form method="POST" action="{{ url_for('account_settings') }}" style="margin-top: 1rem;">
+                            <input type="hidden" name="action" value="change_username">
+                            <div class="form-group" style="margin-bottom: 0.85rem;">
+                                <label style="font-size: 0.78rem; font-weight: 600; display: block; margin-bottom: 0.25rem;">New Username</label>
+                                <input type="text" name="new_username" required placeholder="Enter new username" style="width: 100%; border: 1px solid #000; padding: 0.5rem; font-size: 0.85rem; border-radius: 3px;">
+                            </div>
+                            <div class="form-group" style="margin-bottom: 0.85rem;">
+                                <label style="font-size: 0.78rem; font-weight: 600; display: block; margin-bottom: 0.25rem;">Current Password (Verification)</label>
+                                <input type="password" name="current_password" required placeholder="Enter current password" style="width: 100%; border: 1px solid #000; padding: 0.5rem; font-size: 0.85rem; border-radius: 3px;">
+                            </div>
+                            <button type="submit" class="btn" style="background: #000; color: #fff; border: 1px solid #000; padding: 0.45rem 1rem; font-size: 0.82rem; font-weight: 700;">
+                                Update Username
+                            </button>
+                        </form>
+                    </details>
+                </div>
+            </div>
+
+            <!-- 2. Change Password Form -->
+            <div class="card" style="border: 2px solid #000; padding: 1.5rem; border-radius: 4px; background: #FFFFFF;">
+                <h2 style="font-size: 1.15rem; font-weight: 800; margin: 0 0 0.5rem 0; text-transform: uppercase;">
+                    Change Password
+                </h2>
+                <p style="color: #666; font-size: 0.8rem; margin: 0 0 1.25rem 0;">
+                    Updating your password will immediately invalidate all active sessions across all other devices.
+                </p>
+
+                <form method="POST" action="{{ url_for('account_settings') }}">
+                    <input type="hidden" name="action" value="change_password">
+
+                    <div class="form-group" style="margin-bottom: 1rem; text-align: left;">
+                        <label for="current_password" style="font-weight: 700; font-size: 0.82rem; display: block; margin-bottom: 0.35rem; text-transform: uppercase;">
+                            Current Password
+                        </label>
+                        <input type="password" id="current_password" name="current_password" required placeholder="Enter your current password" style="width: 100%; border: 1px solid #000; padding: 0.65rem 0.75rem; font-size: 0.9rem; border-radius: 4px;">
+                    </div>
+
+                    <div class="form-group" style="margin-bottom: 1rem; text-align: left;">
+                        <label for="new_password" style="font-weight: 700; font-size: 0.82rem; display: block; margin-bottom: 0.35rem; text-transform: uppercase;">
+                            New Password
+                        </label>
+                        <input type="password" id="new_password" name="new_password" required minlength="8" placeholder="At least 8 chars with letters & numbers" style="width: 100%; border: 1px solid #000; padding: 0.65rem 0.75rem; font-size: 0.9rem; border-radius: 4px;">
+                    </div>
+
+                    <div class="form-group" style="margin-bottom: 1.5rem; text-align: left;">
+                        <label for="confirm_password" style="font-weight: 700; font-size: 0.82rem; display: block; margin-bottom: 0.35rem; text-transform: uppercase;">
+                            Confirm New Password
+                        </label>
+                        <input type="password" id="confirm_password" name="confirm_password" required minlength="8" placeholder="Re-enter new password" style="width: 100%; border: 1px solid #000; padding: 0.65rem 0.75rem; font-size: 0.9rem; border-radius: 4px;">
+                    </div>
+
+                    <button type="submit" class="btn" style="width: 100%; background: #000; color: #fff; border: 2px solid #000; padding: 0.75rem; font-size: 0.92rem; font-weight: 700; border-radius: 4px; cursor: pointer;">
+                        Update &amp; Revoke Other Sessions
+                    </button>
+                </form>
+            </div>
+
+        </div>
+
+        <!-- RIGHT COLUMN: Recovery Settings & Security Audit Trail -->
+        <div>
+
+            <!-- 3. Recovery Email & Mobile Settings -->
+            <div class="card" style="border: 1px solid #000; padding: 1.5rem; border-radius: 4px; margin-bottom: 2rem; background: #FFFFFF;">
+                <h2 style="font-size: 1.15rem; font-weight: 800; margin: 0 0 0.5rem 0; text-transform: uppercase;">
+                    Account Recovery Settings
+                </h2>
+                <p style="color: #666; font-size: 0.8rem; margin: 0 0 1.25rem 0;">
+                    Configure your verified recovery email and mobile number for secure password reset.
+                </p>
+
+                <form method="POST" action="{{ url_for('account_settings') }}">
+                    <input type="hidden" name="action" value="update_recovery">
+
+                    <div class="form-group" style="margin-bottom: 1rem; text-align: left;">
+                        <label for="recovery_email" style="font-weight: 700; font-size: 0.82rem; display: block; margin-bottom: 0.35rem; text-transform: uppercase;">
+                            Recovery Email Address
+                        </label>
+                        <input type="email" id="recovery_email" name="recovery_email" value="{{ admin.recovery_email or '' }}" placeholder="e.g. yourname@mitmysore.in" style="width: 100%; border: 1px solid #000; padding: 0.65rem 0.75rem; font-size: 0.9rem; border-radius: 4px;">
+                    </div>
+
+                    <div class="form-group" style="margin-bottom: 1.5rem; text-align: left;">
+                        <label for="recovery_mobile" style="font-weight: 700; font-size: 0.82rem; display: block; margin-bottom: 0.35rem; text-transform: uppercase;">
+                            Recovery Mobile Number (10 Digits)
+                        </label>
+                        <input type="tel" id="recovery_mobile" name="recovery_mobile" maxlength="10" value="{{ admin.recovery_mobile or '' }}" placeholder="10-digit mobile number" style="width: 100%; border: 1px solid #000; padding: 0.65rem 0.75rem; font-size: 0.9rem; border-radius: 4px;">
+                    </div>
+
+                    <button type="submit" class="btn" style="width: 100%; background: #000; color: #fff; border: 1px solid #000; padding: 0.7rem; font-size: 0.9rem; font-weight: 700; border-radius: 4px; cursor: pointer;">
+                        Save Recovery Contacts
+                    </button>
+                </form>
+
+                <!-- Active Session Invalidation Action -->
+                <div style="margin-top: 1.5rem; border-top: 1px solid #eee; padding-top: 1rem;">
+                    <form method="POST" action="{{ url_for('account_settings') }}">
+                        <input type="hidden" name="action" value="revoke_all_sessions">
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <div>
+                                <strong style="font-size: 0.82rem; color: #000; display: block;">Active Device Sessions</strong>
+                                <span style="font-size: 0.75rem; color: #666;">Revoke all sessions on other browsers immediately</span>
+                            </div>
+                            <button type="submit" class="btn btn-secondary" style="border: 1px solid #000; background: #fff; color: #C5221F; font-size: 0.78rem; font-weight: 700; padding: 0.4rem 0.75rem;">
+                                Invalidate Others
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- 4. Security Audit History -->
+            <div class="card" style="border: 1px solid #000; padding: 1.25rem; border-radius: 4px; background: #FAFAFA;">
+                <h3 style="font-size: 0.95rem; font-weight: 700; margin: 0 0 0.75rem 0; text-transform: uppercase;">
+                    Security Audit Trail (Recent Activity)
+                </h3>
+                {% if audit_history %}
+                    <div style="max-height: 250px; overflow-y: auto;">
+                        <table style="width: 100%; font-size: 0.78rem; border-collapse: collapse;">
+                            <thead>
+                                <tr style="border-bottom: 1px solid #000; text-align: left;">
+                                    <th style="padding: 4px 6px;">Event</th>
+                                    <th style="padding: 4px 6px;">Status</th>
+                                    <th style="padding: 4px 6px;">Time (UTC)</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for a in audit_history %}
+                                    <tr style="border-bottom: 1px solid #eee;">
+                                        <td style="padding: 6px;">{{ a.event_type }}</td>
+                                        <td style="padding: 6px;">
+                                            <span style="font-weight: 700; color: {% if a.status == 'SUCCESS' %}#137333{% else %}#C5221F{% endif %};">
+                                                {{ a.status }}
+                                            </span>
+                                        </td>
+                                        <td style="padding: 6px; color: #666; font-family: monospace;">{{ a.timestamp.strftime('%Y-%m-%d %H:%M') }}</td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <p style="font-size: 0.8rem; color: #777; margin: 0;">No security events recorded yet.</p>
+                {% endif %}
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+{% endblock %}

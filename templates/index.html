@@ -1,15 +1,152 @@
 {% extends 'base.html' %}
 
+{% block title %}MIT Mysore — College Placement Tracking & Training Dashboard{% endblock %}
+
 {% block content %}
-<div class="flex-center" style="min-height: 75vh;">
-    <div class="card" style="text-align: center; max-width: 520px; border: 1px solid #000; padding: 2.5rem 2rem;">
-        <img src="{{ url_for('static', filename='images/mit_logo.png') }}" alt="MIT Mysore Logo" style="width: 80px; height: 80px; object-fit: contain; margin: 0 auto 1.25rem; display: block;">
-        <h1 style="margin-bottom: 0.5rem; color: #000; font-size: 1.4rem; text-transform: uppercase; font-weight: 700;">MIT Mysore Placement Portal</h1>
-        <p style="margin-bottom: 2rem; color: #666; font-size: 0.9rem;">Maharaja Institute of Technology Mysore &bull; Placement Management System</p>
-        <div style="display: flex; justify-content: center; gap: 1rem; flex-wrap: wrap;">
-            <a href="{{ url_for('admin_login') }}" class="btn" style="background: #000; color: #fff; border: 1px solid #000; padding: 0.65rem 1.5rem;">Placement Admin Login</a>
-            <a href="{{ url_for('student_login') }}" class="btn btn-secondary" style="border: 1px solid #000; color: #000; background: #fff; padding: 0.65rem 1.5rem;">Student Portal</a>
+<div style="max-width: 1200px; margin: 1.5rem auto 3rem auto; padding: 0 1rem;">
+
+    <!-- 1. Institutional Hero Header -->
+    <div style="text-align: center; border-bottom: 2px solid #000; padding-bottom: 2rem; margin-bottom: 2.5rem;">
+        <img src="{{ url_for('static', filename='images/mit_logo.png') }}" alt="MIT Mysore Logo" style="width: 88px; height: 88px; object-fit: contain; margin: 0 auto 1rem auto; display: block;">
+        <div style="font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.12em; color: #555; font-weight: 700; margin-bottom: 0.35rem;">
+            MAHARAJA INSTITUTE OF TECHNOLOGY MYSORE
+        </div>
+        <h1 style="font-size: 2.2rem; font-weight: 800; color: #000; letter-spacing: -0.02em; margin: 0 0 0.5rem 0; text-transform: uppercase;">
+            College Placement Tracking &amp; Training Portal
+        </h1>
+        <p style="color: #555; font-size: 0.95rem; margin: 0 auto; max-width: 680px; line-height: 1.5;">
+            An integrated institution-wide platform connecting Department HOD approvals, Placement Cell recruitment drives, and student placement performance preparation.
+        </p>
+    </div>
+
+    <!-- 2. Dual Module Architecture Gateway -->
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(480px, 1fr)); gap: 2rem; margin-bottom: 3rem;">
+
+        <!-- MODULE 1: PLACEMENT ADMINISTRATION -->
+        <div class="card" style="border: 2px solid #000; padding: 2rem; border-radius: 4px; display: flex; flex-direction: column; justify-content: space-between; background: #FFFFFF; box-shadow: 0 6px 20px rgba(0,0,0,0.06);">
+            <div>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem; border-bottom: 1px solid #e5e5e5; padding-bottom: 0.75rem;">
+                    <div>
+                        <span class="badge" style="background: #000; color: #fff; font-size: 0.75rem; font-weight: 700; text-transform: uppercase;">MODULE 1</span>
+                        <h2 style="font-size: 1.4rem; font-weight: 800; color: #000; margin: 0.35rem 0 0 0; text-transform: uppercase;">
+                            Placement Administration
+                        </h2>
+                    </div>
+                    <span style="font-size: 1.8rem;">&#127891;</span>
+                </div>
+
+                <p style="font-size: 0.88rem; color: #555; line-height: 1.55; margin-bottom: 1.5rem;">
+                    Authorized administrative consoles for campus-wide placement operations, two-stage student eligibility registration, department-isolated HOD approvals, and company drive outcome tracking.
+                </p>
+
+                <!-- Privileged Roles Grid -->
+                <div style="display: flex; flex-direction: column; gap: 0.85rem; margin-bottom: 1.5rem;">
+                    
+                    <!-- Placement Admin -->
+                    <div style="border: 1px solid #000; padding: 0.85rem 1rem; border-radius: 4px; display: flex; justify-content: space-between; align-items: center; background: #FAFAFA;">
+                        <div>
+                            <strong style="color: #000; font-size: 0.92rem; display: block;">Placement Administrator</strong>
+                            <span style="color: #666; font-size: 0.78rem;">Full campus metrics, departmental oversight &amp; settings</span>
+                        </div>
+                        <a href="{{ url_for('admin_login') }}" class="btn" style="background: #000; color: #fff; font-size: 0.8rem; font-weight: 700; padding: 0.45rem 1rem; border: 1px solid #000; text-decoration: none;">
+                            Admin Login &rarr;
+                        </a>
+                    </div>
+
+                    <!-- Placement Coordinator -->
+                    <div style="border: 1px solid #000; padding: 0.85rem 1rem; border-radius: 4px; display: flex; justify-content: space-between; align-items: center; background: #FAFAFA;">
+                        <div>
+                            <strong style="color: #000; font-size: 0.92rem; display: block;">Placement Coordinator</strong>
+                            <span style="color: #666; font-size: 0.78rem;">Candidate registration, official contact management &amp; drive logs</span>
+                        </div>
+                        <a href="{{ url_for('coordinator_login') }}" class="btn" style="background: #000; color: #fff; font-size: 0.8rem; font-weight: 700; padding: 0.45rem 1rem; border: 1px solid #000; text-decoration: none;">
+                            Coordinator &rarr;
+                        </a>
+                    </div>
+
+                    <!-- Department HODs -->
+                    <div style="border: 1px solid #000; padding: 0.85rem 1rem; border-radius: 4px; display: flex; justify-content: space-between; align-items: center; background: #FAFAFA;">
+                        <div>
+                            <strong style="color: #000; font-size: 0.92rem; display: block;">Department HODs</strong>
+                            <span style="color: #666; font-size: 0.78rem;">CSE, ISE, ECE, MECH, CIVIL &amp; allied department approvals</span>
+                        </div>
+                        <a href="{{ url_for('hod_login') }}" class="btn" style="background: #000; color: #fff; font-size: 0.8rem; font-weight: 700; padding: 0.45rem 1rem; border: 1px solid #000; text-decoration: none;">
+                            HOD Login &rarr;
+                        </a>
+                    </div>
+
+                </div>
+            </div>
+
+            <div style="font-size: 0.75rem; color: #777; border-top: 1px solid #f0f0f0; padding-top: 0.75rem;">
+                Protected Role-Based Access Control (RBAC) &bull; Zero Plaintext Passwords &bull; Audit Trail Logging
+            </div>
+        </div>
+
+        <!-- MODULE 2: STUDENT DASHBOARD -->
+        <div class="card" style="border: 2px solid #000; padding: 2rem; border-radius: 4px; display: flex; flex-direction: column; justify-content: space-between; background: #FFFFFF; box-shadow: 0 6px 20px rgba(0,0,0,0.06);">
+            <div>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem; border-bottom: 1px solid #e5e5e5; padding-bottom: 0.75rem;">
+                    <div>
+                        <span class="badge" style="background: #000; color: #fff; font-size: 0.75rem; font-weight: 700; text-transform: uppercase;">MODULE 2</span>
+                        <h2 style="font-size: 1.4rem; font-weight: 800; color: #000; margin: 0.35rem 0 0 0; text-transform: uppercase;">
+                            Student Placement Portal
+                        </h2>
+                    </div>
+                    <span style="font-size: 1.8rem;">&#128187;</span>
+                </div>
+
+                <p style="font-size: 0.88rem; color: #555; line-height: 1.55; margin-bottom: 1.5rem;">
+                    Personalized placement training console for registered MIT Mysore students. Analyze placement readiness scores, review weaknesses, practice technical quizzes, generate AI mock interviews, and maintain verified achievement portfolios.
+                </p>
+
+                <!-- Student Features Highlights -->
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; margin-bottom: 1.5rem;">
+                    <div style="border: 1px solid #ddd; padding: 0.75rem; border-radius: 4px; background: #FAFAFA;">
+                        <strong style="font-size: 0.82rem; color: #000; display: block;">&#128202; Readiness Engine</strong>
+                        <span style="font-size: 0.75rem; color: #666;">Comprehensive CGPA, aptitude &amp; coding readiness score</span>
+                    </div>
+                    <div style="border: 1px solid #ddd; padding: 0.75rem; border-radius: 4px; background: #FAFAFA;">
+                        <strong style="font-size: 0.82rem; color: #000; display: block;">&#128161; Solution Hub</strong>
+                        <span style="font-size: 0.75rem; color: #666;">Targeted remediation videos &amp; recommended courses</span>
+                    </div>
+                    <div style="border: 1px solid #ddd; padding: 0.75rem; border-radius: 4px; background: #FAFAFA;">
+                        <strong style="font-size: 0.82rem; color: #000; display: block;">&#9997; Practice Quizzes</strong>
+                        <span style="font-size: 0.75rem; color: #666;">Domain-specific MCQs with instant explanations</span>
+                    </div>
+                    <div style="border: 1px solid #ddd; padding: 0.75rem; border-radius: 4px; background: #FAFAFA;">
+                        <strong style="font-size: 0.82rem; color: #000; display: block;">&#129302; AI Mock Interviews</strong>
+                        <span style="font-size: 0.75rem; color: #666;">Interactive technical interview simulator with AI feedback</span>
+                    </div>
+                </div>
+
+                <!-- Primary Student Entry Action -->
+                <a href="{{ url_for('student_login') }}" class="btn" style="display: block; width: 100%; text-align: center; background: #000; color: #fff; border: 2px solid #000; font-size: 1rem; font-weight: 800; padding: 0.85rem; border-radius: 4px; text-decoration: none; text-transform: uppercase; letter-spacing: 0.5px;">
+                    Enter Student Portal (Google OAuth / Mobile OTP) &rarr;
+                </a>
+            </div>
+
+            <div style="font-size: 0.75rem; color: #777; border-top: 1px solid #f0f0f0; padding-top: 0.75rem; margin-top: 1rem;">
+                &#128274; Strict Access: Only students officially registered by the Placement Coordinator are eligible to log in.
+            </div>
+        </div>
+
+    </div>
+
+    <!-- 3. Placement Contact & Institutional Information -->
+    <div style="background: #FAFAFA; border: 1px solid #000; border-radius: 4px; padding: 1.5rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; font-size: 0.82rem;">
+        <div>
+            <strong style="color: #000; text-transform: uppercase;">Department of Placement &amp; Training</strong>
+            <div style="color: #666; margin-top: 2px;">
+                Maharaja Institute of Technology Mysore &bull; Belavadi, Srirangapatna Taluk, Mandya - 571477
+            </div>
+        </div>
+        <div style="display: flex; gap: 1rem; align-items: center;">
+            <a href="mailto:placement@mitmysore.in" style="color: #000; font-weight: 600; text-decoration: underline;">placement@mitmysore.in</a>
+            <span style="color: #999;">&bull;</span>
+            <span style="color: #555;">Office: +91 8236 292601</span>
         </div>
     </div>
+
 </div>
 {% endblock %}

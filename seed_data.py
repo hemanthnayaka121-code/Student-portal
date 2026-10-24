@@ -38,25 +38,37 @@ def seed_data():
             depts[code] = dept
         db.session.commit()
 
-        # 1. Main MIT Placement Portal Login (Mit_placement / Mit@123)
-        mit_admin = Admin(username="Mit_placement", role="PLACEMENT_ADMIN", department_id=None)
-        mit_admin.set_password("Mit@123")
+        # 1. Main MIT Placement Portal Login (Mit_placement)
+        mit_admin = Admin(username='Mit_placement', role='PLACEMENT_ADMIN', department_id=None)
+        mit_admin.set_password('MitmAdmin@2026Secure')
+        mit_admin.recovery_email = 'placement.admin@mitmysore.in'
+        mit_admin.recovery_mobile = '9845099001'
+        mit_admin.is_recovery_email_verified = True
+        mit_admin.is_recovery_mobile_verified = True
 
-        # 2. Placement Coordinator Account (placement_coordinator / PC@123)
-        coordinator_admin = Admin(username="placement_coordinator", role="PLACEMENT_COORDINATOR", department_id=None)
-        coordinator_admin.set_password("PC@123")
+        # 2. Placement Coordinator Account (placement_coordinator)
+        coordinator_admin = Admin(username='placement_coordinator', role='PLACEMENT_COORDINATOR', department_id=None)
+        coordinator_admin.set_password('MitmCoord@2026Secure')
+        coordinator_admin.recovery_email = 'placement.coordinator@mitmysore.in'
+        coordinator_admin.recovery_mobile = '9845099002'
+        coordinator_admin.is_recovery_email_verified = True
+        coordinator_admin.is_recovery_mobile_verified = True
 
         admins = [mit_admin, coordinator_admin]
 
-        # 3. HOD Accounts for each department (username: hod_<code.lower()>, password: <CODE>@123)
+        # 3. HOD Accounts for each department (username: hod_<code.lower()>)
         for code, dept in depts.items():
-            admin_user = Admin(username=f"hod_{code.lower()}", role="HOD", department_id=dept.id)
-            admin_user.set_password(f"{code}@123")
+            admin_user = Admin(username=f'hod_{code.lower()}', role='HOD', department_id=dept.id)
+            admin_user.set_password(f'HOD_{code}@2026Secure')
+            admin_user.recovery_email = dept.hod_email
+            admin_user.recovery_mobile = dept.hod_phone.replace('+91 ', '').replace(' ', '')
+            admin_user.is_recovery_email_verified = True
+            admin_user.is_recovery_mobile_verified = True
             admins.append(admin_user)
         db.session.add_all(admins)
         db.session.commit()
 
-        # 5. Placement Coordinators for each Department
+
         coordinators_data = [
             ("Prof. Sneha Jain", "CSE", "sneha.coord@mitmysore.in", "+91 98451 22001", "Microsoft, Amazon, Infosys", 120),
             ("Prof. Vijay K.", "CE", "vijay.coord@mitmysore.in", "+91 98451 22002", "Texas Instruments, Intel", 65),

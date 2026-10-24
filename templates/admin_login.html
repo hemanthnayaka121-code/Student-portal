@@ -1,74 +1,82 @@
 {% extends 'base.html' %}
 
-{% block title %}MIT Placement Portal - Admin Login{% endblock %}
+{% block title %}Placement Admin Login - MIT Placement Portal{% endblock %}
 
 {% block content %}
 <div class="flex-center" style="min-height: 80vh; padding: 2rem 1rem;">
-    <div class="card" style="width: 100%; max-width: 440px; border: 1px solid #000; box-shadow: 0 4px 16px rgba(0,0,0,0.06); padding: 2.25rem;">
+    <div class="card" style="width: 100%; max-width: 440px; border: 2px solid #000; box-shadow: 0 8px 24px rgba(0,0,0,0.08); padding: 2.25rem; border-radius: 4px;">
         
         <!-- College Logo & Title -->
         <div style="text-align: center; margin-bottom: 2rem;">
-            <img src="{{ url_for('static', filename='images/mit_logo.png') }}" alt="MIT Mysore Logo" style="width: 80px; height: 80px; object-fit: contain; margin: 0 auto 1rem; display: block;">
-            <h2 style="font-size: 1.35rem; color: #000; margin-bottom: 0.35rem; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase;">
+            <img src="{{ url_for('static', filename='images/mit_logo.png') }}" alt="MIT Mysore Logo" style="width: 76px; height: 76px; object-fit: contain; margin: 0 auto 1rem; display: block;">
+            <div style="font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.1em; color: #555; font-weight: 700; margin-bottom: 0.35rem;">
+                MAHARAJA INSTITUTE OF TECHNOLOGY MYSORE
+            </div>
+            <h2 style="font-size: 1.35rem; color: #000; margin-bottom: 0.35rem; font-weight: 800; letter-spacing: 0.5px; text-transform: uppercase;">
                 Placement Admin Login
             </h2>
-            <p style="color: #666; font-size: 0.85rem; margin: 0;">
-                Maharaja Institute of Technology Mysore
+            <p style="color: #666; font-size: 0.82rem; margin: 0;">
+                Central Placement &amp; Training Administration Console
             </p>
         </div>
 
+        <!-- Flashed Messages -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                <div style="margin-bottom: 1.25rem;">
+                    {% for category, message in messages %}
+                        <div class="flash-{{ category }}" style="font-size: 0.82rem; padding: 0.65rem 0.85rem; border-radius: 4px; border: 1px solid {% if category == 'error' %}#C5221F{% else %}#137333{% endif %}; background: {% if category == 'error' %}#FFF0F0{% else %}#E6F4EA{% endif %}; color: {% if category == 'error' %}#C5221F{% else %}#137333{% endif %}; margin-bottom: 0.5rem;">
+                            {{ message }}
+                        </div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        {% endwith %}
+
         <!-- Central Login Form -->
         <form method="POST" action="{{ url_for('admin_login') }}">
-            <div class="form-group" style="margin-bottom: 1.25rem;">
-                <label for="username" style="font-weight: 600; color: #000; font-size: 0.85rem; display: block; margin-bottom: 0.35rem;">User ID</label>
+            <div class="form-group" style="margin-bottom: 1.25rem; text-align: left;">
+                <label for="username" style="font-weight: 700; color: #000; font-size: 0.82rem; display: block; margin-bottom: 0.35rem; text-transform: uppercase;">
+                    Admin User ID
+                </label>
                 <input type="text" id="username" name="username" class="form-control" required 
-                       value="Mit_placement" placeholder="Mit_placement"
-                       style="font-size: 0.95rem; font-weight: 500; border: 1px solid #000; padding: 0.65rem 0.75rem;">
+                       placeholder="Enter Placement Admin User ID" autocomplete="username"
+                       style="font-size: 0.95rem; font-weight: 500; border: 1px solid #000; padding: 0.65rem 0.75rem; width: 100%; border-radius: 4px;">
             </div>
 
-            <div class="form-group" style="margin-bottom: 1.75rem;">
-                <label for="password" style="font-weight: 600; color: #000; font-size: 0.85rem; display: block; margin-bottom: 0.35rem;">Password</label>
+            <div class="form-group" style="margin-bottom: 1.5rem; text-align: left;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.35rem;">
+                    <label for="password" style="font-weight: 700; color: #000; font-size: 0.82rem; text-transform: uppercase;">
+                        Password
+                    </label>
+                    <a href="{{ url_for('admin_forgot_password') }}" style="font-size: 0.78rem; color: #000; font-weight: 600; text-decoration: underline;">
+                        Forgot Password?
+                    </a>
+                </div>
                 <input type="password" id="password" name="password" class="form-control" required 
-                       value="Mit@123" placeholder="Mit@123"
-                       style="font-size: 0.95rem; border: 1px solid #000; padding: 0.65rem 0.75rem;">
+                       placeholder="Enter Admin Password" autocomplete="current-password"
+                       style="font-size: 0.95rem; border: 1px solid #000; padding: 0.65rem 0.75rem; width: 100%; border-radius: 4px;">
             </div>
 
-            <button type="submit" class="btn" style="width: 100%; font-size: 0.95rem; padding: 0.75rem; font-weight: 600; letter-spacing: 0.5px; background: #000; color: #fff; border: 1px solid #000;">
-                LOGIN TO PORTAL
+            <button type="submit" class="btn" style="width: 100%; font-size: 0.95rem; padding: 0.75rem; font-weight: 700; letter-spacing: 0.5px; background: #000; color: #fff; border: 1px solid #000; border-radius: 4px; cursor: pointer;">
+                SIGN IN AS ADMIN
             </button>
         </form>
 
-        <!-- Credentials Helper Card -->
-        <div style="margin-top: 1.75rem; padding: 1rem; border: 1px solid #e5e5e5; background: #fafafa; border-radius: 4px;">
-            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.5rem;">
-                <span style="font-weight: 700; color: #000; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.5px;">
-                    Portal Credentials
-                </span>
-                <span class="badge" style="background: #000; color: #fff; font-size: 0.7rem; padding: 2px 6px;">Central Admin</span>
+        <!-- Navigation Links -->
+        <div style="border-top: 1px solid #e5e5e5; padding-top: 1.25rem; margin-top: 1.75rem; font-size: 0.8rem; text-align: center; color: #666;">
+            <div style="margin-bottom: 0.5rem;">
+                <a href="{{ url_for('coordinator_login') }}" style="color: #000; font-weight: 600; text-decoration: underline;">
+                    Placement Coordinator Login &rarr;
+                </a>
             </div>
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; font-size: 0.8rem; margin-bottom: 0.6rem;">
-                <div>
-                    <span style="color: #666; font-size: 0.7rem; display: block;">USER ID:</span>
-                    <strong style="color: #000; font-family: monospace;">Mit_placement</strong>
-                </div>
-                <div>
-                    <span style="color: #666; font-size: 0.7rem; display: block;">PASSWORD:</span>
-                    <strong style="color: #000; font-family: monospace;">Mit@123</strong>
-                </div>
+            <div>
+                <a href="{{ url_for('student_login') }}" style="color: #666; text-decoration: underline;">
+                    Student Placement Portal Login &rarr;
+                </a>
             </div>
-            <button type="button" onclick="setCreds('Mit_placement', 'Mit@123')" 
-                    class="btn btn-secondary" style="width: 100%; padding: 0.4rem; font-size: 0.75rem; border: 1px solid #000; color: #000; background: #fff;">
-                Auto-Fill Mit_placement
-            </button>
         </div>
 
     </div>
 </div>
-
-<script>
-function setCreds(user, pass) {
-    document.getElementById('username').value = user;
-    document.getElementById('password').value = pass;
-}
-</script>
 {% endblock %}

@@ -3,6 +3,8 @@ __pycache__
 *.pyc
 .env
 .pytest_cache
-test_module2.py
+test_*.py
+*.backup_*
+*.cleanup_backup_*
 venv
 .venv

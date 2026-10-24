@@ -13,22 +13,31 @@
             <img src="{{ url_for('static', filename='images/mit_logo.png') }}" alt="MIT Mysore Logo">
             <span>MIT MYSORE PLACEMENT PORTAL</span>
         </a>
-        <div class="nav-links" style="display: flex; gap: 0.75rem; align-items: center;">
-            {% if session.get('admin_id') %}
-                {% if session.get('role') == 'PLACEMENT_ADMIN' %}
-                    <span class="badge" style="background: #000; color: #fff;">Placement Admin</span>
-                    <a href="{{ url_for('portal_dashboard') }}" class="btn btn-secondary" style="font-size: 0.85rem; padding: 0.45rem 0.85rem;">Admin Portal</a>
-                {% else %}
-                    <span class="badge" style="background: #000; color: #fff;">HOD Session</span>
-                    <a href="{{ url_for('portal_dashboard') }}" class="btn btn-secondary" style="font-size: 0.85rem; padding: 0.45rem 0.85rem;">Dashboard</a>
+        <div class="nav-links" style="display: flex; gap: 0.65rem; align-items: center; flex-wrap: wrap;">
+            {% if session.get('role') == 'PLACEMENT_ADMIN' %}
+                <span class="badge" style="background: #000; color: #fff;">Placement Admin</span>
+                <a href="{{ url_for('portal_dashboard') }}" class="btn btn-secondary" style="font-size: 0.82rem; padding: 0.4rem 0.75rem;">Admin Portal</a>
+                <a href="{{ url_for('account_settings') }}" class="btn btn-secondary" style="font-size: 0.82rem; padding: 0.4rem 0.75rem;">Account Settings</a>
+                <a href="{{ url_for('admin_logout') }}" class="btn" style="font-size: 0.82rem; padding: 0.4rem 0.75rem; background: #000; color: #fff;">Logout</a>
+            {% elif session.get('role') == 'PLACEMENT_COORDINATOR' or session.get('coordinator_authenticated') %}
+                <span class="badge" style="background: #000; color: #fff;">Placement Coordinator</span>
+                <a href="{{ url_for('coordinator_dashboard') }}" class="btn btn-secondary" style="font-size: 0.82rem; padding: 0.4rem 0.75rem;">Coordinator Console</a>
+                <a href="{{ url_for('account_settings') }}" class="btn btn-secondary" style="font-size: 0.82rem; padding: 0.4rem 0.75rem;">Account Settings</a>
+                <a href="{{ url_for('coordinator_logout') }}" class="btn" style="font-size: 0.82rem; padding: 0.4rem 0.75rem; background: #000; color: #fff;">Logout</a>
+            {% elif session.get('role') == 'HOD' or session.get('hod_authenticated') %}
+                <span class="badge" style="background: #000; color: #fff;">{{ session.get('hod_dept_code', 'HOD') }} HOD</span>
+                {% if session.get('hod_dept_code') %}
+                    <a href="{{ url_for('hod_dashboard', dept_code=session.get('hod_dept_code')) }}" class="btn btn-secondary" style="font-size: 0.82rem; padding: 0.4rem 0.75rem;">HOD Dashboard</a>
                 {% endif %}
-                <a href="{{ url_for('admin_logout') }}" class="btn" style="font-size: 0.85rem; padding: 0.45rem 0.85rem;">Logout</a>
+                <a href="{{ url_for('account_settings') }}" class="btn btn-secondary" style="font-size: 0.82rem; padding: 0.4rem 0.75rem;">Account Settings</a>
+                <a href="{{ url_for('hod_logout') }}" class="btn" style="font-size: 0.82rem; padding: 0.4rem 0.75rem; background: #000; color: #fff;">Logout</a>
             {% elif session.get('student_usn') %}
-                <a href="{{ url_for('student_dashboard') }}" class="btn btn-secondary" style="font-size: 0.85rem; padding: 0.45rem 0.85rem;">My Dashboard</a>
-                <a href="{{ url_for('student_logout') }}" class="btn" style="font-size: 0.85rem; padding: 0.45rem 0.85rem;">Student Logout</a>
+                <a href="{{ url_for('student_dashboard') }}" class="btn btn-secondary" style="font-size: 0.82rem; padding: 0.4rem 0.75rem;">Student Dashboard</a>
+                <a href="{{ url_for('student_logout') }}" class="btn" style="font-size: 0.82rem; padding: 0.4rem 0.75rem; background: #000; color: #fff;">Logout</a>
             {% else %}
-                <a href="{{ url_for('admin_login') }}" class="btn" style="font-size: 0.85rem; padding: 0.45rem 0.85rem;">Admin Login</a>
-                <a href="{{ url_for('student_login') }}" class="btn btn-secondary" style="font-size: 0.85rem; padding: 0.45rem 0.85rem;">Student Login</a>
+                <a href="{{ url_for('index') }}" class="btn btn-secondary" style="font-size: 0.82rem; padding: 0.4rem 0.75rem;">Home</a>
+                <a href="{{ url_for('student_login') }}" class="btn" style="font-size: 0.82rem; padding: 0.4rem 0.85rem; background: #000; color: #fff; font-weight: 700;">Student Portal</a>
+                <a href="{{ url_for('admin_login') }}" class="btn btn-secondary" style="font-size: 0.82rem; padding: 0.4rem 0.75rem;">Admin Login</a>
             {% endif %}
         </div>
     </nav>

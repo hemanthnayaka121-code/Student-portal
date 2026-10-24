@@ -46,22 +46,25 @@ class Admin(db.Model):
     password_hash = db.Column(db.String(255), nullable=False)
     role = db.Column(db.String(30), nullable=False, default='PORTAL_ADMIN')
     department_id = db.Column(db.Integer, db.ForeignKey('departments.id'), nullable=True)
+    recovery_email = db.Column(db.String(100), nullable=True)
+    recovery_mobile = db.Column(db.String(30), nullable=True)
+    is_recovery_email_verified = db.Column(db.Boolean, default=False)
+    is_recovery_mobile_verified = db.Column(db.Boolean, default=False)
+    password_changed_at = db.Column(db.DateTime, default=datetime.utcnow)
+    last_login_at = db.Column(db.DateTime, nullable=True)
+    failed_login_count = db.Column(db.Integer, default=0)
+    locked_until = db.Column(db.DateTime, nullable=True)
+    session_version = db.Column(db.Integer, default=1)
 
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)
+        self.password_changed_at = datetime.utcnow()
+        self.session_version = (self.session_version or 0) + 1
 
     def check_password(self, password):
-        if check_password_hash(self.password_hash, password):
-            return True
-        if self.username.lower() == 'mit_placement' and password == 'Mit@123':
-            return True
-        if self.username.lower() == 'placement_coordinator' and password == 'PC@123':
-            return True
-        if self.role == 'HOD' and self.department and password == f"{self.department.code}@123":
-            return True
-        if self.role == 'HOD' and password == 'admin123':
-            return True
-        return False
+        if not self.password_hash or not password:
+            return False
+        return check_password_hash(self.password_hash, password)
 
 class Student(db.Model):
     __tablename__ = 'students'
@@ -70,7 +73,8 @@ class Student(db.Model):
     mobile_number = db.Column(db.String(15), unique=True, nullable=False)
     email = db.Column(db.String(100), unique=True, nullable=True)
     department_id = db.Column(db.Integer, db.ForeignKey('departments.id'), nullable=False)
-    
+    session_version = db.Column(db.Integer, default=1)
+
     # Academic Performance
     semester = db.Column(db.Integer, default=8)
     cgpa = db.Column(db.Float, default=8.0)
@@ -463,12 +467,51 @@ class CertificateSyncLog(db.Model):
     provider_name = db.Column(db.String(50), default='Coursera', nullable=False)
     sync_started_at = db.Column(db.DateTime, default=datetime.utcnow)
     sync_completed_at = db.Column(db.DateTime, nullable=True)
-    sync_status = db.Column(db.String(30), default='SUCCESS') # SUCCESS, NO_NEW_CERTIFICATES, FAILED, PARTNER_API_UNAVAILABLE
+    sync_status = db.Column(db.String(30), default='SUCCESS')
     certificates_found = db.Column(db.Integer, default=0)
     certificates_synced = db.Column(db.Integer, default=0)
     error_category = db.Column(db.String(50), nullable=True)
     error_message = db.Column(db.Text, nullable=True)
 
+# ----------------- SECURITY & AUTHENTICATION MODELS -----------------
 
+class StudentOtpVerification(db.Model):
+    __tablename__ = 'student_otp_verifications'
+    id = db.Column(db.Integer, primary_key=True)
+    identifier = db.Column(db.String(100), nullable=False, index=True) # Normalized mobile number or email
+    student_usn = db.Column(db.String(20), db.ForeignKey('students.usn'), nullable=True, index=True)
+    otp_hash = db.Column(db.String(255), nullable=False) # Salted hash of OTP, never raw plaintext
+    purpose = db.Column(db.String(50), default='STUDENT_LOGIN') # STUDENT_LOGIN, ADMIN_RECOVERY
+    attempts = db.Column(db.Integer, default=0)
+    max_attempts = db.Column(db.Integer, default=3)
+    expires_at = db.Column(db.DateTime, nullable=False)
+    is_used = db.Column(db.Boolean, default=False)
+    used_at = db.Column(db.DateTime, nullable=True)
+    ip_address = db.Column(db.String(50), nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
+    student = db.relationship('Student', backref='otp_verifications', lazy=True)
 
+class PasswordResetToken(db.Model):
+    __tablename__ = 'password_reset_tokens'
+    id = db.Column(db.Integer, primary_key=True)
+    admin_id = db.Column(db.Integer, db.ForeignKey('admins.id'), nullable=False, index=True)
+    token_hash = db.Column(db.String(255), nullable=False, index=True)
+    method = db.Column(db.String(30), default='EMAIL') # EMAIL, MOBILE_OTP, BOOTSTRAP
+    expires_at = db.Column(db.DateTime, nullable=False)
+    is_used = db.Column(db.Boolean, default=False)
+    used_at = db.Column(db.DateTime, nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    admin = db.relationship('Admin', backref='reset_tokens', lazy=True)
+
+class SecurityAuditLog(db.Model):
+    __tablename__ = 'security_audit_logs'
+    id = db.Column(db.Integer, primary_key=True)
+    user_type = db.Column(db.String(30), nullable=False) # ADMIN, COORDINATOR, HOD, STUDENT, SYSTEM
+    user_identifier = db.Column(db.String(100), nullable=False) # username or usn
+    event_type = db.Column(db.String(100), nullable=False)
+    status = db.Column(db.String(30), default='SUCCESS') # SUCCESS, FAILED, BLOCKED
+    ip_address = db.Column(db.String(50), nullable=True)
+    details = db.Column(db.String(255), nullable=True)
+    timestamp = db.Column(db.DateTime, default=datetime.utcnow, index=True)

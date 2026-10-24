@@ -21,18 +21,33 @@ class Module2TestCase(unittest.TestCase):
         self.app_context.push()
 
     def tearDown(self):
+        pending = Student.query.filter_by(usn="TEST_PENDING_01").first()
+        if pending:
+            db.session.delete(pending)
+            db.session.commit()
         self.app_context.pop()
 
-    def test_01_student_identity_matching_and_login(self):
+    from unittest.mock import patch
+
+    @patch('app.verify_firebase_token')
+    def test_01_student_identity_matching_and_login(self, mock_verify):
         """Test 1: Registered student signs in and verified identity links to existing record"""
         # Pick student Alice Sharma (4MH24IS001, alice.is@mitm.ac.in)
         alice = Student.query.filter_by(usn="4MH24IS001").first()
         self.assertIsNotNone(alice, "Alice Sharma must exist in database")
 
-        # Test valid direct authentication
+        mock_verify.return_value = {
+            'email': 'alice.is@mitm.ac.in',
+            'email_verified': True,
+            'name': 'Alice Sharma',
+            'uid': 'mock_alice_uid_123'
+        }
+
+        # Test valid verified token authentication
         response = self.client.post('/student/login', data={
-            'login_type': 'direct',
-            'student_identifier': 'alice.is@mitm.ac.in'
+            'login_type': 'token',
+            'id_token': 'mock_valid_token_alice',
+            'provider': 'google'
         }, follow_redirects=True)
         self.assertEqual(response.status_code, 200)
         self.assertIn(b"Alice Sharma", response.data)
@@ -42,15 +57,22 @@ class Module2TestCase(unittest.TestCase):
         link = StudentAccountLink.query.filter_by(student_usn="4MH24IS001").first()
         self.assertIsNotNone(link, "StudentAccountLink should be created upon login")
 
-    def test_02_unregistered_identity_rejected(self):
+    @patch('app.verify_firebase_token')
+    def test_02_unregistered_identity_rejected(self, mock_verify):
         """Test 2: An unregistered identity cannot access student records"""
-        response = self.client.post('/student/login', data={
-            'login_type': 'email',
+        mock_verify.return_value = {
             'email': 'unknown.outsider@gmail.com',
-            'password': 'password123'
+            'email_verified': True,
+            'name': 'Outsider Student',
+            'uid': 'mock_outsider_uid'
+        }
+        response = self.client.post('/student/login', data={
+            'login_type': 'token',
+            'id_token': 'mock_outsider_token',
+            'provider': 'google'
         }, follow_redirects=True)
         self.assertEqual(response.status_code, 200)
-        self.assertIn(b"No matching student record found", response.data)
+        self.assertIn(b"This Gmail address is not registered", response.data)
 
     def test_03_data_isolation_derived_identity(self):
         """Test 3: A student cannot access another student's data by modifying requests"""

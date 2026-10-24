@@ -4,9 +4,12 @@ from models import (
     AuditLog, PlacementCoordinator, PlacementOfficer, StudentAccountLink, LearningRecommendation,
     YouTubeLesson, QuizQuestion, QuizAttempt, MockInterviewSession, MockInterviewQnA,
     Course, StudentCourseProgress, WorkshopEvent, StudentEventAction, StudentAchievement,
-    StudentNotification, StudentPreference, ExternalProviderAccount, CertificateSyncLog
+    StudentNotification, StudentPreference, ExternalProviderAccount, CertificateSyncLog,
+    StudentOtpVerification, PasswordResetToken, SecurityAuditLog
 )
 from firebase_auth import verify_firebase_token, match_student_identity, link_and_login_student
+from sms_service import SmsOtpService
+from security_service import SecurityService
 from performance_engine import analyze_student_performance
 from youtube_service import search_youtube_videos
 from quiz_bank import seed_quiz_questions, INITIAL_QUIZ_QUESTIONS
@@ -108,6 +111,8 @@ with app.app_context():
 failed_login_attempts = {}
 
 def is_rate_limited(client_ip, max_attempts=5, window_seconds=300):
+    if app.config.get('TESTING'):
+        return False
     now = time.time()
     attempts = [t for t in failed_login_attempts.get(client_ip, []) if now - t < window_seconds]
     failed_login_attempts[client_ip] = attempts
@@ -123,11 +128,47 @@ def reset_failed_logins(client_ip):
     failed_login_attempts.pop(client_ip, None)
 
 @app.before_request
-def auto_redirect_to_authorized_domain():
-    # Automatically switch 127.0.0.1 to localhost for seamless OAuth without prompting the user
-    if not app.config.get('TESTING') and request.host.startswith('127.0.0.1'):
-        target_url = request.url.replace('127.0.0.1:5000', 'localhost:5000', 1)
-        return redirect(target_url, code=302)
+def enforce_security_and_domain():
+    # 1. Automatically switch 127.0.0.1 to localhost for seamless OAuth without prompting the user
+    if not app.config.get('TESTING') and '127.0.0.1' in request.host:
+        target_url = request.url.replace('127.0.0.1', 'localhost', 1)
+        if target_url != request.url:
+            return redirect(target_url, code=302)
+
+    # 2. Session Revocation / Credential Reset Invalidation Check
+    # Skip for static files and authentication entry points
+    exempt_paths = [
+        '/static', '/admin/login', '/coordinator/login', '/hod/login',
+        '/student/login', '/admin/logout', '/coordinator/logout', '/hod/logout',
+        '/student/logout', '/admin/forgot-password', '/admin/reset-password',
+        '/student/login/send-otp', '/student/login/verify-otp'
+    ]
+    if any(request.path.startswith(p) for p in exempt_paths):
+        return None
+
+    if 'admin_id' in session:
+        admin_obj = db.session.get(Admin, session['admin_id'])
+        if not admin_obj:
+            session.clear()
+            return redirect(url_for('admin_login'))
+        cur_version = admin_obj.session_version or 1
+        sess_version = session.get('session_version', 1)
+        if cur_version != sess_version:
+            session.clear()
+            flash('Your session has expired or your credentials were changed. Please sign in again.', 'error')
+            return redirect(url_for('admin_login'))
+
+    if 'student_usn' in session:
+        stud_obj = db.session.get(Student, session['student_usn'])
+        if not stud_obj:
+            session.clear()
+            return redirect(url_for('student_login'))
+        cur_stud_version = stud_obj.session_version or 1
+        sess_stud_version = session.get('session_version', 1)
+        if cur_stud_version != sess_stud_version:
+            session.clear()
+            flash('Your session has expired. Please sign in again.', 'error')
+            return redirect(url_for('student_login'))
 
 @app.context_processor
 def inject_student_notifications():
@@ -319,11 +360,17 @@ def prepare_chart_payload(dept_stats_list):
 
 @app.route('/')
 def index():
-    if 'admin_id' in session:
+    if session.get('role') == 'PLACEMENT_ADMIN':
         return redirect(url_for('portal_dashboard'))
-    elif 'student_usn' in session:
+    elif session.get('role') == 'PLACEMENT_COORDINATOR' or session.get('coordinator_authenticated'):
+        return redirect(url_for('coordinator_dashboard'))
+    elif session.get('role') == 'HOD' and session.get('hod_dept_code'):
+        return redirect(url_for('hod_dashboard', dept_code=session.get('hod_dept_code')))
+    elif session.get('student_usn'):
         return redirect(url_for('student_dashboard'))
-    return redirect(url_for('admin_login'))
+    elif session.get('admin_id'):
+        return redirect(url_for('portal_dashboard'))
+    return render_template('index.html')
 
 @app.route('/admin/login', methods=['GET', 'POST'])
 def admin_login():
@@ -337,7 +384,6 @@ def admin_login():
         username = request.form.get('username', '').strip()
         password = request.form.get('password', '').strip()
         
-        # Main login: Mit_placement / Mit@123
         admin = Admin.query.filter(Admin.username.ilike(username)).first()
         if admin and admin.check_password(password) and (admin.role == 'PLACEMENT_ADMIN' or admin.username.lower() == 'mit_placement'):
             reset_failed_logins(client_ip)
@@ -346,11 +392,17 @@ def admin_login():
             session['admin_id'] = admin.id
             session['username'] = admin.username
             session['role'] = 'PLACEMENT_ADMIN'
+            session['session_version'] = admin.session_version or 1
+            admin.last_login_at = datetime.utcnow()
+            admin.failed_login_count = 0
+            SecurityService.log_security_event('PLACEMENT_ADMIN', admin.username, 'LOGIN_SUCCESS', 'SUCCESS', client_ip)
+            db.session.commit()
             flash('Logged in successfully as Placement Admin.', 'success')
             return redirect(url_for('portal_dashboard'))
         
         record_failed_login(client_ip)
-        flash('Invalid User ID or Password. Please use Mit_placement / Mit@123', 'error')
+        SecurityService.log_security_event('PLACEMENT_ADMIN', username or 'UNKNOWN', 'LOGIN_FAILED', 'FAILED', client_ip, 'Invalid admin credentials')
+        flash('Invalid User ID or Password. Please try again.', 'error')
     return render_template('admin_login.html')
 
 @app.route('/admin/logout')
@@ -422,13 +474,21 @@ def coordinator_login():
         if admin and admin.check_password(password) and (admin.role == 'PLACEMENT_COORDINATOR' or admin.username.lower() == 'placement_coordinator'):
             reset_failed_logins(client_ip)
             session.permanent = True
+            session['admin_id'] = admin.id
             session['coordinator_authenticated'] = True
             session['coordinator_username'] = admin.username
+            session['role'] = 'PLACEMENT_COORDINATOR'
+            session['session_version'] = admin.session_version or 1
+            admin.last_login_at = datetime.utcnow()
+            admin.failed_login_count = 0
+            SecurityService.log_security_event('PLACEMENT_COORDINATOR', admin.username, 'LOGIN_SUCCESS', 'SUCCESS', client_ip)
+            db.session.commit()
             flash('Authenticated as Placement Coordinator. Access granted.', 'success')
             return redirect(url_for('coordinator_dashboard'))
         
         record_failed_login(client_ip)
-        flash('Invalid Coordinator credentials. (Use: placement_coordinator / PC@123)', 'error')
+        SecurityService.log_security_event('PLACEMENT_COORDINATOR', username or 'UNKNOWN', 'LOGIN_FAILED', 'FAILED', client_ip, 'Invalid coordinator credentials')
+        flash('Invalid Coordinator User ID or Password. Please try again.', 'error')
     return render_template('coordinator_login.html')
 
 @app.route('/coordinator/logout')
@@ -783,17 +843,9 @@ def coordinator_activity_add():
 # DEPARTMENT HOD SECTION — HIDE DEPARTMENTS UNTIL LOGIN (RULE 2 & 3)
 @app.route('/portal/hods')
 def portal_hods():
-    admin = get_current_admin()
-    if not admin:
-        return redirect(url_for('admin_login'))
-
-    # Whenever clicking Department HODs, always require HOD authentication
-    session.pop('hod_dept_id', None)
-    session.pop('hod_dept_code', None)
-    session.pop('hod_username', None)
-
-    # Generic landing page with NO exposed department lists, student lists, or placement stats
-    return render_template('hod_department_select.html', active_page='hods', admin=admin)
+    if session.get('role') == 'HOD' and session.get('hod_dept_code'):
+        return redirect(url_for('hod_dashboard', dept_code=session.get('hod_dept_code')))
+    return redirect(url_for('hod_login'))
 
 # HOD AUTHENTICATION (RULE 3 & 4)
 @app.route('/hod/login', methods=['GET', 'POST'])
@@ -805,7 +857,7 @@ def hod_login(dept_code=None):
     if request.method == 'POST':
         if is_rate_limited(client_ip):
             flash('Too many failed attempts. Please wait 5 minutes before trying again.', 'error')
-            return redirect(url_for('portal_hods')), 429
+            return redirect(url_for('hod_login')), 429
 
         username = request.form.get('username', '').strip()
         password = request.form.get('password', '').strip()
@@ -814,22 +866,34 @@ def hod_login(dept_code=None):
         if admin and admin.check_password(password) and admin.role == 'HOD' and admin.department_id:
             dept = db.session.get(Department, admin.department_id)
             if dept:
+                if dept_code and dept_code.upper() != dept.code.upper():
+                    flash(f"Account '{admin.username}' is assigned to {dept.name} ({dept.code}), not {dept_code.upper()}.", 'error')
+                    return redirect(url_for('hod_login'))
+
                 reset_failed_logins(client_ip)
                 session.permanent = True
+                session['admin_id'] = admin.id
+                session['role'] = 'HOD'
+                session['hod_authenticated'] = True
                 session['hod_dept_id'] = dept.id
                 session['hod_dept_code'] = dept.code
                 session['hod_username'] = admin.username
+                session['session_version'] = admin.session_version or 1
+                admin.last_login_at = datetime.utcnow()
+                admin.failed_login_count = 0
+                SecurityService.log_security_event('HOD', admin.username, 'LOGIN_SUCCESS', 'SUCCESS', client_ip, f"Logged into {dept.code} HOD dashboard")
+                db.session.commit()
                 flash(f"Authentication successful. Welcome to {dept.name} HOD Dashboard.", 'success')
                 return redirect(url_for('hod_dashboard', dept_code=dept.code))
 
         record_failed_login(client_ip)
         flash('Invalid HOD credentials. Please authenticate with your department-specific User ID and Password.', 'error')
-        return redirect(url_for('portal_hods'))
+        return redirect(url_for('hod_login'))
 
     if dept_code:
         dept = Department.query.filter_by(code=dept_code.upper()).first()
         return render_template('hod_login.html', department=dept)
-    return redirect(url_for('portal_hods'))
+    return render_template('hod_login.html', department=None)
 
 # HOD LOGOUT
 @app.route('/hod/logout')
@@ -1157,27 +1221,33 @@ def portal_reports():
 @app.route('/student/login', methods=['GET', 'POST'])
 def student_login():
     if request.method == 'POST':
-        login_type = request.form.get('login_type', 'direct')
+        login_type = request.form.get('login_type', 'token')
         client_ip = request.remote_addr or '127.0.0.1'
 
         if is_rate_limited(client_ip):
             flash('Too many login attempts. Please wait 5 minutes before trying again.', 'error')
             return redirect(url_for('student_login')), 429
 
-        # Case A: Token-based sign in (Google, Phone OTP, Firebase Client Token)
+        # Case A: Google Sign-In with verified Google OAuth token
         if login_type == 'token':
             id_token = request.form.get('id_token', '').strip()
-            provider = request.form.get('provider', 'google')
             claims = verify_firebase_token(id_token)
             if not claims:
                 record_failed_login(client_ip)
                 flash('Identity verification failed: Invalid Google authentication token.', 'error')
                 return redirect(url_for('student_login'))
 
-            matched_student, match_err = match_student_identity(claims)
-            if match_err == 'NO_MATCH':
+            # Enforce verified email claim
+            if not claims.get('email_verified', False):
                 record_failed_login(client_ip)
-                flash('No matching student record found. Please contact your Placement Coordinator.', 'error')
+                flash('Google account email is not verified. Please verify your Gmail address with Google before signing in.', 'error')
+                return redirect(url_for('student_login'))
+
+            matched_student, match_err = match_student_identity(claims)
+            if match_err == 'UNREGISTERED_GMAIL' or not matched_student:
+                record_failed_login(client_ip)
+                SecurityService.log_security_event('STUDENT', claims.get('email', 'UNKNOWN'), 'LOGIN_DENIED_UNREGISTERED', 'BLOCKED', client_ip, 'Unregistered Gmail account attempted login')
+                flash('This Gmail address is not registered with the MITM Placement Coordinator. Please contact your department or Placement Coordinator.', 'error')
                 return redirect(url_for('student_login'))
             elif match_err == 'MULTIPLE_MATCHES':
                 record_failed_login(client_ip)
@@ -1190,57 +1260,266 @@ def student_login():
                 return redirect(url_for('student_login'))
 
             reset_failed_logins(client_ip)
+            SecurityService.log_security_event('STUDENT', matched_student.usn, 'LOGIN_SUCCESS_GOOGLE', 'SUCCESS', client_ip, f"Authenticated via {claims.get('email')}")
             flash(f"Welcome, {matched_student.name}! Authenticated via Google Account ({claims.get('email')}).", 'success')
             return redirect(url_for('student_dashboard'))
 
-        # Case B: Email & Password
-        elif login_type == 'email':
-            email = request.form.get('email', '').strip().lower()
-            password = request.form.get('password', '').strip()
+        # Direct unverified logins are rejected
+        record_failed_login(client_ip)
+        flash('Invalid login request. Please use Google Sign-In or Mobile OTP.', 'error')
+        return redirect(url_for('student_login'))
 
-            claims = {
-                'uid': f"email_{re.sub(r'[^a-zA-Z0-9]', '_', email)}",
-                'email': email,
-                'email_verified': True,
-                'auth_provider': 'password'
-            }
-            matched_student, match_err = match_student_identity(claims)
-            if match_err == 'NO_MATCH' or not matched_student:
-                record_failed_login(client_ip)
-                flash('No matching student record found. Please contact your Placement Coordinator.', 'error')
-                return redirect(url_for('student_login'))
-            elif match_err == 'MULTIPLE_MATCHES':
-                record_failed_login(client_ip)
-                flash('Multiple student records matched this email. Contact your Placement Coordinator.', 'error')
-                return redirect(url_for('student_login'))
+    return render_template('student_login.html')
 
-            link_and_login_student(matched_student, claims, session)
-            reset_failed_logins(client_ip)
-            flash(f"Welcome, {matched_student.name}! Authenticated successfully.", 'success')
-            return redirect(url_for('student_dashboard'))
+# Mobile Number OTP Login: Step 1 - Send OTP
+@app.route('/student/login/send-otp', methods=['POST'])
+def student_send_otp():
+    client_ip = request.remote_addr or '127.0.0.1'
+    mobile_input = request.form.get('mobile_number', '').strip()
+    clean_mobile = SmsOtpService.normalize_phone_number(mobile_input)
 
-        # Case C: Direct selection / Verified identifier
+    if not clean_mobile or len(clean_mobile) < 10:
+        return jsonify({
+            'success': False,
+            'message': 'Please enter a valid 10-digit mobile number.'
+        }), 400
+
+    # Check registered students database
+    last10 = clean_mobile[-10:]
+    student = Student.query.filter(
+        (Student.mobile_number == clean_mobile) |
+        (Student.mobile_number == last10) |
+        (Student.mobile_number.endswith(last10))
+    ).first()
+
+    if not student:
+        record_failed_login(client_ip)
+        SecurityService.log_security_event('STUDENT', clean_mobile, 'OTP_REQUEST_UNREGISTERED', 'BLOCKED', client_ip, 'Unregistered mobile requested OTP')
+        return jsonify({
+            'success': False,
+            'message': 'Your Gmail address or mobile number is not registered in the MITM Placement System. Please contact your Placement Coordinator.'
+        }), 403
+
+    success, msg, dev_preview = SmsOtpService.generate_and_send_otp(student, client_ip)
+    if not success:
+        return jsonify({'success': False, 'message': msg}), 429
+
+    return jsonify({
+        'success': True,
+        'message': msg,
+        'dev_preview': dev_preview,
+        'student_name': student.name,
+        'cooldown_seconds': 60
+    })
+
+# Mobile Number OTP Login: Step 2 - Verify OTP & Establish Session
+@app.route('/student/login/verify-otp', methods=['POST'])
+def student_verify_otp():
+    client_ip = request.remote_addr or '127.0.0.1'
+    mobile_input = request.form.get('mobile_number', '').strip()
+    otp_input = request.form.get('otp', '').strip()
+    clean_mobile = SmsOtpService.normalize_phone_number(mobile_input)
+
+    if not clean_mobile or not otp_input:
+        return jsonify({'success': False, 'message': 'Mobile number and 6-digit OTP are required.'}), 400
+
+    success, student, msg = SmsOtpService.verify_otp(clean_mobile, otp_input, client_ip)
+    if not success or not student:
+        record_failed_login(client_ip)
+        return jsonify({'success': False, 'message': msg}), 400
+
+    # Establish student session
+    session.clear()
+    session.permanent = True
+    session['student_usn'] = student.usn
+    session['student_name'] = student.name
+    session['student_email'] = student.email
+    session['student_dept_code'] = student.department.code if student.department else ''
+    session['student_approval_status'] = student.placement_approval_status
+    session['session_version'] = getattr(student, 'session_version', 1)
+    session['student_logged_in_at'] = time.time()
+    reset_failed_logins(client_ip)
+
+    SecurityService.log_security_event('STUDENT', student.usn, 'LOGIN_SUCCESS_OTP', 'SUCCESS', client_ip, f"Authenticated via mobile ending in {clean_mobile[-4:]}")
+    flash(f"Welcome, {student.name}! Authenticated successfully via registered mobile OTP.", 'success')
+    return jsonify({'success': True, 'redirect_url': url_for('student_dashboard')})
+
+# ----------------- ACCOUNT SETTINGS & PASSWORD RECOVERY -----------------
+
+@app.route('/account/settings', methods=['GET', 'POST'])
+def account_settings():
+    admin = get_current_admin()
+    if not admin:
+        flash('Authentication required: Please log in to access account security settings.', 'error')
+        return redirect(url_for('admin_login'))
+
+    client_ip = request.remote_addr or '127.0.0.1'
+
+    if request.method == 'POST':
+        action = request.form.get('action')
+
+        if action == 'change_password':
+            curr_pass = request.form.get('current_password', '').strip()
+            new_pass = request.form.get('new_password', '').strip()
+            conf_pass = request.form.get('confirm_password', '').strip()
+
+            success, msg = SecurityService.change_admin_password(admin, curr_pass, new_pass, conf_pass, client_ip)
+            if success:
+                session['session_version'] = admin.session_version
+                flash(msg, 'success')
+            else:
+                flash(msg, 'error')
+            return redirect(url_for('account_settings'))
+
+        elif action == 'change_username':
+            new_user = request.form.get('new_username', '').strip()
+            curr_pass = request.form.get('current_password', '').strip()
+
+            success, msg = SecurityService.update_admin_username(admin, new_user, curr_pass, client_ip)
+            if success:
+                session['username'] = admin.username
+                if session.get('coordinator_authenticated'):
+                    session['coordinator_username'] = admin.username
+                if session.get('hod_authenticated'):
+                    session['hod_username'] = admin.username
+                flash(msg, 'success')
+            else:
+                flash(msg, 'error')
+            return redirect(url_for('account_settings'))
+
+        elif action == 'update_recovery':
+            rec_email = request.form.get('recovery_email', '').strip()
+            rec_mobile = request.form.get('recovery_mobile', '').strip()
+
+            success, msg = SecurityService.update_recovery_settings(admin, rec_email, rec_mobile, client_ip)
+            if success:
+                flash(msg, 'success')
+            else:
+                flash(msg, 'error')
+            return redirect(url_for('account_settings'))
+
+        elif action == 'revoke_all_sessions':
+            admin.session_version = (admin.session_version or 1) + 1
+            db.session.commit()
+            session['session_version'] = admin.session_version
+            SecurityService.log_security_event(admin.role, admin.username, 'ALL_SESSIONS_REVOKED', 'SUCCESS', client_ip)
+            flash('All other active sessions on other browsers/devices have been invalidated.', 'success')
+            return redirect(url_for('account_settings'))
+
+    audit_history = SecurityAuditLog.query.filter_by(
+        user_identifier=admin.username
+    ).order_by(SecurityAuditLog.timestamp.desc()).limit(15).all()
+
+    return render_template(
+        'account_settings.html',
+        admin=admin,
+        audit_history=audit_history
+    )
+
+@app.route('/admin/forgot-password', methods=['GET', 'POST'])
+def admin_forgot_password():
+    client_ip = request.remote_addr or '127.0.0.1'
+
+    if request.method == 'POST':
+        identifier = request.form.get('identifier', '').strip()
+        method = request.form.get('recovery_method', 'EMAIL')
+
+        success, msg, dev_preview = SecurityService.initiate_password_recovery(identifier, method, client_ip)
+        flash(msg, 'info')
+        if dev_preview:
+            flash(f"[Dev Preview] Verification Code: {dev_preview} (Valid 15 mins)", 'warning')
+        return redirect(url_for('admin_reset_password', identifier=identifier))
+
+    return render_template('forgot_password.html')
+
+@app.route('/admin/reset-password', methods=['GET', 'POST'])
+def admin_reset_password():
+    client_ip = request.remote_addr or '127.0.0.1'
+    identifier = request.args.get('identifier', '')
+
+    if request.method == 'POST':
+        identifier = request.form.get('identifier', '').strip()
+        recovery_code = request.form.get('recovery_code', '').strip()
+        new_password = request.form.get('new_password', '').strip()
+        confirm_password = request.form.get('confirm_password', '').strip()
+
+        success, msg = SecurityService.verify_and_reset_password(
+            identifier, recovery_code, new_password, confirm_password, client_ip
+        )
+        if success:
+            flash(msg, 'success')
+            return redirect(url_for('admin_login'))
         else:
-            identifier = request.form.get('student_identifier', '').strip()
-            claims = {
-                'uid': f"direct_{re.sub(r'[^a-zA-Z0-9]', '_', identifier)}",
-                'email': identifier if '@' in identifier else None,
-                'phone_number': identifier if '@' not in identifier else None,
-                'auth_provider': 'developer_verified'
-            }
-            matched_student, match_err = match_student_identity(claims)
-            if not matched_student:
-                record_failed_login(client_ip)
-                flash('No matching student record found. Please contact your Placement Coordinator.', 'error')
-                return redirect(url_for('student_login'))
+            flash(msg, 'error')
+            return render_template('reset_password.html', identifier=identifier)
 
-            link_and_login_student(matched_student, claims, session)
-            reset_failed_logins(client_ip)
-            flash(f"Welcome, {matched_student.name}! Direct student session established.", 'success')
-            return redirect(url_for('student_dashboard'))
+    return render_template('reset_password.html', identifier=identifier)
 
-    sample_students = Student.query.order_by(Student.usn).limit(30).all()
-    return render_template('student_login.html', sample_students=sample_students)
+@app.route('/coordinator/student/<usn>/update-contact', methods=['POST'])
+def coordinator_update_student_contact(usn):
+    is_coord = session.get('coordinator_authenticated') or session.get('role') == 'PLACEMENT_COORDINATOR'
+    is_admin = session.get('admin_id') is not None or session.get('role') in ['PORTAL_ADMIN', 'PLACEMENT_ADMIN']
+    if not (is_coord or is_admin):
+        flash('Unauthorized: Only Placement Coordinators or Placement Admins can update contact details.', 'error')
+        return redirect(url_for('coordinator_login'))
+
+    student = Student.query.get_or_404(usn)
+    raw_email = request.form.get('email', '').strip().lower()
+    raw_mobile = request.form.get('mobile', '').strip()
+    clean_mobile = SmsOtpService.normalize_phone_number(raw_mobile)
+
+    if not raw_email or '@' not in raw_email:
+        flash('Valid registered Gmail/email address is required.', 'error')
+        return redirect(request.referrer or url_for('coordinator_dashboard'))
+
+    if not clean_mobile or len(clean_mobile) != 10:
+        flash('Valid 10-digit mobile number is required.', 'error')
+        return redirect(request.referrer or url_for('coordinator_dashboard'))
+
+    existing_email = Student.query.filter(
+        db.func.lower(Student.email) == raw_email,
+        Student.usn != usn
+    ).first()
+    if existing_email:
+        flash(f"Email '{raw_email}' is already registered to student {existing_email.name} ({existing_email.usn}).", 'error')
+        return redirect(request.referrer or url_for('coordinator_dashboard'))
+
+    existing_phone = Student.query.filter(
+        (Student.mobile_number == clean_mobile) |
+        (Student.mobile_number.endswith(clean_mobile)),
+        Student.usn != usn
+    ).first()
+    if existing_phone:
+        flash(f"Mobile number '{clean_mobile}' is already registered to student {existing_phone.name} ({existing_phone.usn}).", 'error')
+        return redirect(request.referrer or url_for('coordinator_dashboard'))
+
+    old_email = student.email
+    old_mobile = student.mobile_number
+    student.email = raw_email
+    student.mobile_number = clean_mobile
+    student.session_version = (getattr(student, 'session_version', 1) or 1) + 1
+
+    user_name = session.get('coordinator_username') or session.get('username') or 'placement_coordinator'
+    audit = AuditLog(
+        student_usn=usn,
+        changed_by=user_name,
+        action="Contact Information Updated",
+        details=f"Email: '{old_email}' -> '{raw_email}', Mobile: '{old_mobile}' -> '{clean_mobile}'"
+    )
+    db.session.add(audit)
+
+    SecurityService.log_security_event(
+        'COORDINATOR',
+        user_name,
+        'STUDENT_CONTACT_UPDATED',
+        'SUCCESS',
+        request.remote_addr,
+        f"Updated USN {usn} contact details"
+    )
+    db.session.commit()
+
+    flash(f"Contact details for {student.name} ({student.usn}) updated successfully. Student must sign in with updated credentials.", 'success')
+    return redirect(request.referrer or url_for('coordinator_dashboard'))
 
 @app.route('/student/logout')
 def student_logout():

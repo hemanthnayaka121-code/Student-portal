@@ -51,3 +51,8 @@ Thumbs.db
 # Database backups
 instance/*backup*.db
 *.log
+
+*.backup_*
+instance/*.backup_*
+*.cleanup_backup_*
+instance/*.cleanup_backup_*

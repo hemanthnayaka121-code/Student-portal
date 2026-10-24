@@ -1,7 +1,9 @@
 """
-Firebase Authentication & Student Identity Matching Engine for MIT Placement Portal (Module 2)
-Verifies Firebase ID tokens using Firebase Admin SDK, matches identity against existing
-Placement Coordinator student records, enforces HOD approval eligibility, and issues secure sessions.
+Firebase & Google Authentication Engine for MIT Placement Portal (Module 2)
+Verifies Google OAuth ID tokens cryptographically, matches identity strictly against existing
+Placement Coordinator student records, enforces verified email claims, and establishes secure sessions.
+STRICT RULE: Only students already officially registered in the database are allowed to log in.
+NEVER automatically registers or provisions unknown Google accounts.
 """
 
 import os
@@ -75,7 +77,7 @@ def verify_firebase_token(id_token):
                 'email_verified': decoded_token.get('email_verified', False),
                 'auth_provider': decoded_token.get('firebase', {}).get('sign_in_provider', 'google.com')
             }
-        except Exception as err:
+        except Exception:
             pass # Fall through to Google public cert verification
 
     # 2. Cryptographic RS256 Verification using Google Public Certificates
@@ -109,7 +111,6 @@ def verify_firebase_token(id_token):
                     'auth_provider': decoded.get('firebase', {}).get('sign_in_provider', 'google.com')
                 }
             else:
-                # If certs expired, refresh and retry once
                 _GOOGLE_CERTS_CACHE['timestamp'] = 0
                 certs = _get_google_public_certs()
                 if kid and kid in certs:
@@ -133,7 +134,7 @@ def verify_firebase_token(id_token):
         except Exception as e:
             print(f"Google public cert token verification notice: {e}")
 
-    # 3. Direct Google Verified Claims / Offline Verification Fallback
+    # 3. Direct Google Verified Claims / Test Token Verification
     try:
         if id_token.startswith("TEST_TOKEN:"):
             raw_json = id_token[len("TEST_TOKEN:"):]
@@ -144,7 +145,7 @@ def verify_firebase_token(id_token):
                 'email': payload.get('email'),
                 'department': payload.get('department'),
                 'phone_number': payload.get('phone_number'),
-                'email_verified': True,
+                'email_verified': payload.get('email_verified', True),
                 'auth_provider': payload.get('provider', 'google.com')
             }
         elif id_token.startswith("GOOGLE_AUTH:"):
@@ -157,7 +158,7 @@ def verify_firebase_token(id_token):
                 'email': email_val,
                 'department': payload.get('department'),
                 'phone_number': payload.get('phone_number'),
-                'email_verified': True,
+                'email_verified': payload.get('email_verified', True),
                 'auth_provider': 'google.com'
             }
     except Exception:
@@ -167,18 +168,27 @@ def verify_firebase_token(id_token):
 
 def match_student_identity(verified_claims):
     """
-    Matches the verified Firebase claims against existing Student records created by Placement Coordinator.
+    Matches the verified Firebase / Google claims against existing Student records created by Placement Coordinator.
     Rules:
-    - Check StudentAccountLink by firebase_uid first
-    - Match by email (case-insensitive)
-    - Match by phone (last 10 digits)
-    - If Google OAuth identity is used and no record exists, auto-provision and approve student record
+    - Verifies email_verified claim for Google logins
+    - Matches only against officially registered students created in Module 1
+    - NEVER auto-provisions or creates student records automatically
+    - If email is not registered: returns (None, 'UNREGISTERED_GMAIL')
+    - If phone is not registered: returns (None, 'UNREGISTERED_PHONE')
     """
+    if not verified_claims:
+        return None, 'INVALID_CLAIMS'
+
     email = verified_claims.get('email')
     phone = verified_claims.get('phone_number')
     uid = verified_claims.get('uid')
+    email_verified = verified_claims.get('email_verified', False)
 
-    # 1. Existing link by firebase_uid
+    # 1. Enforce verified email requirement
+    if email and not email_verified:
+        return None, 'UNVERIFIED_EMAIL'
+
+    # 2. Existing link by firebase_uid (only if linked student still exists)
     if uid:
         link = StudentAccountLink.query.filter_by(firebase_uid=uid).first()
         if link and link.student:
@@ -186,20 +196,20 @@ def match_student_identity(verified_claims):
 
     matches = set()
 
-    # Match by email (case-insensitive)
+    # Match by normalized email (case-insensitive)
     if email and email.strip():
         clean_email = email.strip().lower()
         matched_by_email = Student.query.filter(db.func.lower(Student.email) == clean_email).all()
         for s in matched_by_email:
             matches.add(s)
 
-    # Match by phone (strip +91, hyphens, spaces)
-    if phone and phone.strip():
-        clean_phone = re.sub(r'[\s\-\(\)\+]', '', phone.strip())
-        # Check last 10 digits
+    # Match by normalized phone (strip +91, hyphens, spaces, check canonical last 10 digits)
+    if phone and str(phone).strip():
+        clean_phone = re.sub(r'\D', '', str(phone).strip())
         last10 = clean_phone[-10:] if len(clean_phone) >= 10 else clean_phone
         matched_by_phone = Student.query.filter(
             (Student.mobile_number == clean_phone) |
+            (Student.mobile_number == last10) |
             (Student.mobile_number.endswith(last10))
         ).all()
         for s in matched_by_phone:
@@ -210,72 +220,31 @@ def match_student_identity(verified_claims):
     if len(matched_list) == 1:
         return matched_list[0], None
     elif len(matched_list) > 1:
-        return matched_list[0], None
+        return None, 'MULTIPLE_MATCHES'
 
-    # Google Auth automatic allowance & auto-provisioning
-    auth_provider = str(verified_claims.get('auth_provider', ''))
-    if email and ('google' in auth_provider.lower() or (uid and 'google' in uid.lower())):
-        import random
-        clean_email = email.strip().lower()
-        dept_code = verified_claims.get('department')
-        dept = None
-        if dept_code:
-            dept = Department.query.filter((Department.code == dept_code) | (Department.name == dept_code)).first()
-        if not dept:
-            dept = Department.query.filter_by(code='ISE').first() or Department.query.filter_by(code='IS').first() or Department.query.first()
-        usn_dept = dept.code if dept else 'ISE'
-        gen_usn = f"4MH24{usn_dept}{random.randint(100, 999)}"
-        while Student.query.filter_by(usn=gen_usn).first():
-            gen_usn = f"4MH24{usn_dept}{random.randint(100, 999)}"
-
-        display_name = verified_claims.get('name') or clean_email.split('@')[0].replace('.', ' ').title()
-        new_student = Student(
-            usn=gen_usn,
-            name=display_name,
-            email=clean_email,
-            mobile_number=phone or f"9{random.randint(100000000, 999999999)}",
-            department_id=dept.id if dept else 1,
-            placement_approval_status='APPROVED'
-        )
-        db.session.add(new_student)
-        db.session.flush()
-
-        perf = PerformanceRecord(
-            student_usn=new_student.usn,
-            aptitude_score=78.0,
-            coding_c_score=82.0,
-            coding_java_score=75.0,
-            coding_dsa_score=70.0,
-            hr_status=True,
-            gd_status=True
-        )
-        db.session.add(perf)
-        db.session.commit()
-        return new_student, None
-
-    return None, "NO_MATCH"
+    # Unregistered account: STRICTLY DENY ACCESS. Do not auto-provision.
+    if email:
+        return None, 'UNREGISTERED_GMAIL'
+    elif phone:
+        return None, 'UNREGISTERED_PHONE'
+    return None, 'NO_MATCH'
 
 def link_and_login_student(student, verified_claims, session_obj):
     """
     Links authenticated Firebase user to student record in database, updates last login,
-    and sets secure session parameters with automatic approval.
+    and sets secure session parameters with actual database approval status.
     """
     uid = verified_claims.get('uid') or f"uid_{student.usn}"
     provider = verified_claims.get('auth_provider', 'firebase')
     email = verified_claims.get('email') or student.email
     phone = verified_claims.get('phone_number') or student.mobile_number
 
-    # Ensure student is marked APPROVED so they are never blocked by any approval gate
-    if student.placement_approval_status != 'APPROVED':
-        student.placement_approval_status = 'APPROVED'
-
     # Check or create StudentAccountLink
     link = StudentAccountLink.query.filter_by(student_usn=student.usn).first()
     if not link:
-        # Check if uid already taken by another student
         existing_uid_link = StudentAccountLink.query.filter_by(firebase_uid=uid).first()
         if existing_uid_link and existing_uid_link.student_usn != student.usn:
-            return False, "This Firebase account is already linked to another student. Please contact administrator."
+            return False, "This Google/Firebase account is already linked to another student record. Please contact your Placement Coordinator."
 
         link = StudentAccountLink(
             student_usn=student.usn,
@@ -297,7 +266,7 @@ def link_and_login_student(student, verified_claims, session_obj):
 
     db.session.commit()
 
-    # Establish session
+    # Establish session with actual placement_approval_status
     try:
         session_obj.permanent = True
     except AttributeError:
@@ -306,7 +275,8 @@ def link_and_login_student(student, verified_claims, session_obj):
     session_obj['student_name'] = student.name
     session_obj['student_email'] = student.email
     session_obj['student_dept_code'] = student.department.code if student.department else ''
-    session_obj['student_approval_status'] = 'APPROVED'
+    session_obj['student_approval_status'] = student.placement_approval_status
+    session_obj['session_version'] = getattr(student, 'session_version', 1)
     session_obj['student_logged_in_at'] = time.time()
 
     return True, "Login successful."

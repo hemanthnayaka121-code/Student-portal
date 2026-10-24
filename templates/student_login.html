@@ -7,13 +7,36 @@
 @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 .student-login-box {
     width: 100%;
-    max-width: 460px;
+    max-width: 480px;
     background: #FFFFFF;
     border: 2px solid #000000;
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
-    padding: 2.5rem 2rem;
+    padding: 2.25rem 2rem;
     border-radius: 4px;
     text-align: center;
+}
+.login-tabs {
+    display: flex;
+    border-bottom: 2px solid #000;
+    margin-bottom: 1.5rem;
+}
+.login-tab-btn {
+    flex: 1;
+    background: #F4F4F4;
+    border: none;
+    border-bottom: 2px solid transparent;
+    padding: 0.75rem 0.5rem;
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: #555;
+    cursor: pointer;
+    transition: all 0.15s ease-in-out;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+.login-tab-btn.active {
+    background: #000000;
+    color: #FFFFFF;
 }
 .btn-google-auth {
     width: 100%;
@@ -30,7 +53,6 @@
     border-radius: 4px;
     cursor: pointer;
     transition: all 0.15s ease-in-out;
-    letter-spacing: -0.01em;
 }
 .btn-google-auth:hover {
     background: #222222;
@@ -38,12 +60,51 @@
     transform: translateY(-1px);
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
-.btn-google-auth:active {
-    transform: translateY(0);
+.btn-primary-action {
+    width: 100%;
+    background: #000000;
+    color: #FFFFFF;
+    border: 2px solid #000000;
+    font-size: 0.92rem;
+    font-weight: 700;
+    padding: 0.75rem 1rem;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.15s ease;
 }
-.btn-google-auth:disabled {
-    opacity: 0.75;
-    cursor: not-allowed;
+.btn-primary-action:hover {
+    background: #222;
+    border-color: #222;
+}
+.input-phone {
+    width: 100%;
+    border: 1px solid #000;
+    padding: 0.7rem 0.85rem;
+    font-size: 0.95rem;
+    font-weight: 600;
+    border-radius: 4px;
+    letter-spacing: 0.5px;
+}
+.input-otp {
+    width: 100%;
+    border: 2px solid #000;
+    padding: 0.75rem;
+    font-size: 1.35rem;
+    font-weight: 800;
+    text-align: center;
+    letter-spacing: 8px;
+    border-radius: 4px;
+    font-family: monospace;
+}
+.guidance-box {
+    background: #FAFAFA;
+    border: 1px solid #000;
+    border-radius: 4px;
+    padding: 0.85rem 1rem;
+    margin-top: 1.5rem;
+    text-align: left;
+    font-size: 0.78rem;
+    line-height: 1.45;
 }
 </style>
 
@@ -51,51 +112,139 @@
     <div class="student-login-box">
         
         <!-- MIT Mysore Institution Branding -->
-        <div style="margin-bottom: 2rem;">
-            <img src="{{ url_for('static', filename='images/mit_logo.png') }}" alt="MIT Mysore Logo" style="width: 80px; height: 80px; object-fit: contain; margin: 0 auto 1rem; display: block;">
-            <div style="font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.1em; color: #555; font-weight: 700; margin-bottom: 0.35rem;">
+        <div style="margin-bottom: 1.5rem;">
+            <img src="{{ url_for('static', filename='images/mit_logo.png') }}" alt="MIT Mysore Logo" style="width: 72px; height: 72px; object-fit: contain; margin: 0 auto 0.75rem; display: block;">
+            <div style="font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.1em; color: #555; font-weight: 700; margin-bottom: 0.25rem;">
                 MAHARAJA INSTITUTE OF TECHNOLOGY MYSORE
             </div>
-            <h1 style="font-size: 1.5rem; font-weight: 800; color: #000; letter-spacing: -0.02em; margin: 0 0 0.4rem 0;">
+            <h1 style="font-size: 1.45rem; font-weight: 800; color: #000; letter-spacing: -0.02em; margin: 0 0 0.25rem 0;">
                 STUDENT PLACEMENT PORTAL
             </h1>
-            <p style="color: #666; font-size: 0.82rem; margin: 0; line-height: 1.45;">
+            <p style="color: #666; font-size: 0.8rem; margin: 0;">
                 Autonomous Institute Affiliated to VTU Belagavi &bull; Placement &amp; Training Cell
             </p>
         </div>
 
         <!-- Dynamic Notice / Status Box -->
-        <div id="status-alert-box" style="display: none; padding: 0.85rem 1rem; margin-bottom: 1.5rem; font-size: 0.82rem; line-height: 1.45; border: 1px solid #000; text-align: left; border-radius: 4px;"></div>
+        <div id="status-alert-box" style="display: none; padding: 0.85rem 1rem; margin-bottom: 1.25rem; font-size: 0.82rem; line-height: 1.45; border: 1px solid #000; text-align: left; border-radius: 4px;"></div>
 
-        <!-- Google Authentication Action Card -->
-        <div style="background: #FAFAFA; border: 1px solid var(--border-mid); padding: 2rem 1.5rem; border-radius: 4px; margin-bottom: 1.75rem;">
-            <p style="font-size: 0.88rem; color: #333; margin: 0 0 1.25rem 0; line-height: 1.5;">
-                Sign in with your <strong>Google Account</strong> to access your placement dashboard, diagnostic assessment results, and verified achievements portfolio.
-            </p>
+        <!-- Flash Messages Display -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                <div style="margin-bottom: 1.25rem; text-align: left;">
+                    {% for category, message in messages %}
+                        <div class="flash-{{ category }}" style="font-size: 0.82rem; padding: 0.75rem 1rem; border-radius: 4px; border: 1px solid {% if category == 'error' %}#C5221F{% else %}#137333{% endif %}; background: {% if category == 'error' %}#FFF0F0{% else %}#E6F4EA{% endif %}; color: {% if category == 'error' %}#C5221F{% else %}#137333{% endif %}; margin-bottom: 0.5rem; line-height: 1.45;">
+                            <strong>{% if category == 'error' %}&#9888; Access Notice:{% else %}&#10004; Success:{% endif %}</strong> {{ message }}
+                        </div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        {% endwith %}
 
-            <!-- Exclusive Google Sign In Button -->
-            <button type="button" id="google-auth-btn" onclick="handleGoogleSignIn()" class="btn-google-auth">
-                <svg width="20" height="20" viewBox="0 0 24 24" style="flex-shrink: 0;">
-                    <path fill="#EA4335" d="M12 5c1.6 0 3 .6 4.1 1.6l3.1-3.1C17.3 1.7 14.8 1 12 1 7.5 1 3.7 3.6 1.9 7.3l3.7 2.9C6.5 7.4 9 5 12 5z"/>
-                    <path fill="#4285F4" d="M23.5 12.3c0-.8-.1-1.6-.2-2.3H12v4.5h6.5c-.3 1.5-1.1 2.8-2.4 3.7l3.7 2.9c2.2-2 3.7-5 3.7-8.8z"/>
-                    <path fill="#FBBC05" d="M5.6 14.8c-.2-.7-.4-1.5-.4-2.8s.2-2.1.4-2.8L1.9 6.3C.7 8.7 0 10.8 0 12s.7 3.3 1.9 5.7l3.7-2.9z"/>
-                    <path fill="#34A853" d="M12 23c3.2 0 6-1.1 8-3l-3.7-2.9c-1.1.7-2.5 1.2-4.3 1.2-3 0-5.5-2-6.4-4.8L1.9 16.4C3.7 20.1 7.5 23 12 23z"/>
-                </svg>
-                <span id="google-btn-text">Sign In with Google</span>
+        <!-- Tab Selector: Google OAuth vs Mobile OTP -->
+        <div class="login-tabs">
+            <button type="button" class="login-tab-btn active" id="tab-google-btn" onclick="switchLoginTab('google')">
+                Continue with Google
             </button>
+            <button type="button" class="login-tab-btn" id="tab-otp-btn" onclick="switchLoginTab('otp')">
+                Mobile Number OTP
+            </button>
+        </div>
 
-            <div style="display: flex; align-items: center; justify-content: center; gap: 0.4rem; margin-top: 1rem; font-size: 0.74rem; color: #666;">
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#666" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
-                <span>Direct, secure authentication via Google OAuth 2.0</span>
+        <!-- 1. GOOGLE SIGN-IN PANEL -->
+        <div id="panel-google" style="display: block;">
+            <div style="background: #FAFAFA; border: 1px solid var(--border-mid); padding: 1.75rem 1.25rem; border-radius: 4px; margin-bottom: 1rem;">
+                <p style="font-size: 0.85rem; color: #333; margin: 0 0 1.25rem 0; line-height: 1.5;">
+                    Sign in with your <strong>Registered Gmail Address</strong> to access your placement dashboard, weaknesses analysis, and achievements portfolio.
+                </p>
+
+                <!-- Google OAuth Button -->
+                <button type="button" id="google-auth-btn" onclick="handleGoogleSignIn()" class="btn-google-auth">
+                    <svg width="20" height="20" viewBox="0 0 24 24" style="flex-shrink: 0;">
+                        <path fill="#EA4335" d="M12 5c1.6 0 3 .6 4.1 1.6l3.1-3.1C17.3 1.7 14.8 1 12 1 7.5 1 3.7 3.6 1.9 7.3l3.7 2.9C6.5 7.4 9 5 12 5z"/>
+                        <path fill="#4285F4" d="M23.5 12.3c0-.8-.1-1.6-.2-2.3H12v4.5h6.5c-.3 1.5-1.1 2.8-2.4 3.7l3.7 2.9c2.2-2 3.7-5 3.7-8.8z"/>
+                        <path fill="#FBBC05" d="M5.6 14.8c-.2-.7-.4-1.5-.4-2.8s.2-2.1.4-2.8L1.9 6.3C.7 8.7 0 10.8 0 12s.7 3.3 1.9 5.7l3.7-2.9z"/>
+                        <path fill="#34A853" d="M12 23c3.2 0 6-1.1 8-3l-3.7-2.9c-1.1.7-2.5 1.2-4.3 1.2-3 0-5.5-2-6.4-4.8L1.9 16.4C3.7 20.1 7.5 23 12 23z"/>
+                    </svg>
+                    <span id="google-btn-text">Continue with Google</span>
+                </button>
+
+                <div style="display: flex; align-items: center; justify-content: center; gap: 0.4rem; margin-top: 1rem; font-size: 0.74rem; color: #666;">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#666" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+                    <span>Official Google OAuth 2.0 / OpenID Connect authentication</span>
+                </div>
             </div>
         </div>
 
-        <!-- Portal Security Footer -->
-        <div style="border-top: 1px solid var(--border-light); padding-top: 1.25rem; font-size: 0.78rem; color: #777;">
-            <div>Authorized student access only &bull; Maharaja Institute of Technology Mysore</div>
-            <div style="margin-top: 0.75rem;">
-                <a href="{{ url_for('admin_login') }}" style="font-size: 0.8rem; color: #000; font-weight: 600; text-decoration: underline;">
-                    Placement Admin / Coordinator Login &rarr;
+        <!-- 2. MOBILE NUMBER OTP PANEL -->
+        <div id="panel-otp" style="display: none;">
+            <div style="background: #FAFAFA; border: 1px solid var(--border-mid); padding: 1.75rem 1.25rem; border-radius: 4px; margin-bottom: 1rem; text-align: left;">
+                
+                <!-- Stage A: Enter Mobile Number -->
+                <div id="otp-step-phone">
+                    <label for="mobile_number_input" style="font-weight: 700; font-size: 0.82rem; color: #000; display: block; margin-bottom: 0.4rem; text-transform: uppercase;">
+                        Registered Mobile Number
+                    </label>
+                    <div style="display: flex; gap: 0.5rem; margin-bottom: 1rem;">
+                        <span style="display: inline-flex; align-items: center; background: #EFEFEF; border: 1px solid #000; padding: 0 0.75rem; font-weight: 700; font-size: 0.88rem; border-radius: 4px;">+91</span>
+                        <input type="tel" id="mobile_number_input" maxlength="10" placeholder="10-digit mobile number" class="input-phone" autofocus>
+                    </div>
+                    <button type="button" id="send-otp-btn" onclick="requestMobileOtp()" class="btn-primary-action">
+                        Send Verification OTP
+                    </button>
+                    <p style="font-size: 0.75rem; color: #666; margin: 0.65rem 0 0 0; text-align: center;">
+                        A time-limited 6-digit OTP will be sent to your registered mobile number.
+                    </p>
+                </div>
+
+                <!-- Stage B: Enter & Verify OTP -->
+                <div id="otp-step-verify" style="display: none;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                        <label for="otp_code_input" style="font-weight: 700; font-size: 0.82rem; color: #000; text-transform: uppercase;">
+                            Enter 6-Digit OTP
+                        </label>
+                        <button type="button" onclick="resetOtpStep()" style="background: none; border: none; color: #000; font-size: 0.75rem; text-decoration: underline; cursor: pointer;">
+                            Change Number
+                        </button>
+                    </div>
+                    <p id="otp-sent-info" style="font-size: 0.78rem; color: #333; margin: 0 0 0.85rem 0;"></p>
+                    <input type="text" id="otp_code_input" maxlength="6" placeholder="&bull; &bull; &bull; &bull; &bull; &bull;" class="input-otp" style="margin-bottom: 1rem;">
+                    
+                    <button type="button" id="verify-otp-btn" onclick="verifyMobileOtp()" class="btn-primary-action" style="margin-bottom: 0.75rem;">
+                        Verify &amp; Enter Dashboard
+                    </button>
+
+                    <div style="display: flex; justify-content: space-between; align-items: center; font-size: 0.75rem; color: #555;">
+                        <span id="countdown-timer">Resend OTP in <strong>60s</strong></span>
+                        <button type="button" id="resend-otp-btn" onclick="requestMobileOtp()" disabled style="background: none; border: none; color: #000; font-weight: 700; cursor: pointer; text-decoration: underline; opacity: 0.5;">
+                            Resend Code
+                        </button>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+        <!-- Institutional Placement Coordinator Guidance Box -->
+        <div class="guidance-box">
+            <strong style="color: #000; display: block; margin-bottom: 0.25rem;">
+                &#128274; STRICT PLACEMENT REGISTRATION POLICY
+            </strong>
+            <div>
+                Only students officially registered by the <strong>Department Placement Coordinator</strong> are eligible to log in.
+                If your Gmail address or mobile number is not registered, or if you have recently changed contact details, please contact your department Placement Coordinator to update your record.
+            </div>
+        </div>
+
+        <!-- Administrative Login Link -->
+        <div style="border-top: 1px solid var(--border-light); padding-top: 1.25rem; margin-top: 1.25rem; font-size: 0.78rem; color: #777;">
+            <div>Maharaja Institute of Technology Mysore &bull; Placement Portal</div>
+            <div style="margin-top: 0.5rem; display: flex; justify-content: center; gap: 1.5rem;">
+                <a href="{{ url_for('admin_login') }}" style="color: #000; font-weight: 600; text-decoration: underline;">
+                    Placement Admin Login &rarr;
+                </a>
+                <a href="{{ url_for('coordinator_login') }}" style="color: #000; font-weight: 600; text-decoration: underline;">
+                    Placement Coordinator Login &rarr;
                 </a>
             </div>
         </div>
@@ -110,7 +259,8 @@
 <script>
 // Auto-switch from 127.0.0.1 to localhost for seamless OAuth without prompting the user
 if (window.location.hostname === '127.0.0.1') {
-    window.location.replace(window.location.href.replace('127.0.0.1:5000', 'localhost:5000'));
+    const newHost = window.location.host.replace('127.0.0.1', 'localhost');
+    window.location.replace(window.location.protocol + '//' + newHost + window.location.pathname + window.location.search);
 }
 
 // --- FIREBASE CLIENT CONFIGURATION ---
@@ -129,36 +279,28 @@ try {
         firebase.initializeApp(firebaseConfig);
     }
     auth = firebase.auth();
-    console.log("Firebase initialized successfully for Google Authentication.");
 } catch (e) {
-    console.error("Firebase initialization note:", e);
+    console.error("Firebase init:", e);
 }
 
-// Handle Google Redirect Result on page load
-if (auth) {
-    auth.getRedirectResult().then(function(result) {
-        if (result && result.user) {
-            setButtonLoading(true);
-            result.user.getIdToken().then(function(idToken) {
-                submitFirebaseToken(idToken, 'google');
-            });
-        }
-    }).catch(function(error) {
-        console.error("Redirect sign-in error:", error);
-        handleAuthError(error);
-    });
-}
+// Tab Switcher
+function switchLoginTab(tab) {
+    const tabGoogle = document.getElementById('tab-google-btn');
+    const tabOtp = document.getElementById('tab-otp-btn');
+    const panelGoogle = document.getElementById('panel-google');
+    const panelOtp = document.getElementById('panel-otp');
 
-function setButtonLoading(loading) {
-    const btn = document.getElementById('google-auth-btn');
-    const btnText = document.getElementById('google-btn-text');
-    if (btn) btn.disabled = loading;
-    if (btnText) {
-        if (loading) {
-            btnText.innerHTML = '<span style="display:inline-block; width:14px; height:14px; border:2px solid #fff; border-top-color:transparent; border-radius:50%; animation: spin 0.8s linear infinite; margin-right:8px; vertical-align:middle;"></span> Connecting Google Sign-In...';
-        } else {
-            btnText.innerText = "Sign In with Google";
-        }
+    if (tab === 'google') {
+        tabGoogle.classList.add('active');
+        tabOtp.classList.remove('active');
+        panelGoogle.style.display = 'block';
+        panelOtp.style.display = 'none';
+    } else {
+        tabOtp.classList.add('active');
+        tabGoogle.classList.remove('active');
+        panelOtp.style.display = 'block';
+        panelGoogle.style.display = 'none';
+        document.getElementById('mobile_number_input').focus();
     }
 }
 
@@ -169,41 +311,29 @@ function showStatusAlert(message, type) {
         box.style.background = type === 'error' ? '#FFF0F0' : '#E6F4EA';
         box.style.color = type === 'error' ? '#C5221F' : '#137333';
         box.style.borderColor = type === 'error' ? '#C5221F' : '#137333';
-        box.innerHTML = message;
+        box.innerHTML = '<strong>' + (type === 'error' ? '&#9888; Access Notice:' : '&#10004; Success:') + '</strong> ' + message;
     }
 }
 
-function handleAuthError(error) {
-    setButtonLoading(false);
-    if (error.code === 'auth/popup-closed-by-user') {
-        return;
+function setGoogleButtonLoading(loading) {
+    const btn = document.getElementById('google-auth-btn');
+    const btnText = document.getElementById('google-btn-text');
+    if (btn) btn.disabled = loading;
+    if (btnText) {
+        if (loading) {
+            btnText.innerHTML = '<span style="display:inline-block; width:14px; height:14px; border:2px solid #fff; border-top-color:transparent; border-radius:50%; animation: spin 0.8s linear infinite; margin-right:8px; vertical-align:middle;"></span> Connecting Google Sign-In...';
+        } else {
+            btnText.innerText = "Continue with Google";
+        }
     }
-    if (error.code === 'auth/unauthorized-domain') {
-        showStatusAlert('<strong>Firebase Domain Not Authorized:</strong><br>' +
-            'Please add <code>' + window.location.hostname + '</code> (or <code>vercel.app</code>) in your Firebase Console.<br>' +
-            '<div style="display:flex; gap:0.5rem; flex-wrap:wrap; margin-top:0.5rem;">' +
-            '<button type="button" onclick="navigator.clipboard.writeText(window.location.hostname); this.innerText=\'Copied!\';" style="background:#000; color:#fff; border:none; padding:5px 12px; border-radius:3px; cursor:pointer; font-size:0.78rem; font-weight:700;">📋 Copy Domain</button>' +
-            '<a href="https://console.firebase.google.com/project/student-portal-4fcbd/authentication/settings" target="_blank" style="background:#1a73e8; color:#fff; text-decoration:none; padding:5px 12px; border-radius:3px; font-size:0.78rem; font-weight:700; display:inline-flex; align-items:center;">Open Firebase Settings &rarr;</a>' +
-            '</div>', 'error');
-        return;
-    }
-    if (error.code === 'auth/popup-blocked') {
-        // Fallback to full page redirect if popup is blocked
-        const provider = new firebase.auth.GoogleAuthProvider();
-        provider.setCustomParameters({ prompt: 'select_account' });
-        auth.signInWithRedirect(provider);
-        return;
-    }
-    showStatusAlert('<strong>Google Authentication Notice:</strong> ' + (error.message || error.code), 'error');
 }
 
-// EXCLUSIVE GOOGLE SIGN-IN HANDLER
+// Google Sign-In Handler
 function handleGoogleSignIn() {
-    setButtonLoading(true);
-
+    setGoogleButtonLoading(true);
     if (!auth) {
-        showStatusAlert("Firebase is not initialized. Please refresh the page.", "error");
-        setButtonLoading(false);
+        showStatusAlert("Authentication service is initializing. Please refresh the page.", "error");
+        setGoogleButtonLoading(false);
         return;
     }
 
@@ -221,21 +351,24 @@ function handleGoogleSignIn() {
                 submitFirebaseToken(idToken, 'google');
             })
             .catch(function(error) {
-                console.error("Google popup error:", error);
-                if (error.code === 'auth/popup-blocked' || error.code === 'auth/cancelled-popup-request') {
-                    // Smoothly fall back to redirect on mobile or blocked popup
+                console.error("Google sign-in error:", error);
+                setGoogleButtonLoading(false);
+                if (error.code === 'auth/popup-closed-by-user') {
+                    return;
+                }
+                if (error.code === 'auth/popup-blocked') {
                     auth.signInWithRedirect(provider);
                     return;
                 }
-                handleAuthError(error);
+                showStatusAlert(error.message || "Google authentication failed. Please try again.", "error");
             });
     } catch (e) {
-        console.error("Google sign-in exception:", e);
-        handleAuthError(e);
+        console.error("Exception:", e);
+        setGoogleButtonLoading(false);
+        showStatusAlert("An unexpected error occurred during Google Sign-In.", "error");
     }
 }
 
-// TOKEN SUBMISSION TO BACKEND
 function submitFirebaseToken(token, provider) {
     const form = document.createElement('form');
     form.method = 'POST';
@@ -261,6 +394,124 @@ function submitFirebaseToken(token, provider) {
 
     document.body.appendChild(form);
     form.submit();
+}
+
+// --- MOBILE NUMBER OTP WORKFLOW ---
+let countdownInterval = null;
+let activePhone = "";
+
+function requestMobileOtp() {
+    const phoneInput = document.getElementById('mobile_number_input').value.trim();
+    if (!phoneInput || phoneInput.length < 10) {
+        showStatusAlert("Please enter a valid 10-digit mobile number.", "error");
+        return;
+    }
+
+    const sendBtn = document.getElementById('send-otp-btn');
+    sendBtn.disabled = true;
+    sendBtn.innerText = "Verifying & Sending OTP...";
+
+    const formData = new FormData();
+    formData.append('mobile_number', phoneInput);
+
+    fetch("{{ url_for('student_send_otp') }}", {
+        method: "POST",
+        body: formData
+    })
+    .then(res => res.json())
+    .then(data => {
+        sendBtn.disabled = false;
+        sendBtn.innerText = "Send Verification OTP";
+
+        if (data.success) {
+            activePhone = phoneInput;
+            document.getElementById('otp-step-phone').style.display = 'none';
+            document.getElementById('otp-step-verify').style.display = 'block';
+            document.getElementById('otp-sent-info').innerHTML = data.message;
+            document.getElementById('otp_code_input').value = "";
+            document.getElementById('otp_code_input').focus();
+
+            if (data.dev_preview) {
+                showStatusAlert("OTP Code (Dev Mode): <strong>" + data.dev_preview + "</strong>", "info");
+            } else {
+                showStatusAlert(data.message, "success");
+            }
+
+            startOtpCountdown(data.cooldown_seconds || 60);
+        } else {
+            showStatusAlert(data.message, "error");
+        }
+    })
+    .catch(err => {
+        sendBtn.disabled = false;
+        sendBtn.innerText = "Send Verification OTP";
+        showStatusAlert("Failed to dispatch OTP. Please check your network and try again.", "error");
+    });
+}
+
+function verifyMobileOtp() {
+    const otpCode = document.getElementById('otp_code_input').value.trim();
+    if (!otpCode || otpCode.length !== 6) {
+        showStatusAlert("Please enter the complete 6-digit OTP code.", "error");
+        return;
+    }
+
+    const verifyBtn = document.getElementById('verify-otp-btn');
+    verifyBtn.disabled = true;
+    verifyBtn.innerText = "Verifying OTP...";
+
+    const formData = new FormData();
+    formData.append('mobile_number', activePhone);
+    formData.append('otp', otpCode);
+
+    fetch("{{ url_for('student_verify_otp') }}", {
+        method: "POST",
+        body: formData
+    })
+    .then(res => res.json())
+    .then(data => {
+        verifyBtn.disabled = false;
+        verifyBtn.innerText = "Verify & Enter Dashboard";
+
+        if (data.success) {
+            window.location.href = data.redirect_url;
+        } else {
+            showStatusAlert(data.message, "error");
+        }
+    })
+    .catch(err => {
+        verifyBtn.disabled = false;
+        verifyBtn.innerText = "Verify & Enter Dashboard";
+        showStatusAlert("Verification error. Please try again.", "error");
+    });
+}
+
+function resetOtpStep() {
+    clearInterval(countdownInterval);
+    document.getElementById('otp-step-verify').style.display = 'none';
+    document.getElementById('otp-step-phone').style.display = 'block';
+    document.getElementById('mobile_number_input').focus();
+}
+
+function startOtpCountdown(seconds) {
+    clearInterval(countdownInterval);
+    let remaining = seconds;
+    const timerElem = document.getElementById('countdown-timer');
+    const resendBtn = document.getElementById('resend-otp-btn');
+    resendBtn.disabled = true;
+    resendBtn.style.opacity = '0.5';
+
+    countdownInterval = setInterval(() => {
+        remaining--;
+        if (remaining > 0) {
+            timerElem.innerHTML = "Resend OTP in <strong>" + remaining + "s</strong>";
+        } else {
+            clearInterval(countdownInterval);
+            timerElem.innerText = "Didn't receive code?";
+            resendBtn.disabled = false;
+            resendBtn.style.opacity = '1';
+        }
+    }, 1000);
 }
 </script>
 {% endblock %}
