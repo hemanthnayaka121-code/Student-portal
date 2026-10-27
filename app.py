@@ -1284,28 +1284,31 @@ def student_login():
             flash(f"Welcome, {matched_student.name}! Authenticated via Google Account ({claims.get('email')}).", 'success')
             return redirect(url_for('student_dashboard'))
 
-        # Case B: USN and Date of Birth / Credentials Sign-In
-        if login_type in ['usn_dob', 'dob', 'credentials']:
-            usn_input = (request.form.get('usn') or payload.get('usn') or '').strip().upper()
+        # Case B: USN / Registered Email and Date of Birth / Credentials Sign-In
+        if login_type in ['usn_dob', 'dob', 'credentials', 'email_dob']:
+            ident_input = (request.form.get('usn') or payload.get('usn') or request.form.get('email') or payload.get('email') or '').strip()
             dob_input = (request.form.get('dob') or request.form.get('password') or request.form.get('date_of_birth') or 
                          payload.get('dob') or payload.get('password') or payload.get('date_of_birth') or '').strip()
 
-            if not usn_input or not dob_input:
-                err_msg = 'Please enter both your USN and Date of Birth.'
+            if not ident_input or not dob_input:
+                err_msg = 'Please enter your USN or registered Email and Date of Birth.'
                 if is_json:
                     return jsonify({'success': False, 'message': err_msg}), 400
                 flash(err_msg, 'error')
                 return redirect(url_for('student_login'))
 
-            # Retrieve student record using submitted USN
-            student = Student.query.filter(db.func.upper(Student.usn) == usn_input).first()
+            # Retrieve student record using submitted USN or registered Email
+            if '@' in ident_input:
+                student = Student.query.filter(db.func.lower(Student.email) == ident_input.lower()).first()
+            else:
+                student = Student.query.filter(db.func.upper(Student.usn) == ident_input.upper()).first()
 
             # Security requirement: Generic message to never reveal whether USN exists
             generic_auth_err = 'Authentication failed: Invalid USN or Date of Birth. Please check your credentials or contact your Placement Coordinator.'
 
             if not student:
                 record_failed_login(client_ip)
-                SecurityService.log_security_event('STUDENT', usn_input, 'LOGIN_FAILED_CREDENTIALS', 'FAILED', client_ip, 'USN not found in placement database')
+                SecurityService.log_security_event('STUDENT', ident_input, 'LOGIN_FAILED_CREDENTIALS', 'FAILED', client_ip, 'Identifier not found in placement database')
                 if is_json:
                     return jsonify({'success': False, 'message': generic_auth_err}), 401
                 flash(generic_auth_err, 'error')
