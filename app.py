@@ -5,7 +5,7 @@ from models import (
     YouTubeLesson, QuizQuestion, QuizAttempt, MockInterviewSession, MockInterviewQnA,
     Course, StudentCourseProgress, WorkshopEvent, StudentEventAction, StudentAchievement,
     StudentNotification, StudentPreference, ExternalProviderAccount, CertificateSyncLog,
-    StudentOtpVerification, PasswordResetToken, SecurityAuditLog
+    StudentOtpVerification, PasswordResetToken, SecurityAuditLog, parse_dob_string
 )
 from firebase_auth import verify_firebase_token, match_student_identity, link_and_login_student
 from sms_service import SmsOtpService
@@ -665,11 +665,17 @@ def coordinator_register_student():
 
     # 9. Create Student & Performance Record with strict error handling & rollback
     try:
+        raw_dob = request.form.get('date_of_birth') or request.form.get('dob')
+        parsed_dob = parse_dob_string(raw_dob) if raw_dob else None
+        if not parsed_dob:
+            parsed_dob = datetime.strptime("2003-01-01", "%Y-%m-%d").date()
+
         new_student = Student(
             usn=usn,
             name=name,
             mobile_number=clean_phone,
             email=email,
+            date_of_birth=parsed_dob,
             department_id=dept.id,
             semester=semester,
             cgpa=cgpa,
@@ -1221,16 +1227,30 @@ def portal_reports():
 @app.route('/student/login', methods=['GET', 'POST'])
 def student_login():
     if request.method == 'POST':
-        login_type = request.form.get('login_type', 'token')
+        is_json = request.is_json
+        payload = request.get_json(silent=True) or {} if is_json else {}
+        login_type = request.form.get('login_type') or payload.get('login_type')
+        if not login_type:
+            if 'usn' in request.form or 'usn' in payload:
+                login_type = 'usn_dob'
+            elif 'id_token' in request.form or 'id_token' in payload:
+                login_type = 'token'
+            else:
+                login_type = 'token'
+
         client_ip = request.remote_addr or '127.0.0.1'
 
         if is_rate_limited(client_ip):
+            target_ident = request.form.get('usn') or payload.get('usn') or 'UNKNOWN'
+            SecurityService.log_security_event('STUDENT', target_ident, 'LOGIN_RATE_LIMITED', 'BLOCKED', client_ip, 'Rate limit exceeded on student login')
+            if is_json:
+                return jsonify({'success': False, 'message': 'Too many login attempts. Please wait 5 minutes before trying again.'}), 429
             flash('Too many login attempts. Please wait 5 minutes before trying again.', 'error')
             return redirect(url_for('student_login')), 429
 
         # Case A: Google Sign-In with verified Google OAuth token
         if login_type == 'token':
-            id_token = request.form.get('id_token', '').strip()
+            id_token = (request.form.get('id_token') or payload.get('id_token') or '').strip()
             claims = verify_firebase_token(id_token)
             if not claims:
                 record_failed_login(client_ip)
@@ -1264,85 +1284,146 @@ def student_login():
             flash(f"Welcome, {matched_student.name}! Authenticated via Google Account ({claims.get('email')}).", 'success')
             return redirect(url_for('student_dashboard'))
 
+        # Case B: USN and Date of Birth / Credentials Sign-In
+        if login_type in ['usn_dob', 'dob', 'credentials']:
+            usn_input = (request.form.get('usn') or payload.get('usn') or '').strip().upper()
+            dob_input = (request.form.get('dob') or request.form.get('password') or request.form.get('date_of_birth') or 
+                         payload.get('dob') or payload.get('password') or payload.get('date_of_birth') or '').strip()
+
+            if not usn_input or not dob_input:
+                err_msg = 'Please enter both your USN and Date of Birth.'
+                if is_json:
+                    return jsonify({'success': False, 'message': err_msg}), 400
+                flash(err_msg, 'error')
+                return redirect(url_for('student_login'))
+
+            # Retrieve student record using submitted USN
+            student = Student.query.filter(db.func.upper(Student.usn) == usn_input).first()
+
+            # Security requirement: Generic message to never reveal whether USN exists
+            generic_auth_err = 'Authentication failed: Invalid USN or Date of Birth. Please check your credentials or contact your Placement Coordinator.'
+
+            if not student:
+                record_failed_login(client_ip)
+                SecurityService.log_security_event('STUDENT', usn_input, 'LOGIN_FAILED_CREDENTIALS', 'FAILED', client_ip, 'USN not found in placement database')
+                if is_json:
+                    return jsonify({'success': False, 'message': generic_auth_err}), 401
+                flash(generic_auth_err, 'error')
+                return redirect(url_for('student_login'))
+
+            # Check account lockout
+            if student.is_locked():
+                lockout_remaining = max(1, int((student.locked_until - datetime.utcnow()).total_seconds() / 60))
+                lock_msg = f'Account temporarily locked due to repeated failed login attempts. Please try again in {lockout_remaining} minute(s) or contact your Placement Coordinator.'
+                SecurityService.log_security_event('STUDENT', student.usn, 'LOGIN_LOCKED', 'BLOCKED', client_ip, f'Student account locked until {student.locked_until}')
+                if is_json:
+                    return jsonify({'success': False, 'message': lock_msg}), 403
+                flash(lock_msg, 'error')
+                return redirect(url_for('student_login'))
+
+            # Verify credentials: Date of Birth or personal password if set
+            is_valid_cred = student.verify_dob(dob_input)
+            if not is_valid_cred and student.password_hash:
+                is_valid_cred = student.check_password(dob_input)
+
+            if not is_valid_cred:
+                student.record_failed_attempt(max_attempts=5, lockout_minutes=15)
+                record_failed_login(client_ip)
+                SecurityService.log_security_event('STUDENT', student.usn, 'LOGIN_FAILED_CREDENTIALS', 'FAILED', client_ip, 'Invalid credentials submitted')
+                if student.is_locked():
+                    lock_msg = 'Too many failed login attempts. Your account has been temporarily locked for 15 minutes for security.'
+                    if is_json:
+                        return jsonify({'success': False, 'message': lock_msg}), 403
+                    flash(lock_msg, 'error')
+                    return redirect(url_for('student_login'))
+                if is_json:
+                    return jsonify({'success': False, 'message': generic_auth_err}), 401
+                flash(generic_auth_err, 'error')
+                return redirect(url_for('student_login'))
+
+            # Check HOD Approval Workflow
+            if student.placement_approval_status != 'APPROVED':
+                record_failed_login(client_ip)
+                if student.placement_approval_status in ['PENDING', 'PENDING_HOD_APPROVAL']:
+                    approval_err = f"Access Denied: Your placement record is pending approval by your department Head of Department ({student.department.code if student.department else 'HOD'}). Access to the placement portal is restricted until approved."
+                    SecurityService.log_security_event('STUDENT', student.usn, 'LOGIN_DENIED_PENDING_APPROVAL', 'BLOCKED', client_ip, 'Placement approval status is PENDING')
+                else:
+                    approval_err = f"Access Denied: Your placement registration was not approved by your department ({student.placement_approval_status}). Please contact your Placement Coordinator for assistance."
+                    SecurityService.log_security_event('STUDENT', student.usn, 'LOGIN_DENIED_UNAPPROVED', 'BLOCKED', client_ip, f"Placement approval status is {student.placement_approval_status}")
+                if is_json:
+                    return jsonify({'success': False, 'message': approval_err}), 403
+                flash(approval_err, 'error')
+                return redirect(url_for('student_login'))
+
+            # Successful Authentication
+            student.reset_failed_attempts()
+            reset_failed_logins(client_ip)
+
+            is_first_login = (student.first_login_at is None)
+            if is_first_login:
+                student.first_login_at = datetime.utcnow()
+            student.dob_login_count = (student.dob_login_count or 0) + 1
+            db.session.commit()
+
+            # Establish student session
+            session.clear()
+            session.permanent = True
+            session['student_usn'] = student.usn
+            session['student_name'] = student.name
+            session['student_email'] = student.email
+            session['student_dept_code'] = student.department.code if student.department else ''
+            session['student_approval_status'] = student.placement_approval_status
+            session['session_version'] = getattr(student, 'session_version', 1)
+            session['student_logged_in_at'] = time.time()
+            session['login_method'] = 'USN_DOB'
+            if is_first_login:
+                session['first_dob_login'] = True
+
+            SecurityService.log_security_event(
+                'STUDENT',
+                student.usn,
+                'LOGIN_SUCCESS_USN_DOB',
+                'SUCCESS',
+                client_ip,
+                f"Authenticated via USN and Date of Birth (first_login={is_first_login})"
+            )
+
+            welcome_msg = f"Welcome, {student.name}! Authenticated successfully via USN and Date of Birth."
+            if is_first_login and not student.password_hash:
+                welcome_msg += " As Date of Birth is an initial credential, please visit Account Security to set a personal password."
+            flash(welcome_msg, 'info' if is_first_login else 'success')
+
+            if is_json:
+                return jsonify({'success': True, 'redirect_url': url_for('student_dashboard')})
+            return redirect(url_for('student_dashboard'))
+
         # Direct unverified logins are rejected
         record_failed_login(client_ip)
-        flash('Invalid login request. Please use Google Sign-In or Mobile OTP.', 'error')
+        flash('Invalid login request. Please use USN & Date of Birth or Google Sign-In.', 'error')
+        if is_json:
+            return jsonify({'success': False, 'message': 'Invalid login request.'}), 400
         return redirect(url_for('student_login'))
 
     return render_template('student_login.html')
 
-# Mobile Number OTP Login: Step 1 - Send OTP
+@app.route('/student/login/dob', methods=['GET', 'POST'])
+def student_login_dob():
+    return student_login()
+
+# Mobile Number OTP Login is decommissioned
 @app.route('/student/login/send-otp', methods=['POST'])
 def student_send_otp():
-    client_ip = request.remote_addr or '127.0.0.1'
-    mobile_input = request.form.get('mobile_number', '').strip()
-    clean_mobile = SmsOtpService.normalize_phone_number(mobile_input)
-
-    if not clean_mobile or len(clean_mobile) < 10:
-        return jsonify({
-            'success': False,
-            'message': 'Please enter a valid 10-digit mobile number.'
-        }), 400
-
-    # Check registered students database
-    last10 = clean_mobile[-10:]
-    student = Student.query.filter(
-        (Student.mobile_number == clean_mobile) |
-        (Student.mobile_number == last10) |
-        (Student.mobile_number.endswith(last10))
-    ).first()
-
-    if not student:
-        record_failed_login(client_ip)
-        SecurityService.log_security_event('STUDENT', clean_mobile, 'OTP_REQUEST_UNREGISTERED', 'BLOCKED', client_ip, 'Unregistered mobile requested OTP')
-        return jsonify({
-            'success': False,
-            'message': 'Your Gmail address or mobile number is not registered in the MITM Placement System. Please contact your Placement Coordinator.'
-        }), 403
-
-    success, msg, dev_preview = SmsOtpService.generate_and_send_otp(student, client_ip)
-    if not success:
-        return jsonify({'success': False, 'message': msg}), 429
-
     return jsonify({
-        'success': True,
-        'message': msg,
-        'dev_preview': dev_preview,
-        'student_name': student.name,
-        'cooldown_seconds': 60
-    })
+        'success': False,
+        'message': 'Mobile OTP login is disabled. Please log in using USN & Date of Birth or Google Sign-In.'
+    }), 400
 
-# Mobile Number OTP Login: Step 2 - Verify OTP & Establish Session
 @app.route('/student/login/verify-otp', methods=['POST'])
 def student_verify_otp():
-    client_ip = request.remote_addr or '127.0.0.1'
-    mobile_input = request.form.get('mobile_number', '').strip()
-    otp_input = request.form.get('otp', '').strip()
-    clean_mobile = SmsOtpService.normalize_phone_number(mobile_input)
-
-    if not clean_mobile or not otp_input:
-        return jsonify({'success': False, 'message': 'Mobile number and 6-digit OTP are required.'}), 400
-
-    success, student, msg = SmsOtpService.verify_otp(clean_mobile, otp_input, client_ip)
-    if not success or not student:
-        record_failed_login(client_ip)
-        return jsonify({'success': False, 'message': msg}), 400
-
-    # Establish student session
-    session.clear()
-    session.permanent = True
-    session['student_usn'] = student.usn
-    session['student_name'] = student.name
-    session['student_email'] = student.email
-    session['student_dept_code'] = student.department.code if student.department else ''
-    session['student_approval_status'] = student.placement_approval_status
-    session['session_version'] = getattr(student, 'session_version', 1)
-    session['student_logged_in_at'] = time.time()
-    reset_failed_logins(client_ip)
-
-    SecurityService.log_security_event('STUDENT', student.usn, 'LOGIN_SUCCESS_OTP', 'SUCCESS', client_ip, f"Authenticated via mobile ending in {clean_mobile[-4:]}")
-    flash(f"Welcome, {student.name}! Authenticated successfully via registered mobile OTP.", 'success')
-    return jsonify({'success': True, 'redirect_url': url_for('student_dashboard')})
+    return jsonify({
+        'success': False,
+        'message': 'Mobile OTP login is disabled. Please log in using USN & Date of Birth or Google Sign-In.'
+    }), 400
 
 # ----------------- ACCOUNT SETTINGS & PASSWORD RECOVERY -----------------
 
@@ -1465,7 +1546,7 @@ def coordinator_update_student_contact(usn):
 
     student = Student.query.get_or_404(usn)
     raw_email = request.form.get('email', '').strip().lower()
-    raw_mobile = request.form.get('mobile', '').strip()
+    raw_mobile = (request.form.get('mobile_number') or request.form.get('mobile') or '').strip()
     clean_mobile = SmsOtpService.normalize_phone_number(raw_mobile)
 
     if not raw_email or '@' not in raw_email:
@@ -1493,6 +1574,15 @@ def coordinator_update_student_contact(usn):
         flash(f"Mobile number '{clean_mobile}' is already registered to student {existing_phone.name} ({existing_phone.usn}).", 'error')
         return redirect(request.referrer or url_for('coordinator_dashboard'))
 
+    raw_dob = request.form.get('date_of_birth') or request.form.get('dob')
+    old_dob = student.date_of_birth.strftime('%Y-%m-%d') if student.date_of_birth else 'Not Set'
+    dob_changed = False
+    if raw_dob:
+        parsed_dob = parse_dob_string(raw_dob)
+        if parsed_dob and parsed_dob != student.date_of_birth:
+            student.date_of_birth = parsed_dob
+            dob_changed = True
+
     old_email = student.email
     old_mobile = student.mobile_number
     student.email = raw_email
@@ -1500,11 +1590,14 @@ def coordinator_update_student_contact(usn):
     student.session_version = (getattr(student, 'session_version', 1) or 1) + 1
 
     user_name = session.get('coordinator_username') or session.get('username') or 'placement_coordinator'
+    audit_details = f"Email: '{old_email}' -> '{raw_email}', Mobile: '{old_mobile}' -> '{clean_mobile}'"
+    if dob_changed:
+        audit_details += f", DOB updated"
     audit = AuditLog(
         student_usn=usn,
         changed_by=user_name,
         action="Contact Information Updated",
-        details=f"Email: '{old_email}' -> '{raw_email}', Mobile: '{old_mobile}' -> '{clean_mobile}'"
+        details=audit_details
     )
     db.session.add(audit)
 
@@ -2535,6 +2628,56 @@ def student_security():
         student=student,
         account_link=account_link
     )
+
+@app.route('/student/security/set-password', methods=['POST'])
+def student_set_password():
+    student = get_current_student()
+    if not student:
+        return redirect(url_for('student_login'))
+
+    current_cred = request.form.get('current_credential', '').strip()
+    new_password = request.form.get('new_password', '').strip()
+    confirm_password = request.form.get('confirm_password', '').strip()
+    client_ip = request.remote_addr or '127.0.0.1'
+
+    # 1. Identity re-authentication: verify current DOB or current password
+    is_valid = False
+    if current_cred:
+        if student.password_hash:
+            is_valid = student.check_password(current_cred) or student.verify_dob(current_cred)
+        else:
+            is_valid = student.verify_dob(current_cred)
+
+    if not is_valid:
+        SecurityService.log_security_event('STUDENT', student.usn, 'PASSWORD_SET_FAILED', 'FAILED', client_ip, 'Current credential verification failed')
+        flash('Current credential verification failed. Please enter your correct Date of Birth or existing password.', 'error')
+        return redirect(url_for('student_security'))
+
+    # 2. Confirm password match
+    if new_password != confirm_password:
+        flash('New password and confirmation password do not match.', 'error')
+        return redirect(url_for('student_security'))
+
+    # 3. Disallow re-using current password
+    if student.password_hash and student.check_password(new_password):
+        flash('New password cannot be the same as your current password.', 'error')
+        return redirect(url_for('student_security'))
+
+    # 4. Password strength validation
+    is_strong, reason = SecurityService.validate_password_strength(new_password)
+    if not is_strong:
+        flash(reason, 'error')
+        return redirect(url_for('student_security'))
+
+    # 5. Set password and increment session_version
+    student.set_password(new_password)
+    session['session_version'] = student.session_version
+    session.pop('first_dob_login', None)
+    db.session.commit()
+
+    SecurityService.log_security_event('STUDENT', student.usn, 'PASSWORD_SET_SUCCESS', 'SUCCESS', client_ip, 'Personal password set successfully')
+    flash('Your personal password has been successfully updated. You can now use your USN and new password or Date of Birth to log in.', 'success')
+    return redirect(url_for('student_security'))
 
 
 # ----------------- 8. COMPATIBILITY & ALIAS ROUTES -----------------

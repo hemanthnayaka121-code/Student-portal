@@ -85,17 +85,6 @@
     border-radius: 4px;
     letter-spacing: 0.5px;
 }
-.input-otp {
-    width: 100%;
-    border: 2px solid #000;
-    padding: 0.75rem;
-    font-size: 1.35rem;
-    font-weight: 800;
-    text-align: center;
-    letter-spacing: 8px;
-    border-radius: 4px;
-    font-family: monospace;
-}
 .guidance-box {
     background: #FAFAFA;
     border: 1px solid #000;
@@ -141,18 +130,77 @@
             {% endif %}
         {% endwith %}
 
-        <!-- Tab Selector: Google OAuth vs Mobile OTP -->
+        <!-- Tab Selector: USN & DOB vs Google OAuth -->
         <div class="login-tabs">
-            <button type="button" class="login-tab-btn active" id="tab-google-btn" onclick="switchLoginTab('google')">
-                Continue with Google
+            <button type="button" class="login-tab-btn active" id="tab-dob-btn" onclick="switchLoginTab('dob')">
+                USN &amp; Date of Birth
             </button>
-            <button type="button" class="login-tab-btn" id="tab-otp-btn" onclick="switchLoginTab('otp')">
-                Mobile Number OTP
+            <button type="button" class="login-tab-btn" id="tab-google-btn" onclick="switchLoginTab('google')">
+                Continue with Google
             </button>
         </div>
 
-        <!-- 1. GOOGLE SIGN-IN PANEL -->
-        <div id="panel-google" style="display: block;">
+        <!-- 1. USN & DATE OF BIRTH PANEL -->
+        <div id="panel-dob" style="display: block;">
+            <div style="background: #FAFAFA; border: 1px solid var(--border-mid); padding: 1.75rem 1.25rem; border-radius: 4px; margin-bottom: 1rem; text-align: left;">
+                <form id="dob-login-form" method="POST" action="{{ url_for('student_login') }}" onsubmit="return handleDobLogin(event)">
+                    <input type="hidden" name="login_type" value="usn_dob">
+
+                    <div style="margin-bottom: 1.15rem;">
+                        <label for="usn_input" style="font-weight: 700; font-size: 0.82rem; color: #000; display: block; margin-bottom: 0.4rem; text-transform: uppercase;">
+                            University Seat Number (USN) *
+                        </label>
+                        <input type="text" id="usn_input" name="usn" required placeholder="e.g. 4MH24IS001" autocomplete="username"
+                               style="width: 100%; border: 1px solid #000; padding: 0.7rem 0.85rem; font-size: 0.95rem; font-weight: 600; border-radius: 4px; text-transform: uppercase; letter-spacing: 0.5px;">
+                        <small style="color: #666; font-size: 0.74rem; display: block; margin-top: 0.35rem;">Enter your official VTU USN registered with Placement Cell</small>
+                    </div>
+
+                    <div style="margin-bottom: 1.25rem;">
+                        <label for="dob_input" id="auth-cred-label" style="font-weight: 700; font-size: 0.82rem; color: #000; display: flex; align-items: center; gap: 0.4rem; margin-bottom: 0.4rem; text-transform: uppercase;">
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+                            Date of Birth *
+                        </label>
+                        
+                        <!-- Visual HTML5 Date Picker (Default Easy Mode) -->
+                        <div id="dob-mode-container" style="position: relative;">
+                            <input type="date" id="dob_input" name="dob" required min="1980-01-01" max="2015-12-31"
+                                   onclick="if(this.showPicker){ try{ this.showPicker(); }catch(e){} }"
+                                   style="width: 100%; border: 1px solid #000; padding: 0.7rem 0.85rem; font-size: 1rem; font-weight: 600; border-radius: 4px; background: #fff; color: #000; cursor: pointer;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 0.35rem;">
+                                <small style="color: #666; font-size: 0.74rem;">Click or tap to pick your Date of Birth from the calendar</small>
+                            </div>
+                        </div>
+
+                        <!-- Personal Password Mode (Alternative for students who set custom passwords) -->
+                        <div id="password-mode-container" style="display: none; position: relative;">
+                            <div style="position: relative;">
+                                <input type="password" id="password_input" name="password" placeholder="Enter your personal password" autocomplete="current-password"
+                                       style="width: 100%; border: 1px solid #000; padding: 0.7rem 2.6rem 0.7rem 0.85rem; font-size: 0.95rem; font-weight: 600; border-radius: 4px;">
+                                <button type="button" id="toggle-pwd-btn" onclick="togglePasswordVisibility()" title="Toggle visibility"
+                                        style="position: absolute; right: 8px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; padding: 4px; color: #555;">
+                                    <svg id="eye-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                                </button>
+                            </div>
+                            <small style="color: #666; font-size: 0.74rem; display: block; margin-top: 0.35rem;">Enter the personal password created in Account Security</small>
+                        </div>
+
+                        <!-- Switch between Date of Birth and Personal Password -->
+                        <div style="margin-top: 0.5rem; text-align: right;">
+                            <button type="button" id="switch-auth-mode-btn" onclick="toggleAuthInputMode()" style="background: none; border: none; color: #000; text-decoration: underline; font-size: 0.75rem; font-weight: 700; cursor: pointer; padding: 0;">
+                                &#128273; Use Personal Password instead
+                            </button>
+                        </div>
+                    </div>
+
+                    <button type="submit" id="dob-auth-btn" class="btn-primary-action" style="padding: 0.85rem 1rem;">
+                        Authenticate Student
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <!-- 2. GOOGLE SIGN-IN PANEL -->
+        <div id="panel-google" style="display: none;">
             <div style="background: #FAFAFA; border: 1px solid var(--border-mid); padding: 1.75rem 1.25rem; border-radius: 4px; margin-bottom: 1rem;">
                 <p style="font-size: 0.85rem; color: #333; margin: 0 0 1.25rem 0; line-height: 1.5;">
                     Sign in with your <strong>Registered Gmail Address</strong> to access your placement dashboard, weaknesses analysis, and achievements portfolio.
@@ -176,54 +224,7 @@
             </div>
         </div>
 
-        <!-- 2. MOBILE NUMBER OTP PANEL -->
-        <div id="panel-otp" style="display: none;">
-            <div style="background: #FAFAFA; border: 1px solid var(--border-mid); padding: 1.75rem 1.25rem; border-radius: 4px; margin-bottom: 1rem; text-align: left;">
-                
-                <!-- Stage A: Enter Mobile Number -->
-                <div id="otp-step-phone">
-                    <label for="mobile_number_input" style="font-weight: 700; font-size: 0.82rem; color: #000; display: block; margin-bottom: 0.4rem; text-transform: uppercase;">
-                        Registered Mobile Number
-                    </label>
-                    <div style="display: flex; gap: 0.5rem; margin-bottom: 1rem;">
-                        <span style="display: inline-flex; align-items: center; background: #EFEFEF; border: 1px solid #000; padding: 0 0.75rem; font-weight: 700; font-size: 0.88rem; border-radius: 4px;">+91</span>
-                        <input type="tel" id="mobile_number_input" maxlength="10" placeholder="10-digit mobile number" class="input-phone" autofocus>
-                    </div>
-                    <button type="button" id="send-otp-btn" onclick="requestMobileOtp()" class="btn-primary-action">
-                        Send Verification OTP
-                    </button>
-                    <p style="font-size: 0.75rem; color: #666; margin: 0.65rem 0 0 0; text-align: center;">
-                        A time-limited 6-digit OTP will be sent to your registered mobile number.
-                    </p>
-                </div>
 
-                <!-- Stage B: Enter & Verify OTP -->
-                <div id="otp-step-verify" style="display: none;">
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
-                        <label for="otp_code_input" style="font-weight: 700; font-size: 0.82rem; color: #000; text-transform: uppercase;">
-                            Enter 6-Digit OTP
-                        </label>
-                        <button type="button" onclick="resetOtpStep()" style="background: none; border: none; color: #000; font-size: 0.75rem; text-decoration: underline; cursor: pointer;">
-                            Change Number
-                        </button>
-                    </div>
-                    <p id="otp-sent-info" style="font-size: 0.78rem; color: #333; margin: 0 0 0.85rem 0;"></p>
-                    <input type="text" id="otp_code_input" maxlength="6" placeholder="&bull; &bull; &bull; &bull; &bull; &bull;" class="input-otp" style="margin-bottom: 1rem;">
-                    
-                    <button type="button" id="verify-otp-btn" onclick="verifyMobileOtp()" class="btn-primary-action" style="margin-bottom: 0.75rem;">
-                        Verify &amp; Enter Dashboard
-                    </button>
-
-                    <div style="display: flex; justify-content: space-between; align-items: center; font-size: 0.75rem; color: #555;">
-                        <span id="countdown-timer">Resend OTP in <strong>60s</strong></span>
-                        <button type="button" id="resend-otp-btn" onclick="requestMobileOtp()" disabled style="background: none; border: none; color: #000; font-weight: 700; cursor: pointer; text-decoration: underline; opacity: 0.5;">
-                            Resend Code
-                        </button>
-                    </div>
-                </div>
-
-            </div>
-        </div>
 
         <!-- Institutional Placement Coordinator Guidance Box -->
         <div class="guidance-box">
@@ -285,24 +286,149 @@ try {
 
 // Tab Switcher
 function switchLoginTab(tab) {
+    const tabDob = document.getElementById('tab-dob-btn');
     const tabGoogle = document.getElementById('tab-google-btn');
-    const tabOtp = document.getElementById('tab-otp-btn');
+    const panelDob = document.getElementById('panel-dob');
     const panelGoogle = document.getElementById('panel-google');
-    const panelOtp = document.getElementById('panel-otp');
 
     if (tab === 'google') {
-        tabGoogle.classList.add('active');
-        tabOtp.classList.remove('active');
-        panelGoogle.style.display = 'block';
-        panelOtp.style.display = 'none';
+        if (tabGoogle) tabGoogle.classList.add('active');
+        if (tabDob) tabDob.classList.remove('active');
+        if (panelGoogle) panelGoogle.style.display = 'block';
+        if (panelDob) panelDob.style.display = 'none';
     } else {
-        tabOtp.classList.add('active');
-        tabGoogle.classList.remove('active');
-        panelOtp.style.display = 'block';
-        panelGoogle.style.display = 'none';
-        document.getElementById('mobile_number_input').focus();
+        if (tabDob) tabDob.classList.add('active');
+        if (tabGoogle) tabGoogle.classList.remove('active');
+        if (panelDob) panelDob.style.display = 'block';
+        if (panelGoogle) panelGoogle.style.display = 'none';
+        const usnInp = document.getElementById('usn_input');
+        if (usnInp) usnInp.focus();
     }
 }
+
+let currentAuthMode = 'dob'; // 'dob' or 'password'
+
+function toggleAuthInputMode() {
+    const dobContainer = document.getElementById('dob-mode-container');
+    const pwdContainer = document.getElementById('password-mode-container');
+    const dobInput = document.getElementById('dob_input');
+    const pwdInput = document.getElementById('password_input');
+    const modeBtn = document.getElementById('switch-auth-mode-btn');
+    const label = document.getElementById('auth-cred-label');
+
+    if (currentAuthMode === 'dob') {
+        currentAuthMode = 'password';
+        dobContainer.style.display = 'none';
+        pwdContainer.style.display = 'block';
+        dobInput.removeAttribute('required');
+        pwdInput.setAttribute('required', 'required');
+        pwdInput.focus();
+        modeBtn.innerHTML = '&#128197; Use Date of Birth Picker instead';
+        label.innerHTML = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg> Personal Password *';
+    } else {
+        currentAuthMode = 'dob';
+        dobContainer.style.display = 'block';
+        pwdContainer.style.display = 'none';
+        pwdInput.removeAttribute('required');
+        dobInput.setAttribute('required', 'required');
+        modeBtn.innerHTML = '&#128273; Use Personal Password instead';
+        label.innerHTML = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg> Date of Birth *';
+    }
+}
+
+function togglePasswordVisibility() {
+    const input = document.getElementById('password_input');
+    const eyeIcon = document.getElementById('eye-icon');
+    if (input.type === 'password') {
+        input.type = 'text';
+        eyeIcon.innerHTML = '<path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line>';
+    } else {
+        input.type = 'password';
+        eyeIcon.innerHTML = '<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle>';
+    }
+}
+
+function handleDobLogin(event) {
+    event.preventDefault();
+    const usnInput = document.getElementById('usn_input').value.trim();
+    let authCredential = '';
+
+    if (!usnInput) {
+        showStatusAlert("Please enter your USN.", "error");
+        document.getElementById('usn_input').focus();
+        return false;
+    }
+
+    if (currentAuthMode === 'dob') {
+        authCredential = document.getElementById('dob_input').value.trim();
+        if (!authCredential) {
+            showStatusAlert("Please pick your Date of Birth from the calendar.", "error");
+            const dobInp = document.getElementById('dob_input');
+            if (dobInp.showPicker) {
+                try { dobInp.showPicker(); } catch (e) {}
+            } else {
+                dobInp.focus();
+            }
+            return false;
+        }
+    } else {
+        authCredential = document.getElementById('password_input').value.trim();
+        if (!authCredential) {
+            showStatusAlert("Please enter your personal password.", "error");
+            document.getElementById('password_input').focus();
+            return false;
+        }
+    }
+
+    const btn = document.getElementById('dob-auth-btn');
+    btn.disabled = true;
+    const origText = btn.innerText;
+    btn.innerText = "Authenticating...";
+
+    fetch("{{ url_for('student_login') }}", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+            "X-Requested-With": "XMLHttpRequest"
+        },
+        body: JSON.stringify({
+            login_type: "usn_dob",
+            usn: usnInput,
+            dob: authCredential,
+            password: authCredential
+        })
+    })
+    .then(res => res.json().then(data => ({ status: res.status, ok: res.ok, data })))
+    .then(({ status, ok, data }) => {
+        btn.disabled = false;
+        btn.innerText = origText;
+        if (data.success && data.redirect_url) {
+            window.location.href = data.redirect_url;
+        } else {
+            showStatusAlert(data.message || "Authentication failed. Please check your credentials.", "error");
+        }
+    })
+    .catch(err => {
+        btn.disabled = false;
+        btn.innerText = origText;
+        // Fallback to traditional form submit
+        const form = document.getElementById('dob-login-form');
+        if (form) form.submit();
+    });
+
+    return false;
+}
+
+// Auto-switch tab from URL parameter if provided
+window.addEventListener('DOMContentLoaded', () => {
+    const params = new URLSearchParams(window.location.search);
+    const tabParam = params.get('tab');
+    if (tabParam === 'google') {
+        switchLoginTab('google');
+    } else {
+        switchLoginTab('dob');
+    }
+});
 
 function showStatusAlert(message, type) {
     const box = document.getElementById('status-alert-box');
@@ -396,122 +522,5 @@ function submitFirebaseToken(token, provider) {
     form.submit();
 }
 
-// --- MOBILE NUMBER OTP WORKFLOW ---
-let countdownInterval = null;
-let activePhone = "";
-
-function requestMobileOtp() {
-    const phoneInput = document.getElementById('mobile_number_input').value.trim();
-    if (!phoneInput || phoneInput.length < 10) {
-        showStatusAlert("Please enter a valid 10-digit mobile number.", "error");
-        return;
-    }
-
-    const sendBtn = document.getElementById('send-otp-btn');
-    sendBtn.disabled = true;
-    sendBtn.innerText = "Verifying & Sending OTP...";
-
-    const formData = new FormData();
-    formData.append('mobile_number', phoneInput);
-
-    fetch("{{ url_for('student_send_otp') }}", {
-        method: "POST",
-        body: formData
-    })
-    .then(res => res.json())
-    .then(data => {
-        sendBtn.disabled = false;
-        sendBtn.innerText = "Send Verification OTP";
-
-        if (data.success) {
-            activePhone = phoneInput;
-            document.getElementById('otp-step-phone').style.display = 'none';
-            document.getElementById('otp-step-verify').style.display = 'block';
-            document.getElementById('otp-sent-info').innerHTML = data.message;
-            document.getElementById('otp_code_input').value = "";
-            document.getElementById('otp_code_input').focus();
-
-            if (data.dev_preview) {
-                showStatusAlert("OTP Code (Dev Mode): <strong>" + data.dev_preview + "</strong>", "info");
-            } else {
-                showStatusAlert(data.message, "success");
-            }
-
-            startOtpCountdown(data.cooldown_seconds || 60);
-        } else {
-            showStatusAlert(data.message, "error");
-        }
-    })
-    .catch(err => {
-        sendBtn.disabled = false;
-        sendBtn.innerText = "Send Verification OTP";
-        showStatusAlert("Failed to dispatch OTP. Please check your network and try again.", "error");
-    });
-}
-
-function verifyMobileOtp() {
-    const otpCode = document.getElementById('otp_code_input').value.trim();
-    if (!otpCode || otpCode.length !== 6) {
-        showStatusAlert("Please enter the complete 6-digit OTP code.", "error");
-        return;
-    }
-
-    const verifyBtn = document.getElementById('verify-otp-btn');
-    verifyBtn.disabled = true;
-    verifyBtn.innerText = "Verifying OTP...";
-
-    const formData = new FormData();
-    formData.append('mobile_number', activePhone);
-    formData.append('otp', otpCode);
-
-    fetch("{{ url_for('student_verify_otp') }}", {
-        method: "POST",
-        body: formData
-    })
-    .then(res => res.json())
-    .then(data => {
-        verifyBtn.disabled = false;
-        verifyBtn.innerText = "Verify & Enter Dashboard";
-
-        if (data.success) {
-            window.location.href = data.redirect_url;
-        } else {
-            showStatusAlert(data.message, "error");
-        }
-    })
-    .catch(err => {
-        verifyBtn.disabled = false;
-        verifyBtn.innerText = "Verify & Enter Dashboard";
-        showStatusAlert("Verification error. Please try again.", "error");
-    });
-}
-
-function resetOtpStep() {
-    clearInterval(countdownInterval);
-    document.getElementById('otp-step-verify').style.display = 'none';
-    document.getElementById('otp-step-phone').style.display = 'block';
-    document.getElementById('mobile_number_input').focus();
-}
-
-function startOtpCountdown(seconds) {
-    clearInterval(countdownInterval);
-    let remaining = seconds;
-    const timerElem = document.getElementById('countdown-timer');
-    const resendBtn = document.getElementById('resend-otp-btn');
-    resendBtn.disabled = true;
-    resendBtn.style.opacity = '0.5';
-
-    countdownInterval = setInterval(() => {
-        remaining--;
-        if (remaining > 0) {
-            timerElem.innerHTML = "Resend OTP in <strong>" + remaining + "s</strong>";
-        } else {
-            clearInterval(countdownInterval);
-            timerElem.innerText = "Didn't receive code?";
-            resendBtn.disabled = false;
-            resendBtn.style.opacity = '1';
-        }
-    }, 1000);
-}
 </script>
 {% endblock %}

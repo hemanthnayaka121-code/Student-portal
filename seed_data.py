@@ -1,5 +1,5 @@
 from app import app, db
-from models import Department, Admin, Student, PerformanceRecord, RemedialResource, PlacementActivity, AuditLog, PlacementCoordinator, PlacementOfficer
+from models import Department, Admin, Student, PerformanceRecord, RemedialResource, PlacementActivity, AuditLog, PlacementCoordinator, PlacementOfficer, parse_dob_string
 from datetime import datetime
 
 def seed_data():
@@ -316,13 +316,27 @@ def seed_data():
             }
         ]
 
+        # Map of predetermined student DOBs for testing
+        known_student_dobs = {
+            "4MH24IS001": "2003-05-14", "4MH24IS002": "2003-08-22", "4MH24IS003": "2003-11-10",
+            "4MH24IS004": "2004-01-18", "4MH24IS005": "2004-03-25", "4MH24CS001": "2003-02-15",
+            "4MH24CS002": "2003-07-19", "4MH24CS003": "2003-10-04", "4MH24CS004": "2004-04-12",
+            "4MH24CS005": "2003-12-30", "4MH24AI001": "2003-09-17", "4MH24AI002": "2004-02-28",
+            "4MH24AI003": "2003-06-05", "4MH24EC001": "2003-03-11", "4MH24EC002": "2003-11-23",
+            "4MH24IT001": "2003-08-14", "4MH24CV001": "2003-04-20", "4MH24ME001": "2003-01-15",
+            "4MH24ME002": "2003-10-29", "4MH24IS033": "2003-06-12", "4MH24CS033": "2003-07-25",
+            "4MH24IS099": "2003-09-08"
+        }
+
         for s_data in students_data:
             dept = depts[s_data["dept"]]
+            student_dob = parse_dob_string(known_student_dobs.get(s_data["usn"], "2003-01-01"))
             student = Student(
                 usn=s_data["usn"],
                 name=s_data["name"],
                 mobile_number=s_data["mobile"],
                 email=s_data["email"],
+                date_of_birth=student_dob,
                 department_id=dept.id,
                 semester=s_data["sem"],
                 cgpa=s_data["cgpa"],
@@ -366,6 +380,7 @@ def seed_data():
                 name="Kavya Murthy",
                 mobile_number="9845990033",
                 email="kavya.is@mitm.ac.in",
+                date_of_birth=parse_dob_string("2003-06-12"),
                 department_id=depts["ISE"].id,
                 semester=8,
                 cgpa=8.85,
@@ -380,6 +395,7 @@ def seed_data():
                 name="Vikram Sen",
                 mobile_number="9845990034",
                 email="vikram.cs@mitm.ac.in",
+                date_of_birth=parse_dob_string("2003-07-25"),
                 department_id=depts["CSE"].id,
                 semester=8,
                 cgpa=8.50,
@@ -394,6 +410,7 @@ def seed_data():
                 name="Sumanth Rao",
                 mobile_number="9845990099",
                 email="sumanth.is@mitm.ac.in",
+                date_of_birth=parse_dob_string("2003-09-08"),
                 department_id=depts["ISE"].id,
                 semester=8,
                 cgpa=6.10,

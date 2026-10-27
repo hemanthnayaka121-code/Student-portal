@@ -101,50 +101,27 @@ class SecurityAndAuthTestCase(unittest.TestCase):
         self.assertEqual(initial_student_count, final_student_count)
         self.assertIsNone(Student.query.filter_by(email=unregistered_email).first())
 
-    # TEST CASE 3: Registered mobile number completes OTP authentication
-    def test_03_registered_mobile_completes_otp_authentication(self):
-        """Case 3: Registered student mobile number requests OTP and successfully authenticates"""
+    # TEST CASE 3: Student OTP authentication is decommissioned and returns 400
+    def test_03_registered_mobile_otp_decommissioned(self):
+        """Case 3: Student mobile OTP requests return disabled notice"""
         alice = Student.query.filter_by(usn="4MH24IS001").first()
         self.assertIsNotNone(alice)
         mobile = alice.mobile_number
 
-        # 1. Send OTP
         resp_send = self.client.post('/student/login/send-otp', data={'mobile_number': mobile})
-        self.assertEqual(resp_send.status_code, 200)
-        send_data = resp_send.get_json()
-        self.assertTrue(send_data['success'])
-        otp_code = send_data.get('dev_preview')
-        self.assertIsNotNone(otp_code)
-        self.assertEqual(len(otp_code), 6)
-
-        # 2. Verify OTP
-        resp_verify = self.client.post('/student/login/verify-otp', data={
-            'mobile_number': mobile,
-            'otp': otp_code
-        })
-        self.assertEqual(resp_verify.status_code, 200)
-        verify_data = resp_verify.get_json()
-        self.assertTrue(verify_data['success'])
-
-        # 3. Check single-use: Reusing same OTP must fail
-        resp_reuse = self.client.post('/student/login/verify-otp', data={
-            'mobile_number': mobile,
-            'otp': otp_code
-        })
-        self.assertFalse(resp_reuse.get_json()['success'])
-
-    # TEST CASE 4: Unregistered mobile number cannot access dashboard
-    def test_04_unregistered_mobile_cannot_access(self):
-        """Case 4: Unregistered mobile number is rejected with exact requirement notice"""
-        unregistered_mobile = "9999988888"
-        self.assertIsNone(Student.query.filter_by(mobile_number=unregistered_mobile).first())
-
-        resp_send = self.client.post('/student/login/send-otp', data={'mobile_number': unregistered_mobile})
-        self.assertEqual(resp_send.status_code, 403)
+        self.assertEqual(resp_send.status_code, 400)
         send_data = resp_send.get_json()
         self.assertFalse(send_data['success'])
-        expected_msg = "Your Gmail address or mobile number is not registered in the MITM Placement System. Please contact your Placement Coordinator."
-        self.assertEqual(send_data['message'], expected_msg)
+        self.assertIn("Mobile OTP login is disabled", send_data['message'])
+
+    # TEST CASE 4: Direct unverified or OTP verification rejected
+    def test_04_unregistered_mobile_cannot_access(self):
+        """Case 4: Student verify OTP endpoint returns disabled notice"""
+        resp_verify = self.client.post('/student/login/verify-otp', data={'mobile_number': '9876543210', 'otp': '123456'})
+        self.assertEqual(resp_verify.status_code, 400)
+        verify_data = resp_verify.get_json()
+        self.assertFalse(verify_data['success'])
+        self.assertIn("Mobile OTP login is disabled", verify_data['message'])
 
     # TEST CASE 5: Unverified Google email is rejected
     @patch('app.verify_firebase_token')

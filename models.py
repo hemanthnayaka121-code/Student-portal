@@ -1,6 +1,21 @@
 from flask_sqlalchemy import SQLAlchemy
 from werkzeug.security import generate_password_hash, check_password_hash
-from datetime import datetime
+from datetime import datetime, date, timedelta
+import hmac
+
+def parse_dob_string(dob_str):
+    if not dob_str:
+        return None
+    if isinstance(dob_str, (date, datetime)):
+        return dob_str.date() if isinstance(dob_str, datetime) else dob_str
+    dob_str = str(dob_str).strip()
+    formats = ['%Y-%m-%d', '%d-%m-%Y', '%d/%m/%Y', '%Y/%m/%d', '%d.%m.%Y', '%Y.%m.%d', '%Y%m%d', '%d%m%Y']
+    for fmt in formats:
+        try:
+            return datetime.strptime(dob_str, fmt).date()
+        except (ValueError, TypeError):
+            continue
+    return None
 
 db = SQLAlchemy()
 
@@ -118,6 +133,50 @@ class Student(db.Model):
     preference = db.relationship('StudentPreference', backref='student', uselist=False, lazy=True, cascade='all, delete-orphan')
     provider_accounts = db.relationship('ExternalProviderAccount', backref='student', lazy=True, cascade='all, delete-orphan', order_by='ExternalProviderAccount.created_at.desc()')
     sync_logs = db.relationship('CertificateSyncLog', backref='student', lazy=True, cascade='all, delete-orphan', order_by='CertificateSyncLog.sync_started_at.desc()')
+
+    # Date of Birth & Credentials
+    date_of_birth = db.Column(db.Date, nullable=True)
+    password_hash = db.Column(db.String(255), nullable=True)
+    first_login_at = db.Column(db.DateTime, nullable=True)
+    dob_login_count = db.Column(db.Integer, default=0)
+    failed_login_count = db.Column(db.Integer, default=0)
+    locked_until = db.Column(db.DateTime, nullable=True)
+
+    def set_password(self, password):
+        self.password_hash = generate_password_hash(password)
+        self.session_version = (self.session_version or 0) + 1
+
+    def check_password(self, password):
+        if not self.password_hash or not password:
+            return False
+        return check_password_hash(self.password_hash, password)
+
+    def verify_dob(self, input_val):
+        if not self.date_of_birth or not input_val:
+            return False
+        if isinstance(input_val, (datetime, date)):
+            input_date = input_val.date() if isinstance(input_val, datetime) else input_val
+        else:
+            input_date = parse_dob_string(str(input_val))
+        if not input_date:
+            return False
+        return hmac.compare_digest(self.date_of_birth.strftime('%Y-%m-%d'), input_date.strftime('%Y-%m-%d'))
+
+    def is_locked(self):
+        if self.locked_until and self.locked_until > datetime.utcnow():
+            return True
+        return False
+
+    def record_failed_attempt(self, max_attempts=5, lockout_minutes=15):
+        self.failed_login_count = (self.failed_login_count or 0) + 1
+        if self.failed_login_count >= max_attempts:
+            self.locked_until = datetime.utcnow() + timedelta(minutes=lockout_minutes)
+        db.session.commit()
+
+    def reset_failed_attempts(self):
+        self.failed_login_count = 0
+        self.locked_until = None
+        db.session.commit()
 
     @property
     def placement_score(self):

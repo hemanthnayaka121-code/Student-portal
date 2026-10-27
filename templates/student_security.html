@@ -30,10 +30,10 @@
                 <td><strong>{{ student.usn }}</strong> (Permanent Record)</td>
             </tr>
             <tr>
-                <th>Firebase Provider</th>
+                <th>Authentication Provider</th>
                 <td>
                     <span class="badge" style="background: #000; color: #fff;">
-                        {{ account_link.auth_provider if account_link else 'Firebase Verified' }}
+                        {{ account_link.auth_provider if account_link else ('USN & Date of Birth' if session.get('login_method') == 'USN_DOB' else 'Verified Student') }}
                     </span>
                 </td>
             </tr>
@@ -46,16 +46,68 @@
                 <td>+91 {{ student.mobile_number }}</td>
             </tr>
             <tr>
-                <th>Account Linked Date</th>
-                <td>{{ account_link.linked_at.strftime('%d %B %Y, %I:%M %p') if account_link else 'Active' }}</td>
+                <th>Personal Password Status</th>
+                <td>
+                    {% if student.password_hash %}
+                        <span class="badge badge-pass">&#10004; Custom Password Active</span>
+                    {% else %}
+                        <span class="badge badge-fail">&#9888; Default Date of Birth Credential (Action Recommended)</span>
+                    {% endif %}
+                </td>
             </tr>
             <tr>
-                <th>Last Login Timestamp</th>
-                <td>{{ account_link.last_login_at.strftime('%d %B %Y, %I:%M %p') if account_link else 'Current Session' }}</td>
+                <th>Account Status</th>
+                <td>
+                    <span class="badge badge-pass">{{ student.placement_approval_status }}</span>
+                </td>
             </tr>
         </tbody>
     </table>
     </div>
+</div>
+
+<!-- SET / CHANGE PERSONAL PASSWORD CARD -->
+<div class="card" style="border: 2px solid #000; margin-bottom: 1.5rem; padding: 1.5rem; background: #fff;">
+    <div style="margin-bottom: 1rem; border-bottom: 1px solid var(--border-light); padding-bottom: 0.75rem;">
+        <h3 style="font-size: 1.15rem; font-weight: 700; color: #000; margin: 0 0 0.35rem 0;">
+            Set / Update Personal Password
+        </h3>
+        <p style="font-size: 0.82rem; color: #555; margin: 0;">
+            Date of Birth is an initial temporary credential. For long-term security, we strongly recommend establishing a private, confidential password.
+        </p>
+    </div>
+
+    <form method="POST" action="{{ url_for('student_set_password') }}" style="max-width: 520px;">
+        <div style="margin-bottom: 1rem;">
+            <label style="font-weight: 600; font-size: 0.82rem; color: #000; display: block; margin-bottom: 0.35rem;">
+                Current Verification Credential *
+            </label>
+            <input type="password" name="current_credential" required placeholder="Current Date of Birth (YYYY-MM-DD) or current password"
+                   style="width: 100%; border: 1px solid #000; padding: 0.65rem 0.85rem; font-size: 0.9rem; border-radius: 4px;">
+            <small style="color: #666; font-size: 0.74rem;">Enter your Date of Birth in YYYY-MM-DD format (or current password if previously set)</small>
+        </div>
+
+        <div style="margin-bottom: 1rem;">
+            <label style="font-weight: 600; font-size: 0.82rem; color: #000; display: block; margin-bottom: 0.35rem;">
+                New Personal Password *
+            </label>
+            <input type="password" name="new_password" required minlength="8" placeholder="Minimum 8 characters (letters & numbers)"
+                   style="width: 100%; border: 1px solid #000; padding: 0.65rem 0.85rem; font-size: 0.9rem; border-radius: 4px;">
+            <small style="color: #666; font-size: 0.74rem;">Must be at least 8 characters with at least one letter and one number or special character</small>
+        </div>
+
+        <div style="margin-bottom: 1.25rem;">
+            <label style="font-weight: 600; font-size: 0.82rem; color: #000; display: block; margin-bottom: 0.35rem;">
+                Confirm New Password *
+            </label>
+            <input type="password" name="confirm_password" required minlength="8" placeholder="Re-type new password"
+                   style="width: 100%; border: 1px solid #000; padding: 0.65rem 0.85rem; font-size: 0.9rem; border-radius: 4px;">
+        </div>
+
+        <button type="submit" class="btn" style="background: #000; color: #fff; font-weight: 700; padding: 0.7rem 1.5rem; border: 1px solid #000;">
+            Update &amp; Secure Account Password
+        </button>
+    </form>
 </div>
 
 <!-- DATA ISOLATION & INTEGRITY CONTROLS -->
